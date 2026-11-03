@@ -1,0 +1,7 @@
+{
+  "password": "ExploreAgentZuno!",
+  "accounts": [
+    { "name": "Alex", "email": "alex@demo.agentzuno.test" },
+    { "name": "Jordan", "email": "jordan@demo.agentzuno.test" }
+  ]
+}

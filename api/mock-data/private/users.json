@@ -1,0 +1,16 @@
+[
+  {
+    "id": "alex",
+    "name": "Alex Morgan",
+    "email": "alex@demo.agentzuno.test",
+    "salt": "agentzuno-demo-alex",
+    "passwordHash": "287ca98a396916da3b354aca4db117cbc291dcf0332b995f2f00ccffeab788509aba05f711ae41090083bc28a5e98413fac116fac239de2a83048ed2458afb65"
+  },
+  {
+    "id": "jordan",
+    "name": "Jordan Lee",
+    "email": "jordan@demo.agentzuno.test",
+    "salt": "agentzuno-demo-jordan",
+    "passwordHash": "8fba963a75cb74449377ed8c46e19776a319f16039e4eb74a417a7a38d1240ffdd3b4e19dba06b6646a0f259ddeeea243cdeba3a69a59f04f5c9e37ec2e76d23"
+  }
+]

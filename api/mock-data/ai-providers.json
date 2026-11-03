@@ -1,0 +1,36 @@
+[
+  {
+    "id": "openai",
+    "name": "OpenAI",
+    "models": [
+      { "id": "gpt-6.1-sol", "name": "GPT-6.1 Sol" },
+      { "id": "gpt-6.1-terra", "name": "GPT-6.1 Terra" },
+      { "id": "gpt-6-luna", "name": "GPT-6 Luna" },
+      { "id": "gpt-6-astra", "name": "GPT-6 Astra" }
+    ],
+    "supportsReasoning": true,
+    "docsUrl": "https://developers.openai.com/api/docs/guides/latest-model"
+  },
+  {
+    "id": "anthropic",
+    "name": "Anthropic",
+    "models": [
+      { "id": "claude-sonnet-5-5", "name": "Claude Sonnet 5.5" },
+      { "id": "claude-haiku-5-5", "name": "Claude Haiku 5.5" },
+      { "id": "claude-opus-5-5", "name": "Claude Opus 5.5" }
+    ],
+    "supportsReasoning": false,
+    "docsUrl": "https://platform.claude.com/docs/en/models/overview"
+  },
+  {
+    "id": "google",
+    "name": "Google Gemini",
+    "models": [
+      { "id": "gemini-3.8-flash", "name": "Gemini 3.8 Flash" },
+      { "id": "gemini-4-argon", "name": "Gemini 4 Argon" },
+      { "id": "gemini-3.5-flash-lite", "name": "Gemini 3.5 Flash-Lite" }
+    ],
+    "supportsReasoning": false,
+    "docsUrl": "https://ai.google.dev/gemini-api/docs/models"
+  }
+]

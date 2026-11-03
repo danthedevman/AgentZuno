@@ -1,0 +1,18 @@
+[
+  {
+    "id": "entra",
+    "name": "Microsoft Entra ID",
+    "issuerHint": "https://login.microsoftonline.com/YOUR-TENANT-ID/v2.0"
+  },
+  { "id": "okta", "name": "Okta", "issuerHint": "https://YOUR-ORG.okta.com/oauth2/default" },
+  { "id": "google", "name": "Google Workspace", "issuerHint": "https://accounts.google.com" },
+  { "id": "onelogin", "name": "OneLogin", "issuerHint": "https://YOUR-ORG.onelogin.com/oidc/2" },
+  {
+    "id": "ping",
+    "name": "Ping Identity",
+    "issuerHint": "https://auth.pingone.com/YOUR-ENVIRONMENT/as"
+  },
+  { "id": "auth0", "name": "Auth0", "issuerHint": "https://YOUR-TENANT.auth0.com/" },
+  { "id": "keycloak", "name": "Keycloak", "issuerHint": "https://YOUR-DOMAIN/realms/YOUR-REALM" },
+  { "id": "custom", "name": "Custom OpenID Connect", "issuerHint": "https://YOUR-ISSUER" }
+]

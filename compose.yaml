@@ -1,0 +1,122 @@
+services:
+  mongo:
+    image: mongo:8
+    ports:
+      - '127.0.0.1:${MONGO_PORT:-27017}:27017'
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ['CMD', 'mongosh', '--quiet', '--eval', 'db.adminCommand({ ping: 1 })']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+  redis:
+    image: redis:7-alpine
+    command:
+      [
+        'redis-server',
+        '--appendonly',
+        'yes',
+        '--appendfsync',
+        'everysec',
+        '--maxmemory-policy',
+        'noeviction',
+      ]
+    ports:
+      - '127.0.0.1:${REDIS_PORT:-6379}:6379'
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+  api:
+    build: ./api
+    ports:
+      - '${API_PORT:-3001}:3001'
+    environment: &api-environment
+      PORT: 3001
+      MONGODB_URI: mongodb://mongo:27017/agentzuno
+      APP_ORIGIN: ${APP_ORIGIN:-http://localhost:3000}
+      CUSTOM_DOMAIN_TARGET: ${CUSTOM_DOMAIN_TARGET:-}
+      CREDENTIAL_ENCRYPTION_KEY: ${CREDENTIAL_ENCRYPTION_KEY:-}
+      OIDC_ALLOWED_ORIGINS: ${OIDC_ALLOWED_ORIGINS:-}
+      REDIS_URL: redis://redis:6379
+      OLLAMA_URL: http://ollama:11434
+      QDRANT_URL: http://qdrant:6333
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+    depends_on:
+      redis:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+    init: true
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+  worker:
+    build: ./api
+    command: ['node', 'src/worker.js']
+    environment: *api-environment
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'node', 'src/workerHealth.js']
+      interval: 30s
+      timeout: 5s
+      start_period: 40s
+      retries: 3
+    init: true
+    stop_grace_period: 2m
+    read_only: true
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports: ['127.0.0.1:${QDRANT_PORT:-6333}:6333']
+    volumes: [qdrant-data:/qdrant/storage]
+    restart: unless-stopped
+    security_opt: [no-new-privileges:true]
+  ollama:
+    image: ollama/ollama:latest
+    ports: ['127.0.0.1:${OLLAMA_PORT:-11434}:11434']
+    volumes: [ollama-data:/root/.ollama]
+    restart: unless-stopped
+    security_opt: [no-new-privileges:true]
+  ollama-model:
+    image: ollama/ollama:latest
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: ['/bin/sh', '-c']
+    command: ['sleep 5; ollama pull nomic-embed-text']
+    depends_on: [ollama]
+    restart: on-failure
+  web:
+    build: .
+    ports:
+      - '${PORT:-3000}:8080'
+    depends_on:
+      api:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+volumes:
+  mongo-data:
+  redis-data:
+  qdrant-data:
+  ollama-data:

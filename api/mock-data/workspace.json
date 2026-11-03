@@ -1,0 +1,327 @@
+{
+  "mode": "guest",
+  "name": "Explore AgentZuno",
+  "description": "Your product tour, knowledge workspace, and help center. All in one place.",
+  "knowledgeBases": [
+    {
+      "id": "start",
+      "name": "Getting started",
+      "description": "Take a tour and find your first answer.",
+      "icon": "compass"
+    },
+    {
+      "id": "guide",
+      "name": "Product guides",
+      "description": "Discover the ideas behind your workspace.",
+      "icon": "layers"
+    },
+    {
+      "id": "help",
+      "name": "Help & answers",
+      "description": "Practical answers about this preview.",
+      "icon": "help"
+    }
+  ],
+  "articles": [
+    {
+      "id": "welcome",
+      "title": "Meet your knowledge workspace",
+      "base": "start",
+      "summary": "A shared home for the answers your people and agents need.",
+      "sections": [
+        {
+          "heading": "One workspace, many ways to find answers",
+          "text": "AgentZuno brings knowledge, source connections, and agent configurations into a familiar workspace. This public edition is both a product tour and a help center: the examples you explore are real explanations of how the product is being built."
+        },
+        {
+          "heading": "Explore before you sign in",
+          "text": "Use the sidebar to browse knowledge, inspect example agents, explore planned connections, and search the help content. You do not need an account to take the tour."
+        },
+        {
+          "heading": "Make it yours",
+          "text": "Sign in with a demo account to switch this same interface to that account\u2019s own mock items. The guest collection is public product content; it is never another customer\u2019s workspace."
+        }
+      ],
+      "label": "AgentZuno guide",
+      "updatedAt": "2026-10-28T09:00:00Z",
+      "publicationState": "published",
+      "status": "Published"
+    },
+    {
+      "id": "guest-access",
+      "title": "Explore first. Sign in when it is yours.",
+      "base": "start",
+      "summary": "How public exploration and personal workspaces fit together.",
+      "sections": [
+        {
+          "heading": "Public by design",
+          "text": "The guest workspace contains only AgentZuno product guides and clearly labeled examples. It is available without registration. Opening a page, searching, and reading help do not require sign-in."
+        },
+        {
+          "heading": "A clear change of context",
+          "text": "After sign-in, the workspace name, articles, agents, and tasks change to your account\u2019s mock dataset. The Explore AgentZuno link opens the public help collection without replacing your own workspace."
+        },
+        {
+          "heading": "A prototype, honestly labeled",
+          "text": "This build uses JSON fixtures and in-memory sessions. Demo accounts demonstrate the separation between users. They are not intended to hold real private or sensitive information. Production identity and persistent storage come later."
+        }
+      ],
+      "label": "AgentZuno guide",
+      "updatedAt": "2026-10-27T09:00:00Z",
+      "publicationState": "published",
+      "status": "Published"
+    },
+    {
+      "id": "first-answer",
+      "title": "Find your first answer",
+      "base": "start",
+      "summary": "Use search, knowledge bases, and article links to explore.",
+      "sections": [
+        {
+          "heading": "Search across the workspace",
+          "text": "Open Search in the sidebar and type a phrase such as permissions, agents, or connections. Results match article titles, summaries, and content in your current workspace."
+        },
+        {
+          "heading": "Browse by topic",
+          "text": "Knowledge bases group related articles. Choose a base to filter its articles, then open any title to read the full guide. Pages have their own URLs, so browser back and direct links work."
+        },
+        {
+          "heading": "Keep the source close",
+          "text": "Every public guide is labeled as AgentZuno product content. Future imported sources should retain source attribution and permissions. This prototype does not connect to external services."
+        }
+      ],
+      "label": "AgentZuno guide",
+      "updatedAt": "2026-10-26T09:00:00Z",
+      "publicationState": "published",
+      "status": "Published"
+    },
+    {
+      "id": "knowledge-guide",
+      "title": "Give useful knowledge a home",
+      "base": "guide",
+      "summary": "A simple structure for information your team can trust.",
+      "sections": [
+        {
+          "heading": "Start with an answer",
+          "text": "Organize articles around the question a reader is trying to answer. Use a specific title, a short summary, and clear sections. The examples in this workspace show that structure."
+        },
+        {
+          "heading": "Group with intent",
+          "text": "Use a knowledge base for a stable topic, such as getting started, product guidance, or internal operations. Prefer a small number of useful categories to a long list of empty folders."
+        },
+        {
+          "heading": "What works in this preview",
+          "text": "You can browse and search articles and filter by knowledge base. Editing, publication workflows, and version history are future features; the preview is read-only."
+        }
+      ],
+      "label": "AgentZuno guide",
+      "updatedAt": "2026-10-25T09:00:00Z",
+      "publicationState": "published",
+      "status": "Published"
+    },
+    {
+      "id": "agent-guide",
+      "title": "Knowledge for any agent",
+      "base": "guide",
+      "summary": "Explore how agents can use a shared body of knowledge.",
+      "sections": [
+        {
+          "heading": "A shared source of truth",
+          "text": "The goal is to let people and agents work from the same curated knowledge. Agent configurations can describe a purpose, a knowledge scope, and rules about citing sources."
+        },
+        {
+          "heading": "Inspect an example",
+          "text": "The Agents page contains example configurations you can open and read. They are product examples, not connected AI services. No model requests are executed in this preview."
+        },
+        {
+          "heading": "Keep access aligned",
+          "text": "A future agent should receive only content available to its authenticated identity. Connecting an AI service will require an explicit implementation and a deliberate choice about where content is sent."
+        }
+      ],
+      "label": "AgentZuno guide",
+      "updatedAt": "2026-10-24T09:00:00Z",
+      "publicationState": "published",
+      "status": "Published"
+    },
+    {
+      "id": "connections-guide",
+      "title": "Connect the tools your team uses",
+      "base": "guide",
+      "summary": "Connect ServiceNow knowledge, index it locally, and give agents controlled access.",
+      "sections": [
+        {
+          "heading": "Connect ServiceNow as a reader",
+          "text": "Ask your administrator to install the AgentZuno knowledge permission bridge, then connect with a delegated user OAuth token. Source-enforced reads evaluate ServiceNow ACLs and KB/article user criteria before returning content."
+        },
+        {
+          "heading": "Import and index",
+          "text": "Preserve source knowledge-base names or bundle articles into an existing base. MongoDB stores snapshots and chunks; the worker uses local Ollama embeddings and Qdrant vector indexes. Connection status shows indexing progress."
+        },
+        {
+          "heading": "Give agents access",
+          "text": "Create each agent and grant only the knowledge bases it needs. Tokens inherit the agent\u2019s current permissions. Every source-enforced result is checked again in ServiceNow; cached vectors never grant access."
+        },
+        {
+          "heading": "Other sources",
+          "text": "Use the Custom connection action for authorized JSON or HTTPS API snapshots. Custom imports use AgentZuno-managed permissions and do not synchronize source access rules."
+        }
+      ],
+      "label": "AgentZuno guide",
+      "updatedAt": "2026-10-23T09:00:00Z",
+      "publicationState": "published",
+      "status": "Published"
+    },
+    {
+      "id": "demo-signin",
+      "title": "Try your own workspace with a demo account",
+      "base": "help",
+      "summary": "Two accounts let you test a genuine change of context.",
+      "sections": [
+        {
+          "heading": "Choose a demo account",
+          "text": "Open Sign in and choose Alex or Jordan. The form shows the public demo credentials. Continue to enter that account\u2019s workspace; you do not need to register or supply personal information."
+        },
+        {
+          "heading": "Separate on the server",
+          "text": "A session cookie identifies the selected account. The API chooses that account\u2019s JSON fixture on the server. Adding another user ID to a URL does not select their data."
+        },
+        {
+          "heading": "Sign out to return to exploring",
+          "text": "Use Sign out in the account section. Your workspace returns to the public AgentZuno collection. Sessions are temporary and reset when the API container restarts."
+        }
+      ],
+      "label": "AgentZuno guide",
+      "updatedAt": "2026-10-22T09:00:00Z",
+      "publicationState": "published",
+      "status": "Published"
+    },
+    {
+      "id": "help-faq",
+      "title": "Answers about this preview",
+      "base": "help",
+      "summary": "What is available, what is mocked, and what comes next.",
+      "sections": [
+        {
+          "heading": "Can I use this without an account?",
+          "text": "Yes. Public product articles, help, example agents, and the connection catalog are available to everyone. The app itself is the tour."
+        },
+        {
+          "heading": "Can I add my own documents yet?",
+          "text": "Not yet. This version is read-only and uses mock JSON objects. Uploads, editing, and live source connections will be added as separate features."
+        },
+        {
+          "heading": "Is this a live AI assistant?",
+          "text": "No. Agent cards describe example configurations. They do not run models or send your information to AI providers."
+        },
+        {
+          "heading": "Why does my demo workspace look different?",
+          "text": "Each demo account has its own articles, agents, and tasks. The shared navigation stays the same, but the items shown are chosen from that account\u2019s dataset."
+        }
+      ],
+      "label": "AgentZuno guide",
+      "updatedAt": "2026-10-21T09:00:00Z",
+      "publicationState": "published",
+      "status": "Published"
+    }
+  ],
+  "integrations": [
+    {
+      "id": "servicenow",
+      "name": "ServiceNow",
+      "description": "Bring curated service knowledge into one workspace.",
+      "status": "Planned adapter"
+    },
+    {
+      "id": "drive",
+      "name": "Google Drive",
+      "description": "Make team documents easier to discover.",
+      "status": "Planned adapter"
+    },
+    {
+      "id": "slack",
+      "name": "Slack",
+      "description": "Turn useful team conversations into lasting answers.",
+      "status": "Planned adapter"
+    },
+    {
+      "id": "teams",
+      "name": "Microsoft Teams",
+      "description": "Keep collaboration connected to your knowledge.",
+      "status": "Planned adapter"
+    },
+    {
+      "id": "jira",
+      "name": "Jira",
+      "description": "Connect delivery context with useful documentation.",
+      "status": "Planned adapter"
+    },
+    {
+      "id": "rest",
+      "name": "Custom REST API",
+      "description": "Plan a connection to another source of knowledge.",
+      "status": "Planned adapter"
+    }
+  ],
+  "agents": [
+    {
+      "id": "guide-agent",
+      "name": "Workspace guide",
+      "description": "An example of a product assistant grounded in your help articles.",
+      "scope": "Getting started and Help & answers",
+      "rules": "Use only the selected knowledge. Cite the relevant article. Say when an answer is unavailable.",
+      "status": "Example configuration"
+    },
+    {
+      "id": "support-agent",
+      "name": "Support companion",
+      "description": "A pattern for answering common support questions from reviewed knowledge.",
+      "scope": "Product guides",
+      "rules": "Prefer published source material. Provide a citation with each answer. Never invent a source.",
+      "status": "Example configuration"
+    }
+  ],
+  "tasks": [],
+  "files": [
+    {
+      "id": "guest-workspace-notes",
+      "title": "Workspace notes.txt",
+      "base": "start",
+      "summary": "Example planning notes for a knowledge workspace.",
+      "updatedAt": "2026-10-28T11:00:00Z",
+      "content": "Workspace planning notes\n\nCollect useful knowledge, organize it into knowledge bases, and give agents the context they need.\n\nThis is a mock text file for exploring AgentZuno.",
+      "status": "Active"
+    }
+  ],
+  "images": [
+    {
+      "id": "guest-knowledge-map",
+      "title": "Knowledge connections.svg",
+      "base": "start",
+      "summary": "An example illustration connecting knowledge, people, and agents.",
+      "updatedAt": "2026-10-28T10:00:00Z",
+      "alt": "Five connected nodes forming a knowledge network.",
+      "src": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22960%22%20height%3D%22540%22%20viewBox%3D%220%200%20960%20540%22%3E%3Crect%20width%3D%22960%22%20height%3D%22540%22%20fill%3D%22%23080c16%22/%3E%3Cg%20stroke%3D%22%236d9bdf%22%20stroke-width%3D%222%22%20fill%3D%22none%22%3E%3Cpath%20d%3D%22M240%20270%20480%20140%20720%20270%20480%20400Z%20M240%20270H720%20M480%20140V400%22/%3E%3C/g%3E%3Cg%20fill%3D%22%23b2ceff%22%3E%3Ccircle%20cx%3D%22240%22%20cy%3D%22270%22%20r%3D%2212%22/%3E%3Ccircle%20cx%3D%22480%22%20cy%3D%22140%22%20r%3D%2212%22/%3E%3Ccircle%20cx%3D%22720%22%20cy%3D%22270%22%20r%3D%2212%22/%3E%3Ccircle%20cx%3D%22480%22%20cy%3D%22400%22%20r%3D%2212%22/%3E%3Ccircle%20cx%3D%22480%22%20cy%3D%22270%22%20r%3D%2220%22/%3E%3C/g%3E%3Ctext%20x%3D%22480%22%20y%3D%22485%22%20fill%3D%22%23b2ceff%22%20font-family%3D%22sans-serif%22%20font-size%3D%2222%22%20text-anchor%3D%22middle%22%3EKnowledge%20%C2%B7%20People%20%C2%B7%20Agents%3C/text%3E%3C/svg%3E",
+      "status": "Active"
+    }
+  ],
+  "topics": [
+    {
+      "id": "getting-started",
+      "name": "Getting started",
+      "description": "Find your way around AgentZuno.",
+      "articleIds": ["welcome", "guest-access", "first-answer"]
+    },
+    {
+      "id": "knowledge-management",
+      "name": "Knowledge management",
+      "description": "Organize useful knowledge and connect sources.",
+      "articleIds": ["knowledge-guide", "connections-guide"]
+    },
+    {
+      "id": "agent-access",
+      "name": "Agent access",
+      "description": "Connect assistants with controlled knowledge access.",
+      "articleIds": ["agent-guide"]
+    }
+  ]
+}

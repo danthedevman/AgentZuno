@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "jsx": "preserve",
+    "jsxImportSource": "solid-js",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "target": "ES2022"
+  },
+  "include": ["src", "vite.config.js"]
+}

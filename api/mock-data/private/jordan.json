@@ -1,0 +1,73 @@
+{
+  "mode": "personal",
+  "name": "Jordan\u2019s workspace",
+  "description": "Your own mock knowledge, agents, and tasks.",
+  "knowledgeBases": [
+    {
+      "id": "jordan-team",
+      "name": "Support team",
+      "description": "Knowledge for your day-to-day work.",
+      "icon": "layers"
+    }
+  ],
+  "articles": [
+    {
+      "id": "jordan-welcome",
+      "title": "Support team handbook",
+      "base": "jordan-team",
+      "summary": "An example item that belongs only to Jordan.",
+      "label": "Your mock article",
+      "sections": [
+        {
+          "heading": "A workspace of your own",
+          "text": "This article is part of Jordan Lee\u2019s private mock dataset. The guest workspace and the other demo account do not receive it."
+        },
+        {
+          "heading": "Build your knowledge here",
+          "text": "This area will eventually hold your own content. For now, it shows how the same interface switches from exploration to a personal workspace after sign-in."
+        }
+      ],
+      "updatedAt": "2026-10-28T09:00:00Z"
+    }
+  ],
+  "agents": [
+    {
+      "id": "jordan-agent",
+      "name": "Support team assistant",
+      "description": "Your own example agent configuration.",
+      "scope": "Support team",
+      "rules": "Use team knowledge only and include source citations.",
+      "status": "Example configuration"
+    }
+  ],
+  "integrations": [],
+  "tasks": [
+    {
+      "id": "jordan-review",
+      "name": "Review your team handbook",
+      "status": "To do",
+      "description": "A sample content review task in your workspace."
+    }
+  ],
+  "files": [
+    {
+      "id": "jordan-workspace-notes",
+      "title": "Jordan team notes.txt",
+      "base": "jordan-team",
+      "summary": "Example planning notes for a knowledge workspace.",
+      "updatedAt": "2026-10-28T11:00:00Z",
+      "content": "Workspace planning notes\n\nCollect useful knowledge, organize it into knowledge bases, and give agents the context they need.\n\nThis is a mock text file for exploring AgentZuno."
+    }
+  ],
+  "images": [
+    {
+      "id": "jordan-knowledge-map",
+      "title": "Jordan knowledge map.svg",
+      "base": "jordan-team",
+      "summary": "An example illustration connecting knowledge, people, and agents.",
+      "updatedAt": "2026-10-28T10:00:00Z",
+      "alt": "Five connected nodes forming a knowledge network.",
+      "src": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22960%22%20height%3D%22540%22%20viewBox%3D%220%200%20960%20540%22%3E%3Crect%20width%3D%22960%22%20height%3D%22540%22%20fill%3D%22%23080c16%22/%3E%3Cg%20stroke%3D%22%236d9bdf%22%20stroke-width%3D%222%22%20fill%3D%22none%22%3E%3Cpath%20d%3D%22M240%20270%20480%20140%20720%20270%20480%20400Z%20M240%20270H720%20M480%20140V400%22/%3E%3C/g%3E%3Cg%20fill%3D%22%23b2ceff%22%3E%3Ccircle%20cx%3D%22240%22%20cy%3D%22270%22%20r%3D%2212%22/%3E%3Ccircle%20cx%3D%22480%22%20cy%3D%22140%22%20r%3D%2212%22/%3E%3Ccircle%20cx%3D%22720%22%20cy%3D%22270%22%20r%3D%2212%22/%3E%3Ccircle%20cx%3D%22480%22%20cy%3D%22400%22%20r%3D%2212%22/%3E%3Ccircle%20cx%3D%22480%22%20cy%3D%22270%22%20r%3D%2220%22/%3E%3C/g%3E%3Ctext%20x%3D%22480%22%20y%3D%22485%22%20fill%3D%22%23b2ceff%22%20font-family%3D%22sans-serif%22%20font-size%3D%2222%22%20text-anchor%3D%22middle%22%3EKnowledge%20%C2%B7%20People%20%C2%B7%20Agents%3C/text%3E%3C/svg%3E"
+    }
+  ]
+}

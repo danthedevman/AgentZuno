@@ -1,0 +1,6 @@
+[
+  { "id": "codex", "name": "Codex" },
+  { "id": "claude", "name": "Claude" },
+  { "id": "cursor", "name": "Cursor" },
+  { "id": "custom", "name": "Custom agent" }
+]

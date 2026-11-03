@@ -1,0 +1,30 @@
+{
+  "name": "agentzuno-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=../.env src/index.js",
+    "dev": "node --env-file-if-exists=../.env --watch src/index.js",
+    "test": "node --test",
+    "worker": "node --env-file-if-exists=../.env src/worker.js",
+    "workflow:test": "node scripts/preview-workflow.mjs"
+  },
+  "dependencies": {
+    "bullmq": "^6.5.1",
+    "express": "^5.3.0",
+    "ioredis": "^6.0.0",
+    "ipaddr.js": "^2.5.0",
+    "mongodb": "^7.7.0",
+    "nodemailer": "^10.3.1",
+    "openid-client": "^6.8.8",
+    "quickjs-emscripten": "^0.32.0",
+    "sanitize-html": "^2.18.1",
+    "sharp": "^0.35.5",
+    "typescript": "^5.9.3"
+  },
+  "license": "Apache-2.0"
+}

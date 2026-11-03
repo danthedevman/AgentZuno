@@ -1,0 +1,306 @@
+import ReferenceArrow from '../../components/ReferenceArrow.jsx';
+import BackLink from '../../components/BackLink.jsx';
+import { untrack } from 'solid-js';
+import { confirmRemovedFields, clearConfirmedFields } from '../../services/confirmations.js';
+import DataTableBuilder from '../../components/DataTableBuilder.jsx';
+import { Show, createEffect, createResource, createSignal, onCleanup } from 'solid-js';
+import { createStore, reconcile } from 'solid-js/store';
+import { useNavigate, useParams, useSearchParams } from '@solidjs/router';
+import { useWorkspace } from '../../context/WorkspaceContext.jsx';
+import { useWorkspacePath } from '../../services/workspaceRoutes.js';
+import { api } from '../../services/api.js';
+import { useToasts } from '../../context/ToastContext.jsx';
+import A from '../../components/WorkspaceLink.jsx';
+import PageHeading from '../../components/PageHeading.jsx';
+import RecordTable from '../../components/RecordTable.jsx';
+import ToastMessage from '../../components/ToastMessage.jsx';
+const emptyDefinition = () => ({
+  name: '',
+  description: '',
+  fields: [{ id: 'name', label: 'Name', type: 'text', required: true }],
+});
+export default function DataPage() {
+  const params = useParams();
+  const [query, setQuery] = useSearchParams();
+  const navigate = useNavigate();
+  const path = useWorkspacePath();
+  const { access } = useWorkspace();
+  const { notify } = useToasts();
+  const isAdmin = () => !access.error && access()?.role === 'admin';
+  const isNew = () => params.id === 'new';
+  const designing = () => isNew() || query.design === '1';
+  const [tables, { refetch: refreshTables }] = createResource(isAdmin, () =>
+    api('/api/helpdesk/data/tables'),
+  );
+  const [table, { refetch: refreshTable }] = createResource(
+    () => (isAdmin() && params.id && !isNew() ? params.id : false),
+    (id) => api(`/api/helpdesk/data/tables/${id}`),
+  );
+  const [draft, setDraft] = createSignal(emptyDefinition());
+  createEffect(() => {
+    if (!table.error && table())
+      setDraft({ name: table().name, description: table().description, fields: table().fields });
+  });
+  const [prompt, setPrompt] = createSignal('');
+  const [sending, setSending] = createSignal(false);
+  const [scrollRevision, setScrollRevision] = createSignal(0);
+  const [revision, setRevision] = createSignal(0);
+  const [saving, setSaving] = createSignal(false);
+  const chatId = () => (/^[a-f0-9]{24}$/.test(query.chat || '') ? query.chat : '');
+  const [conversation, { refetch: refreshConversation }] = createResource(
+    () => isAdmin() && (chatId() || false),
+    (id) => api(`/api/helpdesk/data/conversations/${id}`),
+  );
+  const [messages, setMessages] = createStore([]);
+  let previousProposal = '';
+  createEffect(() => {
+    setMessages(
+      reconcile(!conversation.error ? conversation()?.messages || [] : [], { key: 'id' }),
+    );
+    if (!conversation.error && conversation()?.definition) {
+      const proposal = JSON.stringify(conversation().definition);
+      if (proposal !== previousProposal) {
+        previousProposal = proposal;
+        const next = conversation().definition;
+        const before = untrack(() => draft().fields || []);
+        confirmRemovedFields(before, next.fields || []).then((approved) => {
+          if (approved) setDraft(next);
+        });
+      }
+    }
+  });
+  const processing = () =>
+    !conversation.error && ['queued', 'responding'].includes(conversation()?.status);
+  createEffect(() => {
+    if (processing()) {
+      const timer = setInterval(() => refreshConversation().catch(() => {}), 600);
+      onCleanup(() => clearInterval(timer));
+    }
+  });
+  async function send(event) {
+    event.preventDefault();
+    if (sending() || processing() || !prompt().trim()) return;
+    setSending(true);
+    try {
+      const definition =
+        draft().name.trim() && draft().fields.every((field) => field.label.trim())
+          ? draft()
+          : undefined;
+      const result = await api(
+        chatId()
+          ? `/api/helpdesk/data/conversations/${chatId()}/messages`
+          : '/api/helpdesk/data/conversations',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            text: prompt().trim(),
+            ...(chatId() ? {} : { requestId: crypto.randomUUID() }),
+            ...(definition ? { definition } : {}),
+          }),
+        },
+      );
+      if (!chatId()) setQuery({ chat: result.id });
+      setPrompt('');
+      await refreshConversation();
+      setScrollRevision((value) => value + 1);
+    } catch (error) {
+      notify({ tone: 'error', message: error.message });
+    } finally {
+      setSending(false);
+    }
+  }
+  async function saveTable(event) {
+    event.preventDefault();
+    if (!(await confirmRemovedFields(table()?.fields || [], draft()?.fields || []))) return;
+    setSaving(true);
+    try {
+      const result = await api(
+        isNew() ? '/api/helpdesk/data/tables' : `/api/helpdesk/data/tables/${params.id}`,
+        {
+          method: isNew() ? 'POST' : 'PUT',
+          body: JSON.stringify({
+            confirmedRemovedFieldIds: (table()?.fields || [])
+              .filter((field) => !draft().fields.some((item) => item.id === field.id))
+              .map((field) => field.id),
+            definition: draft(),
+            ...(isNew() ? {} : { version: table().version }),
+          }),
+        },
+      );
+      clearConfirmedFields();
+      await refreshTables();
+      notify({ tone: 'success', message: 'Table saved.' });
+      navigate(path(`/workspace/data/${result.id}${chatId() ? `?chat=${chatId()}` : ''}`));
+      await refreshTable();
+    } catch (error) {
+      notify({ tone: 'error', message: error.message });
+    } finally {
+      setSaving(false);
+    }
+  }
+  function openRecord(item = null) {
+    navigate(path(`/workspace/data/${params.id}/records/${item?.id || 'new'}`));
+  }
+  return (
+    <section class={designing() ? 'workflow-page is-builder data-page' : 'reading-page data-page'}>
+      <Show
+        when={isAdmin()}
+        fallback={
+          <Show when={!access.loading && !!access()}>
+            <ToastMessage tone="error">Administrator access is required.</ToastMessage>
+          </Show>
+        }
+      >
+        <Show
+          when={!params.id}
+          fallback={
+            <>
+              <Show when={!designing()}>
+                <BackLink href="/workspace/data">Data</BackLink>
+                <div class="connections-heading">
+                  <PageHeading title={isNew() ? 'New Table' : table()?.name || 'Table'} />
+                  <Show when={!designing() && table()}>
+                    <div class="helpdesk-actions">
+                      <button
+                        class="workspace-button secondary small"
+                        onClick={() => setQuery({ design: '1' })}
+                      >
+                        Edit Fields
+                      </button>
+                      <button
+                        class="workspace-button small"
+                        disabled={table()?.sourceManaged}
+                        onClick={() => openRecord()}
+                      >
+                        Add Record
+                      </button>
+                    </div>
+                  </Show>
+                </div>
+              </Show>
+              <Show when={table.error}>
+                <ToastMessage tone="error">{table.error.message}</ToastMessage>
+              </Show>
+              <Show
+                when={designing()}
+                fallback={
+                  <Show when={!table.error && table()}>
+                    {(value) => (
+                      <RecordTable
+                        label={`${value().name} Records`}
+                        emptyAction={
+                          value().sourceManaged
+                            ? undefined
+                            : { label: 'Add Record', onClick: () => openRecord() }
+                        }
+                        source={`/api/helpdesk/data/tables/${params.id}/records`}
+                        refreshKey={revision()}
+                        onRowClick={openRecord}
+                        columns={[
+                          ...value().fields.map((field) => ({
+                            key: field.id,
+                            label: field.label,
+                            render: (row) =>
+                              field.type === 'reference' ? (
+                                <span class="record-reference-value">
+                                  {row.labels[field.id] || '—'}
+                                  <ReferenceArrow
+                                    href={
+                                      row.values[field.id]
+                                        ? field.referenceTable === 'users'
+                                          ? `/workspace/users/${row.values[field.id]}`
+                                          : `/workspace/data/${field.referenceTable}/records/${row.values[field.id]}`
+                                        : ''
+                                    }
+                                    label={field.label}
+                                  />
+                                </span>
+                              ) : typeof row.values[field.id] === 'boolean' ? (
+                                row.values[field.id] ? (
+                                  'Yes'
+                                ) : (
+                                  'No'
+                                )
+                              ) : (
+                                String(row.values[field.id] ?? '—')
+                              ),
+                          })),
+                          {
+                            label: 'Updated',
+                            defaultDirection: 'desc',
+                            render: (row) =>
+                              row.updatedAt ? new Date(row.updatedAt).toLocaleString() : '—',
+                          },
+                        ]}
+                      />
+                    )}
+                  </Show>
+                }
+              >
+                <DataTableBuilder
+                  scrollRevision={scrollRevision()}
+                  value={draft()}
+                  onChange={setDraft}
+                  tables={tables() || []}
+                  protectedFields={!table.error ? table()?.protectedFields || [] : []}
+                  isNew={isNew()}
+                  tableId={params.id}
+                  saving={saving()}
+                  onSave={saveTable}
+                  prompt={prompt()}
+                  onPrompt={setPrompt}
+                  onSend={send}
+                  sending={sending()}
+                  processing={processing()}
+                  failed={!conversation.error && conversation()?.status === 'failed'}
+                  error={conversation.error?.message}
+                  messages={messages}
+                />
+              </Show>
+            </>
+          }
+        >
+          <div class="connections-heading">
+            <PageHeading title="Data" />
+            <A class="workspace-button small" href="/workspace/data/new">
+              New Table
+            </A>
+          </div>
+          <RecordTable
+            label="Data Tables"
+            emptyAction={{ label: 'Add Table', href: '/workspace/data/new' }}
+            source="/api/helpdesk/data/tables"
+            defaultSort={{ key: 'Table', direction: 'asc' }}
+            columns={[
+              {
+                label: 'Table',
+                render: (item) => (
+                  <A class="article-table-title" href={`/workspace/data/${item.id}`}>
+                    <span>
+                      <strong>{item.name}</strong>
+                      <small>
+                        {item.system
+                          ? item.description === 'IT service desk records'
+                            ? 'Built-In Table'
+                            : 'Shared Workforce References'
+                          : 'Custom Table'}
+                      </small>
+                    </span>
+                  </A>
+                ),
+              },
+              { label: 'Description', render: (item) => item.description },
+              { label: 'Fields', render: (item) => item.fields.length },
+              {
+                label: 'Updated',
+                defaultDirection: 'desc',
+                render: (item) =>
+                  item.updatedAt ? new Date(item.updatedAt).toLocaleString() : '—',
+              },
+            ]}
+          />
+        </Show>
+      </Show>
+    </section>
+  );
+}
