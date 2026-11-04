@@ -372,8 +372,6 @@ export default function ChatPage() {
             <div
               class="chat-messages"
               ref={messageList}
-              onWheel={() => setResponseReveal(null)}
-              onTouchStart={() => setResponseReveal(null)}
               role="log"
               aria-label="Chat messages"
               aria-live="polite"

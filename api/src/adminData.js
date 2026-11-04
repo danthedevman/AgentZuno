@@ -1,3 +1,4 @@
+import { isEmailAddress } from './emailAddress.js';
 import { requireCompatibleDemoReferences } from './demoReferences.js';
 import { workspaceGroups } from './groups.js';
 import { userReferenceOptions } from './userReferences.js';
@@ -636,8 +637,7 @@ export function createAdminData(store) {
           new Date(value).toISOString().slice(0, 10) !== value)
       )
         deny('Invalid date.', 400);
-      if (field.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))
-        deny('Invalid email.', 400);
+      if (field.type === 'email' && !isEmailAddress(value)) deny('Invalid email.', 400);
       if (
         field.type === 'reference' &&
         !(await options(user, field.referenceTable, Boolean(source?.demoDatasetId))).some(

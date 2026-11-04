@@ -1,3 +1,4 @@
+import { rateLimit } from 'express-rate-limit';
 import { decryptSecret } from './secrets.js';
 import { randomBytes, createHash } from 'node:crypto';
 
@@ -18,6 +19,16 @@ const providers = {
 };
 
 export function installConnectionOAuthRoutes(app, store, service, fetcher = fetch) {
+  app.use(
+    '/api/connections/oauth/start',
+    rateLimit({
+      windowMs: 60000,
+      limit: 20,
+      standardHeaders: 'draft-8',
+      legacyHeaders: false,
+      message: { error: 'Too many attempts. Try again in a minute.' },
+    }),
+  );
   const cookieOptions = {
     httpOnly: true,
     sameSite: 'lax',

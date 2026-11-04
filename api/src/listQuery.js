@@ -5,13 +5,14 @@ export function listResponse(request, records, columns, defaults = {}) {
   if (request.query.list !== '1') return records;
   const q = request.query.q ?? '';
   const sort = request.query.sort || defaults.sort || Object.keys(columns)[0];
+  const selectedColumn = Object.entries(columns).find(([name]) => name === sort);
   const direction = request.query.direction || defaults.direction || 'asc';
   const page = Number(request.query.page || 1);
   const pageSize = Number(request.query.pageSize || 20);
   if (
     typeof q !== 'string' ||
     q.length > 200 ||
-    !Object.hasOwn(columns, sort) ||
+    !selectedColumn ||
     !['asc', 'desc'].includes(direction) ||
     !Number.isInteger(page) ||
     page < 1 ||
@@ -35,8 +36,8 @@ export function listResponse(request, records, columns, defaults = {}) {
     : records;
   const sign = direction === 'asc' ? 1 : -1;
   const ordered = [...filtered].sort((a, b) => {
-    const left = value(a, columns[sort]);
-    const right = value(b, columns[sort]);
+    const left = value(a, selectedColumn[1]);
+    const right = value(b, selectedColumn[1]);
     const missingLeft = left === undefined || left === null || left === '';
     const missingRight = right === undefined || right === null || right === '';
     if (missingLeft !== missingRight) return missingLeft ? 1 : -1;

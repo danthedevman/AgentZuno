@@ -1,12 +1,11 @@
+import { uploadBytes } from './uploadBytes.js';
 import sharp from 'sharp';
 import { deny, helpdeskScope } from './helpdeskRoles.js';
 
 export function installProfilePictureRoutes(app, store) {
   app.put('/api/helpdesk/profile-picture', async (request, response) => {
     const user = request.helpdeskUser;
-    const bytes = request.body;
-    if (!Buffer.isBuffer(bytes) || !bytes.length || bytes.length > 5 * 1024 * 1024)
-      deny('Choose a PNG, JPEG, or WebP picture up to 5 MB.', 400);
+    const bytes = uploadBytes(request.body, 5242880);
     const type = bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))
       ? 'image/png'
       : bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255

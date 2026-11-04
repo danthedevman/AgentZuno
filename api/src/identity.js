@@ -1,3 +1,4 @@
+import { rateLimit } from 'express-rate-limit';
 import * as oidc from 'openid-client';
 import { provisionIdentityUser } from './helpdeskProvisioning.js';
 import { randomBytes, createHash } from 'node:crypto';
@@ -76,6 +77,16 @@ async function guardedFetch(url, options) {
 }
 
 export function installIdentityRoutes(app, store, auth) {
+  app.use(
+    '/api/auth/oidc',
+    rateLimit({
+      windowMs: 60000,
+      limit: 30,
+      standardHeaders: 'draft-8',
+      legacyHeaders: false,
+      message: { error: 'Too many attempts. Try again in a minute.' },
+    }),
+  );
   const origin = () => process.env.APP_ORIGIN || 'http://localhost:3000';
   const callback = () => `${origin()}/api/auth/oidc/callback`;
   const requireUser = (request, response, next) =>

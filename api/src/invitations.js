@@ -1,3 +1,4 @@
+import { isEmailAddress } from './emailAddress.js';
 import { listResponse } from './listQuery.js';
 import { randomBytes, createHash } from 'node:crypto';
 import { ObjectId } from 'mongodb';
@@ -91,7 +92,7 @@ export function installInvitationRoutes(app, store) {
     const input = request.body || {};
     const value = validateMember(input);
     const email = typeof input.email === 'string' ? input.email.trim().toLowerCase() : '';
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254 || !value.active)
+    if (!isEmailAddress(email) || email.length > 254 || !value.active)
       deny('Provide an email address and an active membership.', 400);
     if (
       await store.collection('identitySettings').findOne({ ...helpdeskScope(user), enabled: true })

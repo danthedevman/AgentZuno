@@ -1,5 +1,5 @@
 import { A, useLocation } from '@solidjs/router';
-import { For, createSignal, onMount, onCleanup } from 'solid-js';
+import { For, createEffect, createSignal, onMount, onCleanup } from 'solid-js';
 import ChatMarkdown from '../components/ChatMarkdown.jsx';
 import CodeBlock from '../components/CodeBlock.jsx';
 import knowledgeGuide from '../../docs/knowledge.md?raw';
@@ -22,6 +22,17 @@ export default function DocsPage() {
   const [sectionHeadings, setSectionHeadings] = createSignal({});
   const [activeHeading, setActiveHeading] = createSignal('');
   let content;
+  function openAnchor(hash) {
+    const id =
+      hash?.slice(1) ||
+      (location.pathname === '/docs/workflows' ? 'workflow-sdk' : 'getting-started');
+    content?.querySelector(`[id="${CSS.escape(id)}"]`)?.scrollIntoView({ block: 'start' });
+  }
+  createEffect(() => {
+    const hash = location.hash;
+    const frame = requestAnimationFrame(() => openAnchor(hash));
+    onCleanup(() => cancelAnimationFrame(frame));
+  });
   onMount(() => {
     const sections = sectionIds.map((id) => content.querySelector(`#${id}`));
     const headingsBySection = {};
@@ -52,24 +63,12 @@ export default function DocsPage() {
     const scheduleUpdate = () => {
       if (frame === undefined) frame = requestAnimationFrame(updateActiveSection);
     };
-    const openAnchor = () => {
-      const id =
-        location.hash.slice(1) ||
-        (location.pathname === '/docs/workflows' ? 'workflow-sdk' : 'getting-started');
-      if (content.querySelector(`[id="${CSS.escape(id)}"]`)) {
-        content.querySelector(`#${id}`).scrollIntoView();
-        scheduleUpdate();
-      }
-    };
-    openAnchor();
     updateActiveSection();
     window.addEventListener('scroll', scheduleUpdate, { passive: true });
     window.addEventListener('resize', scheduleUpdate);
-    window.addEventListener('hashchange', openAnchor);
     onCleanup(() => {
       window.removeEventListener('scroll', scheduleUpdate);
       window.removeEventListener('resize', scheduleUpdate);
-      window.removeEventListener('hashchange', openAnchor);
       if (frame !== undefined) cancelAnimationFrame(frame);
     });
   });
@@ -89,7 +88,13 @@ export default function DocsPage() {
           </A>
         </nav>
       </header>
-      <div class="docs-layout">
+      <div
+        class="docs-layout"
+        onClick={(event) => {
+          const hash = event.target.closest('a[href^="#"]')?.getAttribute('href');
+          if (hash) requestAnimationFrame(() => openAnchor(hash));
+        }}
+      >
         <aside class="docs-navigation">
           <nav aria-label="Documentation">
             <a

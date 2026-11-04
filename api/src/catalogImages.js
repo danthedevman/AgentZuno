@@ -1,3 +1,4 @@
+import { uploadBytes } from './uploadBytes.js';
 import { matchesWorkflowDepartment } from './workflowDepartments.js';
 import sharp from 'sharp';
 import { ObjectId } from 'mongodb';
@@ -17,13 +18,8 @@ export function installCatalogImageRoutes(app, store) {
   app.post('/api/helpdesk/catalog-images', async (request, response) => {
     const user = request.helpdeskUser;
     requireRole(user, ['admin']);
-    const bytes = request.body;
-    if (
-      !Buffer.isBuffer(bytes) ||
-      !bytes.length ||
-      bytes.length > 5 * 1024 * 1024 ||
-      !['image/png', 'image/jpeg', 'image/webp'].includes(request.headers['content-type'])
-    )
+    const bytes = uploadBytes(request.body, 5242880);
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(request.headers['content-type']))
       deny('Choose a PNG, JPEG, or WebP image up to 5 MB.', 400);
     if (
       (await store.collection('catalogImages').countDocuments({
@@ -62,6 +58,7 @@ export function installCatalogImageRoutes(app, store) {
     if (!image) deny('Image not found.', 404);
     if (user.role !== 'admin') {
       const workflow =
+        typeof request.query.workflow === 'string' &&
         ObjectId.isValid(request.query.workflow) &&
         (await store.collection('helpdeskWorkflows').findOne({
           ...helpdeskScope(user),

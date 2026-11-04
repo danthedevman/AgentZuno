@@ -1,3 +1,4 @@
+import { rateLimit } from 'express-rate-limit';
 import { databaseConfiguration, needsDatabaseSetup } from './storage/configuration.js';
 import { randomBytes } from 'node:crypto';
 import { domainToASCII } from 'node:url';
@@ -181,6 +182,16 @@ export function createCustomDomains(store, dns = { resolveTxt, resolveCname }) {
   return { get, save, verify, disable, remove, resolve };
 }
 export function installCustomDomainRoutes(app, service) {
+  app.use(
+    '/api/helpdesk/domain',
+    rateLimit({
+      windowMs: 60000,
+      limit: 30,
+      standardHeaders: 'draft-8',
+      legacyHeaders: false,
+      message: { error: 'Too many attempts. Try again in a minute.' },
+    }),
+  );
   app.get('/api/helpdesk/domain', async (req, res) =>
     res.json(await service.get(req.helpdeskUser)),
   );

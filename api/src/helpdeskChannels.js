@@ -1,3 +1,4 @@
+import { isEmailAddress } from './emailAddress.js';
 import { getConnectorActions, saveConnectorActions } from './connectorActions.js';
 import {
   channelApplication,
@@ -305,7 +306,7 @@ export function createHelpdeskChannels(store, fetcher = fetch) {
     const mailbox = isEmail
       ? (profile.emailAddress || profile.mail || profile.userPrincipalName || '').toLowerCase()
       : null;
-    if (isEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mailbox))
+    if (isEmail && !isEmailAddress(mailbox))
       deny('The mailbox identity could not be verified.', 422);
     if (
       isEmail &&

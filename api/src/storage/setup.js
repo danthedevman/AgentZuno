@@ -1,3 +1,4 @@
+import { rateLimit } from 'express-rate-limit';
 import express from 'express';
 import { timingSafeEqual } from 'node:crypto';
 import { MongoClient } from 'mongodb';
@@ -28,6 +29,13 @@ export function installDatabaseSetupRoutes(app) {
   });
   app.post(
     '/api/installation/database',
+    rateLimit({
+      windowMs: 60000,
+      limit: 10,
+      standardHeaders: 'draft-8',
+      legacyHeaders: false,
+      message: { error: 'Too many setup attempts. Try again in a minute.' },
+    }),
     express.json({ limit: '8kb' }),
     async (request, response) => {
       response.set('Cache-Control', 'no-store');

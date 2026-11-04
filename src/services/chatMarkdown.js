@@ -82,7 +82,7 @@ export function renderChatMarkdown(text, purifier = DOMPurify) {
     ALLOWED_ATTR: ['href', 'title', 'start', 'class'],
     ALLOW_DATA_ATTR: false,
     ALLOW_ARIA_ATTR: false,
-    ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto):|[^a-z]|[a-z+.-]+(?:[^a-z+.-:]|$))/i,
+    ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i,
   });
 }
 

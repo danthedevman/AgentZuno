@@ -1,3 +1,4 @@
+import { uploadBytes } from './uploadBytes.js';
 import { Binary, ObjectId } from 'mongodb';
 import {
   helpdeskScope,
@@ -33,20 +34,16 @@ export function installRequestAttachmentRoutes(app, store, service) {
   app.post('/api/helpdesk/request-attachments/:requestId', async (request, response) => {
     const user = request.helpdeskUser;
     await record(user, request.params.requestId, true);
+    const bytes = uploadBytes(request.body, 10485760);
     let name;
     try {
-      name = decodeURIComponent(request.headers['x-file-name'] || '');
+      const header = request.headers['x-file-name'];
+      if (typeof header !== 'string') throw new Error('Invalid file name header.');
+      name = decodeURIComponent(header);
     } catch {
       deny('Invalid attachment name.', 400);
     }
-    if (
-      !name ||
-      name.length > 200 ||
-      /[\x00-\x1f\/\\]/.test(name) ||
-      !Buffer.isBuffer(request.body) ||
-      !request.body.length ||
-      request.body.length > 10 * 1024 * 1024
-    )
+    if (!name || name.length > 200 || /[\x00-\x1f\/\\]/.test(name))
       deny('Choose a file up to 10 MB with a valid name.', 400);
     const scope = helpdeskScope(user),
       files = store.collection('requestAttachments');
@@ -64,8 +61,8 @@ export function installRequestAttachmentRoutes(app, store, service) {
       ...scope,
       requestId: request.params.requestId,
       name,
-      size: request.body.length,
-      data: new Binary(request.body),
+      size: bytes.length,
+      data: new Binary(bytes),
       uploadedBy: user.id,
       createdAt: new Date(),
     };

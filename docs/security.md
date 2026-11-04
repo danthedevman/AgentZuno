@@ -29,3 +29,9 @@ AgentZuno is an actively developed project. These controls describe implemented 
 Keep access tokens, private records, credentials, and exploitable details out of public issues. Arrange a private reporting channel with the maintainer. Rotate exposed credentials; removing them from the latest commit alone is insufficient.
 
 Before distributing or deploying, review dependencies and licenses, scan the complete repository history for secrets, and test cross-workspace access, role changes, identity mapping, uploads, OAuth, and workflow execution. GitHub's security tools help find classes of problems; they do not verify the app's organizational permission model.
+
+## Request limits and input validation
+
+Every API route has an IP-based budget of 3,000 requests per minute. Database setup, identity login, OAuth initiation, domain verification, SMTP testing, and knowledge/attachment reads have tighter route budgets. A blocked request returns HTTP 429 with a retry interval. Limits use process-local memory: they reset when the API restarts and are not shared across replicas. For production replicas, configure a shared rate-limit store or enforce aggregate limits at the trusted ingress. Users behind a shared NAT share IP budgets. Do not enable blanket proxy trust; configure only your trusted ingress before relying on forwarded client addresses.
+
+Binary upload endpoints accept actual parsed Buffers only; JSON objects and arrays cannot impersonate files. File-name headers and knowledge/workflow query references must have the expected scalar types. List sorting resolves only configured columns, and email validation uses bounded checks without ambiguous backtracking.

@@ -1,24 +1,36 @@
+import { rateLimit } from 'express-rate-limit';
+import { uploadBytes } from './uploadBytes.js';
 import { ObjectId, Binary } from 'mongodb';
 import { requireRole, deny, helpdeskScope } from './helpdeskRoles.js';
 import { canReadAuthoredArticle } from './knowledgeAccess.js';
 export function installArticleAttachmentRoutes(app, store) {
+  app.use(
+    [
+      '/api/helpdesk/article-attachment-list/:id',
+      '/api/helpdesk/article-attachments/:id',
+      '/api/helpdesk/article-attachments',
+    ],
+    rateLimit({
+      windowMs: 60000,
+      limit: 120,
+      standardHeaders: 'draft-8',
+      legacyHeaders: false,
+      message: { error: 'Too many attempts. Try again in a minute.' },
+    }),
+  );
   app.post('/api/helpdesk/article-attachments', async (request, response) => {
     const user = request.helpdeskUser;
     requireRole(user, ['admin']);
+    const bytes = uploadBytes(request.body, 10485760);
     let name;
     try {
-      name = decodeURIComponent(request.headers['x-file-name'] || '');
+      const header = request.headers['x-file-name'];
+      if (typeof header !== 'string') throw new Error('Invalid file name header.');
+      name = decodeURIComponent(header);
     } catch {
       deny('Invalid attachment name.', 400);
     }
-    if (
-      !name ||
-      name.length > 200 ||
-      /[\x00-\x1f\/\\]/.test(name) ||
-      !Buffer.isBuffer(request.body) ||
-      !request.body.length ||
-      request.body.length > 10 * 1024 * 1024
-    )
+    if (!name || name.length > 200 || /[\x00-\x1f\/\\]/.test(name))
       deny('Choose a file up to 10 MB with a valid name.', 400);
     if (
       (await store.collection('articleAttachments').countDocuments({
@@ -32,8 +44,8 @@ export function installArticleAttachmentRoutes(app, store) {
       ownerId: user.id,
       workspaceId: user.workspaceId,
       name,
-      size: request.body.length,
-      data: new Binary(request.body),
+      size: bytes.length,
+      data: new Binary(bytes),
       createdAt: new Date(),
     };
     const result = await store.collection('articleAttachments').insertOne(record);
@@ -64,8 +76,9 @@ export function installArticleAttachmentRoutes(app, store) {
     const user = request.helpdeskUser;
     if (!ObjectId.isValid(request.params.id)) deny('Attachment not found.', 404);
     let allowedOwner = user.id;
-    if (request.query.article) {
-      if (!ObjectId.isValid(request.query.article)) deny('Attachment not found.', 404);
+    if (request.query.article !== undefined) {
+      if (typeof request.query.article !== 'string' || !ObjectId.isValid(request.query.article))
+        deny('Attachment not found.', 404);
       const article = await store.collection('articles').findOne({
         _id: new ObjectId(request.query.article),
         ownerId: user.helpdeskOwnerId || user.id,

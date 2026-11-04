@@ -1,3 +1,4 @@
+import { uploadBytes } from './uploadBytes.js';
 import { ObjectId, Binary } from 'mongodb';
 const fail = (message, status = 400) => {
   throw Object.assign(new Error(message), { status, publicMessage: message });
@@ -61,11 +62,12 @@ async function validateChatAttachmentsForHistory(store, chat, ids) {
 export function installChatAttachmentRoutes(app, store) {
   app.post('/api/helpdesk/chat-attachments', async (request, response) => {
     const user = request.helpdeskUser;
-    if (!Buffer.isBuffer(request.body) || !request.body.length || request.body.length > 100000)
-      fail('Choose a UTF-8 text file up to 100 KB.');
+    const bytes = uploadBytes(request.body, 100000);
     let name;
     try {
-      name = decodeURIComponent(request.headers['x-file-name'] || '');
+      const header = request.headers['x-file-name'];
+      if (typeof header !== 'string') throw new Error('Invalid file name header.');
+      name = decodeURIComponent(header);
     } catch {
       fail('Invalid file name.');
     }
@@ -73,7 +75,7 @@ export function installChatAttachmentRoutes(app, store) {
       fail('Supported files: TXT, Markdown, CSV, JSON, and LOG.');
     let text;
     try {
-      text = new TextDecoder('utf-8', { fatal: true }).decode(request.body);
+      text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
     } catch {
       fail('The file must contain UTF-8 text.');
     }
@@ -87,8 +89,8 @@ export function installChatAttachmentRoutes(app, store) {
       workspaceId: user.workspaceId,
       name,
       text,
-      size: request.body.length,
-      data: new Binary(request.body),
+      size: bytes.length,
+      data: new Binary(bytes),
       createdAt: new Date(),
       expiresAt: new Date(Date.now() + 7 * 86400000),
     };

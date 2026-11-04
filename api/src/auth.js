@@ -1,3 +1,4 @@
+import { isEmailAddress } from './emailAddress.js';
 import { randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
 import { ObjectId } from 'mongodb';
 import { promisify } from 'node:util';
@@ -124,7 +125,7 @@ export function createAuth() {
     if (
       typeof email !== 'string' ||
       email.length > 254 ||
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ||
+      !isEmailAddress(email.trim()) ||
       typeof password !== 'string' ||
       password.length < 12 ||
       password.length > 200

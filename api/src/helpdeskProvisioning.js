@@ -1,3 +1,4 @@
+import { isEmailAddress } from './emailAddress.js';
 import { listResponse } from './listQuery.js';
 import {
   enterpriseUserSchema,
@@ -61,7 +62,7 @@ function normalize(input, previous = {}) {
   if (
     typeof value.userName !== 'string' ||
     value.userName.length > 254 ||
-    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.userName)
+    !isEmailAddress(value.userName)
   )
     deny('Provide a valid userName email.', 400);
   if (
@@ -104,7 +105,7 @@ export async function provisionIdentityUser(store, settings, claims) {
   const email =
     claims.email_verified === true &&
     typeof claims.email === 'string' &&
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(claims.email) &&
+    isEmailAddress(claims.email) &&
     claims.email.length <= 254
       ? claims.email.toLowerCase()
       : null;

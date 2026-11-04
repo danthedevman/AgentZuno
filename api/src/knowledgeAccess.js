@@ -1,3 +1,4 @@
+import { rateLimit } from 'express-rate-limit';
 import { ObjectId } from 'mongodb';
 import { deny, helpdeskScope, requireRole, resolveHelpdeskUser } from './helpdeskRoles.js';
 import { listResponse } from './listQuery.js';
@@ -36,6 +37,16 @@ export async function knowledgeActor(store, chat) {
   );
 }
 export function installKnowledgeAccessRoutes(app, store) {
+  app.use(
+    '/api/helpdesk/knowledge-center',
+    rateLimit({
+      windowMs: 60000,
+      limit: 120,
+      standardHeaders: 'draft-8',
+      legacyHeaders: false,
+      message: { error: 'Too many attempts. Try again in a minute.' },
+    }),
+  );
   async function target(user, kind, id) {
     if (!kinds.includes(kind) || !ObjectId.isValid(id)) deny('Knowledge item not found.', 404);
     if (kind === 'base' && id === user.workspaceId) return;

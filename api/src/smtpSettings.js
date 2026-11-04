@@ -1,3 +1,4 @@
+import { rateLimit } from 'express-rate-limit';
 import nodemailer from 'nodemailer';
 import { lookup } from 'node:dns/promises';
 import { isPublicAddress } from './customImport.js';
@@ -31,6 +32,16 @@ export async function smtpTransport(config) {
   });
 }
 export function installSmtpRoutes(app, store) {
+  app.use(
+    '/api/helpdesk/smtp/test',
+    rateLimit({
+      windowMs: 60000,
+      limit: 10,
+      standardHeaders: 'draft-8',
+      legacyHeaders: false,
+      message: { error: 'Too many attempts. Try again in a minute.' },
+    }),
+  );
   app.get('/api/helpdesk/smtp', async (request, response) => {
     requireRole(request.helpdeskUser, ['admin']);
     const config = await smtpConfiguration(store, helpdeskScope(request.helpdeskUser));

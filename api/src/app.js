@@ -1,3 +1,4 @@
+import { rateLimit } from 'express-rate-limit';
 import { installInteractiveDemoRoutes } from './interactiveDemo.js';
 import { installWorkflowReferenceRoutes } from './workflowReferences.js';
 import { installDatabaseSetupRoutes } from './storage/setup.js';
@@ -53,6 +54,16 @@ const collections = {
 
 export function createApi(options = {}) {
   const app = express();
+  app.use(
+    '/api',
+    rateLimit({
+      windowMs: 60000,
+      limit: 3000,
+      standardHeaders: 'draft-8',
+      legacyHeaders: false,
+      message: { error: 'Too many requests. Try again shortly.' },
+    }),
+  );
   app.locals.isInteractiveDemo = options.isInteractiveDemo === true;
   if (!options.isInteractiveDemo) {
     installDatabaseSetupRoutes(app);
