@@ -106,13 +106,21 @@ export function createAuth() {
   async function register(request, response) {
     if (
       request.body &&
-      Object.keys(request.body).some((key) => !['email', 'password'].includes(key))
+      Object.keys(request.body).some((key) => !['name', 'email', 'password'].includes(key))
     )
       return response
         .status(400)
-        .json({ error: 'Only email and password can be supplied during registration.' });
+        .json({ error: 'Only name, email and password can be supplied during registration.' });
     if (rateLimit(request, response)) return;
-    const { email, password } = request.body || {};
+    const { email, password, name } = request.body || {};
+    if (
+      name !== undefined &&
+      (typeof name !== 'string' ||
+        !name.trim() ||
+        name.length > 160 ||
+        /[\x00-\x1f\x7f]/u.test(name))
+    )
+      return response.status(400).json({ error: 'Enter a name between 1 and 160 characters.' });
     if (
       typeof email !== 'string' ||
       email.length > 254 ||
@@ -136,7 +144,7 @@ export function createAuth() {
       id: new ObjectId().toHexString(),
       workspaceId: new ObjectId().toHexString(),
       email: normalized,
-      name: normalized.split('@')[0],
+      name: name === undefined ? normalized.split('@')[0] : name.trim(),
       salt,
       passwordHash,
       createdAt: new Date(),

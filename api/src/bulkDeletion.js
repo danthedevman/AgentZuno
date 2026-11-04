@@ -50,6 +50,9 @@ export async function bulkDeleteRecords(store, user, kind, input) {
     await collection.deleteOne({ ...filter, _id: record._id });
     if (kind === 'requests') {
       await store
+        .collection('helpdeskTasks')
+        .deleteMany({ ...scope, requestId: String(record._id) });
+      await store
         .collection('requestAttachments')
         .deleteMany({ ...scope, requestId: String(record._id) });
       await store.collection('workflowRuns').updateMany(

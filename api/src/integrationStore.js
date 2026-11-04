@@ -1,10 +1,11 @@
+import { createStorageClient } from './storage/index.js';
 import { auditDatabase } from './recordAudit.js';
-import { MongoClient, ObjectId } from 'mongodb';
+import { ObjectId } from 'mongodb';
 
-export function createIntegrationStore() {
-  const client = process.env.MONGODB_URI
-    ? new MongoClient(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 5000 })
-    : null;
+export function createIntegrationStore(databaseOverride) {
+  const client = databaseOverride
+    ? { configured: true, db: () => databaseOverride, close: async () => {} }
+    : createStorageClient();
   function collection(name) {
     if (!client) throw Object.assign(new Error('MongoDB is not configured.'), { status: 503 });
     return auditDatabase(client.db(process.env.MONGODB_DATABASE || 'agentzuno')).collection(name);
@@ -15,6 +16,12 @@ export function createIntegrationStore() {
     collection,
     async ready() {
       indexes ||= Promise.all([
+        collection('helpdeskTasks').createIndex({
+          ownerId: 1,
+          workspaceId: 1,
+          requestId: 1,
+          createdAt: 1,
+        }),
         collection('articles').createIndex({ semanticStatus: 1, semanticRetryAt: 1, _id: 1 }),
         collection('authoredSemanticRetirements').createIndex({ status: 1 }),
         collection('authoredKnowledgeChunks').createIndex({
@@ -97,6 +104,12 @@ export function createIntegrationStore() {
         collection('helpdeskMembers').createIndex({ userId: 1, active: 1 }),
         collection('helpdeskMembershipHistory').createIndex({ workspaceId: 1, at: -1 }),
         collection('governanceAudit').createIndex({ ownerId: 1, workspaceId: 1, startedAt: -1 }),
+        collection('governanceAudit').createIndex({
+          ownerId: 1,
+          workspaceId: 1,
+          workflowId: 1,
+          startedAt: -1,
+        }),
         collection('helpdeskWorkflows').createIndex({
           ownerId: 1,
           workspaceId: 1,

@@ -1,0 +1,142 @@
+# Render Blueprint: paid services; MongoDB Atlas is supplied during setup.
+services:
+  - type: web
+    name: agentzuno-web
+    runtime: docker
+    plan: starter
+    region: oregon
+    dockerfilePath: ./docker/render/Web.Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: '8080'
+      - key: API_UPSTREAM
+        fromService:
+          type: pserv
+          name: agentzuno-api
+          property: hostport
+
+  - type: pserv
+    name: agentzuno-api
+    runtime: docker
+    plan: standard
+    region: oregon
+    dockerfilePath: ./api/Dockerfile
+    dockerContext: ./api
+    dockerCommand: node scripts/start-render.mjs api
+    envVars:
+      - key: PORT
+        value: '3001'
+      - key: COOKIE_SECURE
+        value: 'true'
+      - key: MONGODB_URI
+        sync: false
+      - key: CREDENTIAL_ENCRYPTION_KEY
+        generateValue: true
+      - key: APP_ORIGIN
+        fromService:
+          type: web
+          name: agentzuno-web
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: agentzuno-redis
+          property: connectionString
+      - key: OLLAMA_HOSTPORT
+        fromService:
+          type: pserv
+          name: agentzuno-ollama
+          property: hostport
+      - key: QDRANT_HOSTPORT
+        fromService:
+          type: pserv
+          name: agentzuno-qdrant
+          property: hostport
+
+  - type: worker
+    name: agentzuno-worker
+    runtime: docker
+    plan: standard
+    region: oregon
+    dockerfilePath: ./api/Dockerfile
+    dockerContext: ./api
+    dockerCommand: node scripts/start-render.mjs worker
+    maxShutdownDelaySeconds: 120
+    envVars:
+      - key: COOKIE_SECURE
+        fromService:
+          type: pserv
+          name: agentzuno-api
+          envVarKey: COOKIE_SECURE
+      - key: MONGODB_URI
+        fromService:
+          type: pserv
+          name: agentzuno-api
+          envVarKey: MONGODB_URI
+      - key: CREDENTIAL_ENCRYPTION_KEY
+        fromService:
+          type: pserv
+          name: agentzuno-api
+          envVarKey: CREDENTIAL_ENCRYPTION_KEY
+      - key: APP_ORIGIN
+        fromService:
+          type: pserv
+          name: agentzuno-api
+          envVarKey: APP_ORIGIN
+      - key: REDIS_URL
+        fromService:
+          type: pserv
+          name: agentzuno-api
+          envVarKey: REDIS_URL
+      - key: OLLAMA_HOSTPORT
+        fromService:
+          type: pserv
+          name: agentzuno-api
+          envVarKey: OLLAMA_HOSTPORT
+      - key: QDRANT_HOSTPORT
+        fromService:
+          type: pserv
+          name: agentzuno-api
+          envVarKey: QDRANT_HOSTPORT
+
+  - type: keyvalue
+    name: agentzuno-redis
+    plan: standard
+    region: oregon
+    ipAllowList: []
+    maxmemoryPolicy: noeviction
+    persistenceMode: journal-snapshot
+
+  - type: pserv
+    name: agentzuno-qdrant
+    runtime: image
+    image:
+      url: qdrant/qdrant:latest
+    plan: standard
+    region: oregon
+    envVars:
+      - key: PORT
+        value: '6333'
+    disk:
+      name: qdrant-data
+      mountPath: /qdrant/storage
+      sizeGB: 10
+
+  - type: pserv
+    name: agentzuno-ollama
+    runtime: docker
+    dockerfilePath: ./docker/render/Ollama.Dockerfile
+    dockerContext: .
+    plan: standard
+    region: oregon
+    envVars:
+      - key: PORT
+        value: '11434'
+      - key: OLLAMA_HOST
+        value: '0.0.0.0:11434'
+    disk:
+      name: ollama-data
+      mountPath: /root/.ollama
+      sizeGB: 5

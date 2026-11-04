@@ -1,3 +1,4 @@
+import { requireCompatibleDemoReferences } from './demoReferences.js';
 import { workspaceGroups } from './groups.js';
 import { userReferenceOptions } from './userReferences.js';
 import { ObjectId } from 'mongodb';
@@ -75,6 +76,8 @@ const names = {
   queue: 'Queues',
   group: 'Groups',
   workflow: 'Workflows',
+  task: 'Tasks',
+  request: 'Requests',
 };
 const optional = (id, label, type = 'text', referenceTable) => ({
   id,
@@ -96,9 +99,17 @@ const serviceDeskTypes = [
   'queue',
   'group',
   'workflow',
+  'task',
+  'request',
 ];
 const allBuiltinTypes = [...referenceTypes, ...serviceDeskTypes];
 const builtinFields = {
+  task: [
+    optional('request', 'Request', 'reference', 'ref-request'),
+    optional('status', 'Status'),
+    optional('assignment-group', 'Assignment Group', 'reference', 'ref-group'),
+  ],
+  request: [optional('number', 'Number'), optional('status', 'Status')],
   'catalog-category': [optional('code', 'Code')],
   user: [optional('email', 'Email', 'email'), optional('role', 'Role')],
   queue: [optional('routing-instructions', 'Routing Instructions')],
@@ -251,7 +262,7 @@ const builtin = (type) => ({
   version: 1,
   system: true,
   protectedFields: ['name', 'description', ...builtinFields[type].map((field) => field.id)],
-  ...(['user', 'queue', 'group', 'workflow'].includes(type)
+  ...(['user', 'queue', 'group', 'workflow', 'task', 'request'].includes(type)
     ? {
         sourceManaged: true,
         readOnlyFields: ['name', 'description', ...builtinFields[type].map((field) => field.id)],
@@ -459,13 +470,41 @@ export function createAdminData(store) {
     if (definition.sourceManaged) {
       const type = tableId.slice(4);
       let source;
-      if (type === 'user') {
+      if (['task', 'request'].includes(type)) {
+        const taskGroups =
+          type === 'task'
+            ? await store.collection('approvalGroups').find(helpdeskScope(user)).toArray()
+            : [];
+        const parents =
+          type === 'task'
+            ? await store.collection('helpdeskRequests').find(helpdeskScope(user)).toArray()
+            : [];
+        source = (
+          await store
+            .collection(type === 'task' ? 'helpdeskTasks' : 'helpdeskRequests')
+            .find(helpdeskScope(user))
+            .toArray()
+        ).map((record) => ({
+          ...record,
+          id: String(record._id),
+          name: record.title,
+          request: record.requestId || '',
+          'assignment-group': String(
+            taskGroups.find((group) => group.name === record.queueName)?._id || '',
+          ),
+          sourceHref:
+            type === 'request'
+              ? `/workspace/chat/${record.chatId}?request=${record._id}`
+              : `/workspace/chat/${parents.find((parent) => String(parent._id) === record.requestId)?.chatId}?request=${record.requestId}&tab=tasks`,
+        }));
+      } else if (type === 'user') {
         const members = await store
           .collection('helpdeskMembers')
           .find({ ...helpdeskScope(user), active: true })
           .toArray();
-        source = (await userReferenceOptions(store, user)).map((record) => ({
+        source = (await userReferenceOptions(store, user, true)).map((record) => ({
           id: record.value,
+          demoDatasetId: members.find((member) => member.userId === record.value)?.demoDatasetId,
           name: record.name,
           email: record.email,
           role: members.find((member) => member.userId === record.value)?.role || '',
@@ -499,6 +538,7 @@ export function createAdminData(store) {
         const saved = custom.find((item) => item.sourceId === record.id);
         return {
           id: record.id,
+          demoDatasetId: record.demoDatasetId,
           version: saved?.version || 0,
           sourceHref: record.sourceHref,
           updatedAt: saved?.updatedAt || record.updatedAt,
@@ -524,6 +564,7 @@ export function createAdminData(store) {
           .toArray()
       ).map((record) => ({
         id: record._id,
+        demoDatasetId: record.demoDatasetId,
         version: record.version || 0,
         values: Object.fromEntries(
           definition.fields.map((field) => [
@@ -544,16 +585,18 @@ export function createAdminData(store) {
         .toArray()
     ).map(safe);
   }
-  async function options(user, tableId) {
+  async function options(user, tableId, includeDemo = false) {
     requireRole(user, ['admin']);
-    if (tableId === 'users') return userReferenceOptions(store, user);
+    if (tableId === 'users') return userReferenceOptions(store, user, includeDemo);
     const definition = await table(user, tableId);
     const first = definition.system ? 'name' : definition.fields[0].id;
-    return (await records(user, tableId)).map((record) => ({
-      value: record.id,
-      label: String(record.values[first] ?? record.id),
-      href: `/workspace/data/${tableId}/records/${record.id}`,
-    }));
+    return (await records(user, tableId))
+      .filter((record) => includeDemo || !record.demoDatasetId)
+      .map((record) => ({
+        value: record.id,
+        label: String(record.values[first] ?? record.id),
+        href: `/workspace/data/${tableId}/records/${record.id}`,
+      }));
   }
   async function saveRecord(user, tableId, id, input) {
     const definition = await table(user, tableId);
@@ -566,6 +609,10 @@ export function createAdminData(store) {
       Object.keys(input.values).some((key) => !definition.fields.some((field) => field.id === key))
     )
       deny('Invalid record fields.', 400);
+    const source = id
+      ? (await records(user, tableId)).find((record) => String(record.id) === id)
+      : null;
+    await requireCompatibleDemoReferences(store, user, source, input.values);
     const values = {};
     for (const field of definition.fields) {
       const value = Object.hasOwn(input.values, field.id) ? input.values[field.id] : undefined;
@@ -593,7 +640,9 @@ export function createAdminData(store) {
         deny('Invalid email.', 400);
       if (
         field.type === 'reference' &&
-        !(await options(user, field.referenceTable)).some((option) => option.value === value)
+        !(await options(user, field.referenceTable, Boolean(source?.demoDatasetId))).some(
+          (option) => option.value === value,
+        )
       )
         deny('Reference record is unavailable.', 400);
       values[field.id] = value;
@@ -739,14 +788,23 @@ export function installAdminDataRoutes(app, store, chats) {
     response.json(await service.saveTable(request.helpdeskUser, request.params.id, request.body)),
   );
   app.get('/api/helpdesk/data/tables/:id/options', async (request, response) =>
-    response.json(await service.options(request.helpdeskUser, request.params.id)),
+    response.json(
+      await service.options(
+        request.helpdeskUser,
+        request.params.id,
+        request.query.includeDemo === '1',
+      ),
+    ),
   );
   app.get('/api/helpdesk/data/tables/:id/records', async (request, response) => {
     const table = await service.table(request.helpdeskUser, request.params.id);
     const records = await service.records(request.helpdeskUser, request.params.id);
     const lookups = new Map();
     for (const field of table.fields.filter((field) => field.type === 'reference'))
-      lookups.set(field.id, await service.options(request.helpdeskUser, field.referenceTable));
+      lookups.set(
+        field.id,
+        await service.options(request.helpdeskUser, field.referenceTable, true),
+      );
     const rows = records.map((record) => ({
       ...record,
       labels: Object.fromEntries(

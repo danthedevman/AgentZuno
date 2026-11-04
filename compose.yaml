@@ -11,6 +11,20 @@ services:
       timeout: 5s
       retries: 10
     restart: unless-stopped
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: agentzuno
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-agentzuno-local-only}
+      POSTGRES_DB: agentzuno
+    volumes: [postgres-data:/var/lib/postgresql/data]
+    ports: ['127.0.0.1:${POSTGRES_PORT:-5432}:5432']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U agentzuno -d agentzuno']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
   redis:
     image: redis:7-alpine
     command:
@@ -43,6 +57,8 @@ services:
     environment: &api-environment
       PORT: 3001
       MONGODB_URI: mongodb://mongo:27017/agentzuno
+      POSTGRES_URL: postgres://agentzuno:${POSTGRES_PASSWORD:-agentzuno-local-only}@postgres:5432/agentzuno
+      INSTALLATION_CONFIG_DIR: /app/installation
       APP_ORIGIN: ${APP_ORIGIN:-http://localhost:3000}
       CUSTOM_DOMAIN_TARGET: ${CUSTOM_DOMAIN_TARGET:-}
       CREDENTIAL_ENCRYPTION_KEY: ${CREDENTIAL_ENCRYPTION_KEY:-}
@@ -51,7 +67,10 @@ services:
       OLLAMA_URL: http://ollama:11434
       QDRANT_URL: http://qdrant:6333
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
+    volumes: [installation-data:/app/installation]
     depends_on:
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
       mongo:
@@ -63,6 +82,7 @@ services:
     restart: unless-stopped
   worker:
     build: ./api
+    volumes: [installation-data:/app/installation]
     command: ['node', 'src/worker.js']
     environment: *api-environment
     depends_on:
@@ -116,6 +136,8 @@ services:
     restart: unless-stopped
 
 volumes:
+  installation-data:
+  postgres-data:
   mongo-data:
   redis-data:
   qdrant-data:

@@ -26,15 +26,31 @@ export default function DemoSettings() {
       ))
     )
       return;
-    if (
-      action === 'remove' &&
-      !(await confirmAction(
-        'Remove all tagged demo records, including requests submitted from demo workflows? Real records and audit history will be retained.',
-        'Remove Demo Data',
-        'Remove Demo Data',
-      ))
-    )
-      return;
+    if (action === 'remove') {
+      setBusy(true);
+      try {
+        const preview = await api('/api/helpdesk/demo/removal-preview');
+        const retained = preview.retained.length
+          ? ` ${preview.retained.length} referenced records will become real records to preserve existing work: ${preview.retained
+              .map((item) => item.name)
+              .slice(0, 8)
+              .join(', ')}.`
+          : '';
+        if (
+          !(await confirmAction(
+            `Remove tagged demo records, including requests submitted from demo workflows? Real records and audit history will be retained.${retained}`,
+            'Remove Demo Data',
+            'Remove Demo Data',
+          ))
+        )
+          return;
+      } catch (error) {
+        notify({ tone: 'error', message: error.message });
+        return;
+      } finally {
+        setBusy(false);
+      }
+    }
     setBusy(true);
     try {
       const result = await api('/api/helpdesk/demo/settings', {

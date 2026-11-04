@@ -1,3 +1,4 @@
+import { requireCompatibleDemoReferences } from './demoReferences.js';
 import { workspaceGroups } from './groups.js';
 import { ObjectId } from 'mongodb';
 import { helpdeskScope, requireRole, deny } from './helpdeskRoles.js';
@@ -157,7 +158,11 @@ export function installApprovalGroupRoutes(app, store) {
   app.get('/api/helpdesk/approval-groups', async (request, response) => {
     requireRole(request.helpdeskUser, ['admin']);
     const rows = (await workspaceGroups(store, request.helpdeskUser)).filter(
-      (group) => group.approvalEnabled !== false,
+      (group) =>
+        group.approvalEnabled !== false &&
+        (request.query.reference !== '1' ||
+          request.query.includeDemo === '1' ||
+          !group.demoDatasetId),
     );
     response.json(
       listResponse(request, rows.map(present), {
@@ -207,6 +212,13 @@ export function installApprovalGroupRoutes(app, store) {
       canApprove: true,
     });
     if (eligible !== ids.length) deny('Choose active users with approval permission.', 400);
+    const previous =
+      request.params.id && ObjectId.isValid(request.params.id)
+        ? await store
+            .collection('approvalGroups')
+            .findOne({ ...helpdeskScope(user), _id: new ObjectId(request.params.id) })
+        : null;
+    await requireCompatibleDemoReferences(store, user, previous, { userIds: ids });
     const now = new Date();
     const values = {
       name: input.name.trim(),

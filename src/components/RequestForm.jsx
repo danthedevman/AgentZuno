@@ -1,3 +1,4 @@
+import WorkflowReferenceField from './WorkflowReferenceField.jsx';
 import { createStore, reconcile } from 'solid-js/store';
 import { For, Show, createEffect, createSignal } from 'solid-js';
 import Dropdown from './Dropdown.jsx';
@@ -69,51 +70,65 @@ export default function RequestForm(props) {
                 </div>
               }
             >
-              <label>
-                {field.label}
-                <Show when={!field.required}>
-                  <small>Optional</small>
-                </Show>
-                <Show
-                  when={field.type === 'select'}
-                  fallback={
+              <Show
+                when={field.type === 'reference'}
+                fallback={
+                  <label>
+                    {field.label}
+                    <Show when={!field.required}>
+                      <small>Optional</small>
+                    </Show>
                     <Show
-                      when={field.type === 'textarea'}
+                      when={field.type === 'select'}
                       fallback={
-                        <input
-                          name={field.id}
-                          required={field.required}
-                          maxlength="500"
-                          disabled={saving()}
-                          value={answers()[field.id] || ''}
-                          onInput={(event) => change(field.id, event.currentTarget.value)}
-                        />
+                        <Show
+                          when={field.type === 'textarea'}
+                          fallback={
+                            <input
+                              name={field.id}
+                              required={field.required}
+                              maxlength="500"
+                              disabled={saving()}
+                              value={answers()[field.id] || ''}
+                              onInput={(event) => change(field.id, event.currentTarget.value)}
+                            />
+                          }
+                        >
+                          <textarea
+                            name={field.id}
+                            required={field.required}
+                            maxlength="2000"
+                            rows="3"
+                            disabled={saving()}
+                            value={answers()[field.id] || ''}
+                            onInput={(event) => change(field.id, event.currentTarget.value)}
+                          />
+                        </Show>
                       }
                     >
-                      <textarea
+                      <Dropdown
                         name={field.id}
+                        ariaLabel={field.label}
                         required={field.required}
-                        maxlength="2000"
-                        rows="3"
-                        disabled={saving()}
+                        placeholder="Choose an option"
                         value={answers()[field.id] || ''}
-                        onInput={(event) => change(field.id, event.currentTarget.value)}
+                        disabled={saving()}
+                        onChange={(value) => change(field.id, value)}
+                        options={field.options.map((value) => ({ value, label: value }))}
                       />
                     </Show>
-                  }
-                >
-                  <Dropdown
-                    name={field.id}
-                    ariaLabel={field.label}
-                    required={field.required}
-                    placeholder="Choose an option"
-                    value={answers()[field.id] || ''}
-                    disabled={saving()}
-                    onChange={(value) => change(field.id, value)}
-                    options={field.options.map((value) => ({ value, label: value }))}
-                  />
-                </Show>
-              </label>
+                  </label>
+                }
+              >
+                <WorkflowReferenceField
+                  field={field}
+                  workflowId={props.form.workflowId}
+                  preview={props.preview}
+                  value={answers()[field.id] || ''}
+                  onChange={(value) => change(field.id, value)}
+                  disabled={saving()}
+                />
+              </Show>
             </Show>
           )}
         </For>

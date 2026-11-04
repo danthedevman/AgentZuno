@@ -22,6 +22,75 @@ function requestsChoice(workflow, message) {
     return pattern.test(message);
   });
 }
+
+const actionFamilies = [
+  ['update', 'edit', 'change', 'modify', 'revise', 'correct'],
+  ['create', 'add', 'publish'],
+  ['remove', 'delete'],
+  ['reset', 'recover'],
+  ['request', 'order', 'get', 'need', 'want'],
+];
+const generalWords = new Set([
+  'a',
+  'an',
+  'the',
+  'i',
+  'we',
+  'my',
+  'our',
+  'your',
+  'to',
+  'for',
+  'in',
+  'on',
+  'of',
+  'and',
+  'with',
+  'please',
+  'can',
+  'could',
+  'would',
+  'employee',
+  'user',
+  'request',
+  'form',
+  'help',
+  'support',
+  'item',
+  'new',
+  'work',
+]);
+const words = (value) =>
+  normalize(value)
+    .split(' ')
+    .map((word) => (word.length > 4 && word.endsWith('s') ? word.slice(0, -1) : word));
+function matchesIntent(workflow, message) {
+  if (!workflow.definition?.form || /(?:^| )(?:not|never|don t|do not)(?: |$)/.test(message))
+    return false;
+  const vocabulary = words(
+    [workflow.name || '', workflow.definition.form.title || '', ...(workflow.keywords || [])].join(
+      ' ',
+    ),
+  );
+  const messageWords = new Set(words(message));
+  const actions = new Set(actionFamilies.flat());
+  const specific = actionFamilies
+    .slice(0, 4)
+    .filter((family) => family.some((word) => messageWords.has(word)));
+  const requestedActions = specific.length ? specific : [actionFamilies[4]];
+  const actionMatch = requestedActions.some(
+    (family) =>
+      family.some((word) => messageWords.has(word)) &&
+      family.some((word) => vocabulary.includes(word)),
+  );
+  const subjects = [
+    ...new Set(
+      vocabulary.filter((word) => word.length > 2 && !generalWords.has(word) && !actions.has(word)),
+    ),
+  ];
+  return actionMatch && subjects.some((word) => messageWords.has(word));
+}
+
 export function findWorkflowMatch(workflows, department, text, includeForm = false) {
   const message = normalize(text);
   const candidates = workflows.filter(
@@ -33,5 +102,7 @@ export function findWorkflowMatch(workflows, department, text, includeForm = fal
   if (literal) return literal;
   if (!includeForm) return null;
   const offered = candidates.filter((item) => requestsChoice(item, message));
-  return offered.length === 1 ? offered[0] : null;
+  if (offered.length) return offered.length === 1 ? offered[0] : null;
+  const inferred = candidates.filter((item) => matchesIntent(item, message));
+  return inferred.length === 1 ? inferred[0] : null;
 }

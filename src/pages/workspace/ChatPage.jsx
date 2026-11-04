@@ -1,3 +1,5 @@
+import { followChatProgress } from '../../services/chatFollow.js';
+import ConversationSkeleton from '../../components/ConversationSkeleton.jsx';
 import SplitResizeHandle from '../../components/SplitResizeHandle.jsx';
 import ArticleReader from '../../components/ArticleReader.jsx';
 import RequestChatAction from '../../components/RequestChatAction.jsx';
@@ -162,9 +164,19 @@ export default function ChatPage() {
   const current = () => (chat.error || conversation.id !== params.id ? null : conversation);
   const busy = () => sending() || ['queued', 'responding'].includes(current()?.status);
   const [pendingMessage, setPendingMessage] = createSignal('');
-  const [responseReveal, setResponseReveal] = createSignal(null);
   let timer;
   let messageList;
+  followChatProgress(
+    () => messageList,
+    () =>
+      JSON.stringify({
+        id: params.id,
+        messages: current()?.messages,
+        form: current()?.requestForm,
+        progress: current()?.progress,
+      }),
+    () => params.id,
+  );
   let resumed = false;
   let openedRequestChat = '';
   createEffect(() => {
@@ -186,27 +198,6 @@ export default function ChatPage() {
     if (!pendingMessage()) return;
     requestAnimationFrame(() => {
       if (messageList) messageList.scrollTop = messageList.scrollHeight;
-    });
-  });
-  createEffect(() => {
-    const reveal = responseReveal();
-    const response = current()
-      ?.messages?.filter((message) => message.role === 'assistant')
-      .at(-1);
-    if (!reveal || !response?.text || response.id === reveal.previousId) return;
-    setResponseReveal(null);
-    requestAnimationFrame(() => {
-      const element = messageList?.querySelector(`[data-message-id="${CSS.escape(response.id)}"]`);
-      if (!element || !messageList) return;
-      const distance =
-        element.getBoundingClientRect().top - messageList.getBoundingClientRect().top - 24;
-      if (distance > 0)
-        messageList.scrollBy({
-          top: Math.min(distance, 160),
-          behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
-            ? 'instant'
-            : 'smooth',
-        });
     });
   });
   createEffect(() => {
@@ -246,11 +237,7 @@ export default function ChatPage() {
     }
     setSending(true);
     setPendingMessage(text);
-    setResponseReveal({
-      previousId: current()
-        ?.messages?.filter((message) => message.role === 'assistant')
-        .at(-1)?.id,
-    });
+
     try {
       const result = await api(params.id ? `${supportPath}/${params.id}/messages` : supportPath, {
         method: 'POST',
@@ -334,7 +321,9 @@ export default function ChatPage() {
               }}
             />
             <div class="chat-history">
-              <h2>Recent Chats</h2>
+              <Show when={chats.loading || recentChats.length > 0}>
+                <h2>Recent Chats</h2>
+              </Show>
 
               <Show when={chats.error}>
                 <ToastMessage tone="error">{chats.error.message}</ToastMessage>
@@ -380,9 +369,6 @@ export default function ChatPage() {
                 This chat could not be loaded. It may belong to another workspace.
               </ToastMessage>
             </Show>
-            <Show when={chat.loading && !current()}>
-              <Skeleton label="Loading chat" lines={5} />
-            </Show>
             <div
               class="chat-messages"
               ref={messageList}
@@ -393,6 +379,9 @@ export default function ChatPage() {
               aria-live="polite"
               aria-relevant="additions text"
             >
+              <Show when={chat.loading && !current()}>
+                <ConversationSkeleton />
+              </Show>
               <For each={current()?.messages || []}>
                 {(message) => (
                   <article
@@ -465,7 +454,7 @@ export default function ChatPage() {
                                         ? answer.value
                                           ? 'Yes'
                                           : 'No'
-                                        : answer.value || '—'}
+                                        : answer.displayValue || answer.value || '—'}
                                     </dd>
                                   </div>
                                 )}

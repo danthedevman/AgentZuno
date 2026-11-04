@@ -34,7 +34,7 @@ export default function MyWorkPage() {
       <div class="connections-heading">
         <PageHeading title="My Work" />
         <button
-          class="workspace-button secondary small"
+          class="workspace-button secondary small refresh-icon-button"
           type="button"
           aria-label="Refresh My Work"
           disabled={!allowed() || summary.loading}

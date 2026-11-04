@@ -1,3 +1,4 @@
+import { requireCompatibleDemoReferences } from './demoReferences.js';
 import { workspaceGroups } from './groups.js';
 import { createHash } from 'node:crypto';
 import { helpdeskScope, requireRole, deny } from './helpdeskRoles.js';
@@ -29,7 +30,7 @@ export async function requireExistingQueues(store, user, names) {
     deny('Choose an existing queue, or create it first.', 400);
 }
 export function installHelpdeskQueueRoutes(app, store) {
-  async function list(user) {
+  async function list(user, realOnly = false) {
     requireRole(user, ['admin']);
     const scope = helpdeskScope(user);
     const [saved, members, config] = await Promise.all([
@@ -46,7 +47,10 @@ export function installHelpdeskQueueRoutes(app, store) {
     ];
     const groups = await workspaceGroups(store, user);
     return groups
-      .filter((group) => group.active !== false && group.assignmentEnabled)
+      .filter(
+        (group) =>
+          group.active !== false && group.assignmentEnabled && (!realOnly || !group.demoDatasetId),
+      )
       .map((group) => {
         const name = group.name;
         const item = saved.find((record) => record.name === name);
@@ -73,7 +77,10 @@ export function installHelpdeskQueueRoutes(app, store) {
     response.json(
       listResponse(
         request,
-        await list(request.helpdeskUser),
+        await list(
+          request.helpdeskUser,
+          request.query.reference === '1' && request.query.includeDemo !== '1',
+        ),
         {
           Queue: 'name',
           Description: 'description',
@@ -121,6 +128,8 @@ export function installHelpdeskQueueRoutes(app, store) {
       .collection('helpdeskMembers')
       .find({ ...scope, active: true, role: { $in: ['admin', 'agent'] } })
       .toArray();
+    const groupSource = (await workspaceGroups(store, user)).find((item) => item.name === name);
+    await requireCompatibleDemoReferences(store, user, groupSource, { agentIds: input.agentIds });
     const agentIds = [...new Set(input.agentIds)];
     if (agentIds.some((agentId) => !agents.some((member) => member.userId === agentId)))
       deny('Choose active Admins or Agents from this workspace.', 400);

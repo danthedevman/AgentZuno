@@ -1,0 +1,177 @@
+{
+  "name": "Northstar Demo",
+  "user": { "name": "Alex Morgan", "role": "Admin", "email": "alex@example.test" },
+  "prompts": [
+    {
+      "id": "group",
+      "prompt": "Create a group named App Support",
+      "reply": "Open [New Workflow](/demo/workflows/new) to ask the Admin agent to create this group."
+    },
+    {
+      "id": "laptop",
+      "prompt": "I need a MacBook for a new engineer",
+      "reply": "Let’s get their laptop request ready. Choose the device and accessories below.",
+      "workflowId": "laptop",
+      "fields": ["Device", "Memory", "Accessories"]
+    },
+    {
+      "id": "figma",
+      "prompt": "Can I get access to Figma?",
+      "reply": "I can guide you through a software access request for Figma. Tell us what access you need and what you’ll use it for.",
+      "workflowId": "figma",
+      "fields": ["Access Level", "Business Reason"]
+    },
+    {
+      "id": "workflow",
+      "prompt": "Build a laptop request workflow with manager approval",
+      "reply": "Here’s a workflow with a device form, manager approval, and routing to Desktop Support. Open the workflow to review its steps.",
+      "workflowId": "laptop"
+    },
+    {
+      "id": "knowledge",
+      "prompt": "How do I reset my password?",
+      "reply": "Open your organization’s sign-in portal, choose Forgot Password, and follow the verification steps. The related article is available in Knowledge.",
+      "articleId": "password"
+    }
+  ],
+  "requests": [
+    {
+      "id": "request-101",
+      "number": "REQ-000101",
+      "title": "MacBook for a new engineer",
+      "status": "Awaiting Approval",
+      "group": "Desktop Support",
+      "requester": "Jordan Lee",
+      "assignedTo": "Alex Morgan",
+      "updated": "2026-11-04",
+      "description": "A 32GB MacBook for an engineer joining the platform team",
+      "workflowId": "laptop",
+      "comments": ["The employee starts next Monday"],
+      "archived": false
+    },
+    {
+      "id": "request-102",
+      "number": "REQ-000102",
+      "title": "Figma editor access",
+      "status": "In Progress",
+      "group": "Application Support",
+      "requester": "Sam Rivera",
+      "assignedTo": "Alex Morgan",
+      "updated": "2026-11-03",
+      "description": "Editor access for the design team",
+      "workflowId": "figma",
+      "comments": ["Manager approval received"],
+      "archived": false
+    },
+    {
+      "id": "request-103",
+      "number": "REQ-000103",
+      "title": "Password reset",
+      "status": "Resolved",
+      "group": "Service Desk",
+      "requester": "Taylor Kim",
+      "assignedTo": "Casey Chen",
+      "updated": "2026-11-02",
+      "description": "The employee completed self-service recovery",
+      "workflowId": "password",
+      "comments": ["Access restored"],
+      "archived": true
+    }
+  ],
+  "workflows": [
+    {
+      "id": "laptop",
+      "name": "Laptop Request",
+      "status": "Published",
+      "category": "Hardware",
+      "updated": "2026-11-04",
+      "prompt": "Build a laptop request that asks Mac or Windows, includes optional accessories, requests manager approval, and routes to Desktop Support",
+      "steps": [
+        "Collect device and accessory choices",
+        "Request manager approval",
+        "Route to Desktop Support",
+        "Notify the employee when complete"
+      ],
+      "fields": ["Device", "Memory", "Accessories"],
+      "inCatalog": true
+    },
+    {
+      "id": "figma",
+      "name": "Figma Access",
+      "status": "Published",
+      "category": "Software",
+      "updated": "2026-11-03",
+      "prompt": "Create a Figma access request with approval and application support routing",
+      "steps": [
+        "Collect access level and business reason",
+        "Request approval",
+        "Route to Application Support",
+        "Notify the employee"
+      ],
+      "fields": ["Access Level", "Business Reason"],
+      "inCatalog": true
+    },
+    {
+      "id": "onboarding",
+      "name": "Employee Onboarding",
+      "status": "Draft",
+      "category": "People",
+      "updated": "2026-11-02",
+      "prompt": "Build an onboarding workflow for a new employee",
+      "steps": [
+        "Collect start date and role",
+        "Create equipment and account tasks",
+        "Route to People Operations"
+      ],
+      "fields": ["Employee Name", "Start Date", "Job Title"],
+      "inCatalog": false
+    }
+  ],
+  "articles": [
+    {
+      "id": "password",
+      "title": "Reset your password",
+      "base": "Employee Help",
+      "topic": "Accounts",
+      "status": "Published",
+      "updated": "2026-11-04",
+      "body": "Open your organization’s sign-in portal and choose Forgot Password. Verify your identity using your enrolled recovery method, then choose a new password. If recovery fails, contact the Service Desk."
+    },
+    {
+      "id": "software",
+      "title": "Request software access",
+      "base": "Employee Help",
+      "topic": "Software",
+      "status": "Published",
+      "updated": "2026-11-03",
+      "body": "Choose an application from the catalog, describe the access you need, and submit the form. Track approval and fulfillment in My Requests."
+    }
+  ],
+  "groups": [
+    {
+      "id": "desktop",
+      "name": "Desktop Support",
+      "members": "Alex Morgan, Casey Chen",
+      "purpose": "Assignment and Approval",
+      "updated": "2026-11-04"
+    },
+    {
+      "id": "applications",
+      "name": "Application Support",
+      "members": "Sam Rivera",
+      "purpose": "Assignment",
+      "updated": "2026-11-03"
+    }
+  ],
+  "connectors": [
+    { "id": "gmail", "name": "Gmail", "status": "Connected", "updated": "2026-11-04" },
+    { "id": "outlook", "name": "Outlook", "status": "Not Configured", "updated": "2026-11-03" },
+    { "id": "slack", "name": "Slack", "status": "Connected", "updated": "2026-11-04" },
+    {
+      "id": "teams",
+      "name": "Microsoft Teams",
+      "status": "Not Configured",
+      "updated": "2026-11-03"
+    }
+  ]
+}

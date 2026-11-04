@@ -107,7 +107,7 @@ export default function DataRecordPage() {
               target="_blank"
               rel="noopener noreferrer"
             >
-              Open Original Record ↗
+              Open Original Record →
             </A>
           </Show>
           <ValidatedForm class="create-form" onSubmit={save}>
@@ -115,6 +115,7 @@ export default function DataRecordPage() {
               <For each={table().fields}>
                 {(field) => (
                   <DataRecordField
+                    includeDemo={Boolean(record()?.demoDatasetId)}
                     readOnly={table().readOnlyFields?.includes(field.id)}
                     field={field}
                     value={values()[field.id]}

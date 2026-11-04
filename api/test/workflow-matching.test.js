@@ -39,3 +39,36 @@ test('published form discovery recognizes requests for configured choices, prese
     'password',
   );
 });
+
+test('catalog form discovery matches reordered subject and action words without exposing ambiguous forms', () => {
+  const portal = {
+    id: 'portal',
+    name: 'Employee Portal Update Request',
+    department: 'it',
+    keywords: ['update employee portal'],
+    definition: { form: { title: 'Employee Portal Update Request', fields: [] } },
+  };
+  for (const message of [
+    'i need to update my pages in our portal',
+    'Can I edit our portal pages?',
+    'Please change my employee portal page',
+  ])
+    assert.equal(findWorkflowMatch([portal], null, message, true)?.id, 'portal');
+  for (const message of [
+    'What is the portal?',
+    'I need a laptop',
+    'Do not update the portal',
+    'I need a portal password reset',
+  ])
+    assert.equal(findWorkflowMatch([portal], null, message, true), null);
+  assert.equal(
+    findWorkflowMatch(
+      [portal, { ...portal, id: 'other' }],
+      null,
+      'I need to edit our portal pages',
+      true,
+    ),
+    null,
+  );
+  assert.equal(findWorkflowMatch([portal], 'hr', 'I need to update our portal', true), null);
+});

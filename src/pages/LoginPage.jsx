@@ -9,7 +9,15 @@ export default function LoginPage(props) {
   const { session, signIn, register } = useSession();
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const [portal] = createResource(() => api('/api/portal'));
+  const [installation] = createResource(() => api('/api/installation/database'));
+  createEffect(() => {
+    if (!installation.error && installation()?.configured === false)
+      navigate('/setup/database', { replace: true });
+  });
+  const [portal] = createResource(
+    () => !installation.error && installation()?.configured,
+    () => api('/api/portal'),
+  );
   const [enterprise] = createResource(
     () =>
       !portal.loading && !portal.error && !portal()?.workspaceId
@@ -38,6 +46,7 @@ export default function LoginPage(props) {
       );
     }
   });
+  const [name, setName] = createSignal('');
   const [email, setEmail] = createSignal('');
   const [password, setPassword] = createSignal('');
   const [isSubmitting, setIsSubmitting] = createSignal(false);
@@ -48,7 +57,7 @@ export default function LoginPage(props) {
     setIsSubmitting(true);
     setError('');
     try {
-      await (isRegister() ? register(email(), password()) : signIn(email(), password()));
+      await (isRegister() ? register(email(), password(), name()) : signIn(email(), password()));
       if (params.next === 'invite') {
         const invite = sessionStorage.getItem('agentzuno-invitation');
         if (invite && /^[a-f0-9]{64}$/.test(invite)) {
@@ -103,6 +112,20 @@ export default function LoginPage(props) {
           </p>
         </Show>
         <ValidatedForm onSubmit={submit}>
+          <Show when={isRegister()}>
+            <label>
+              Name
+              <input
+                name="name"
+                type="text"
+                autocomplete="name"
+                required
+                maxlength="160"
+                value={name()}
+                onInput={(event) => setName(event.currentTarget.value)}
+              />
+            </label>
+          </Show>
           <label>
             Email
             <input

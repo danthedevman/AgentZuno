@@ -53,7 +53,7 @@ export default function ConnectorSetupInstructions(props) {
             <For each={guide().steps}>{(step) => <li>{step}</li>}</For>
           </ol>
           <a href={guide().link} target="_blank" rel="noopener noreferrer">
-            {guide().title} ↗
+            {guide().title} →
           </a>
         </details>
       )}

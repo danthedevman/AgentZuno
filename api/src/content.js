@@ -1,3 +1,4 @@
+import { requireCompatibleDemoReferences } from './demoReferences.js';
 import { ObjectId } from 'mongodb';
 import { installArticleDesignerRoutes } from './articleDesigner.js';
 import sanitizeHtml from 'sanitize-html';
@@ -136,6 +137,12 @@ export function installContentRoutes(app, auth, store, designer = {}) {
         ? request.body.knowledgeBaseId
         : (existing?.base ?? defaults.knowledgeBases[0]?.id);
     const topicIds = request.body?.topicIds ?? existing?.topicIds ?? [];
+    await requireCompatibleDemoReferences(
+      designer.integrations,
+      request.helpdeskUser || request.user,
+      existing,
+      { base, topicIds },
+    );
     if (!request.articlePreviewOnly && Array.isArray(topicIds) && !topicIds.length)
       return response.status(400).json({ error: 'Select at least one topic.' });
     if (

@@ -6,7 +6,9 @@ import { createStore, reconcile } from 'solid-js/store';
 import Dropdown from './Dropdown.jsx';
 
 export default function WorkflowRoutingEditor(props) {
-  const [queues] = createResource(() => api('/api/helpdesk/queues'));
+  const [queues] = createResource(() =>
+    api(`/api/helpdesk/queues?reference=1${props.includeDemo ? '&includeDemo=1' : ''}`),
+  );
   const [rules, setRules] = createStore([]);
   createEffect(() => setRules(reconcile(props.rules || [], { key: 'id' })));
   const fields = () => props.form?.fields || [];

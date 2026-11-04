@@ -1,3 +1,4 @@
+import { confirmAction } from '../services/confirmations.js';
 import AIProviderBanner from '../components/AIProviderBanner.jsx';
 import ProfileAvatar from '../components/ProfileAvatar.jsx';
 import ChatPrompt from '../components/ChatPrompt.jsx';
@@ -20,6 +21,7 @@ import { WorkspaceProvider, useWorkspace } from '../context/WorkspaceContext.jsx
 import { useSession } from '../context/SessionContext.jsx';
 import Icon from '../components/Icon.jsx';
 import Dropdown from '../components/Dropdown.jsx';
+import { workspacePath } from '../services/workspaceRoutes.js';
 import CreatePicker from '../components/CreatePicker.jsx';
 import SearchOverlay from '../components/SearchOverlay.jsx';
 import { openDialog } from '../services/dialogs.js';
@@ -32,7 +34,7 @@ const navigation = [
   ['/workspace/approvals', 'check', 'Approvals'],
   ['/workspace/requests', 'request', 'My Requests'],
   ['/workspace/workflows', 'workflow', 'Workflows'],
-  ['/workspace/data', 'data', 'Data'],
+  ['/workspace/data', 'data', 'Data Tables'],
   ['/workspace/knowledge', 'book-pen', 'Knowledge'],
   ['/workspace/reports', 'reports', 'Reports'],
   ['/workspace/connectors', 'plug', 'Connectors'],
@@ -157,6 +159,10 @@ function WorkspaceShell(props) {
     }
   });
   async function handleSignOut() {
+    if (session()?.user?.isInteractiveDemo) {
+      navigate('/');
+      return;
+    }
     try {
       await signOut();
       navigate('/workspace');
@@ -175,19 +181,51 @@ function WorkspaceShell(props) {
       </a>
       <aside class="workspace-sidebar" aria-label="Workspace sidebar">
         <div class="rail-actions">
-          <button
-            type="button"
-            class="rail-link rail-drawer-toggle"
-            aria-label={isNavigationExpanded() ? 'Collapse navigation' : 'Expand navigation'}
-            aria-expanded={isNavigationExpanded()}
-            aria-controls="workspace-navigation"
-            onClick={toggleNavigation}
-          >
-            <Icon name={isNavigationExpanded() ? 'menu-close' : 'menu-open'} />
-            <span class="rail-tooltip" aria-hidden="true">
-              Menu
-            </span>
-          </button>
+          <div class="sidebar-brand-row">
+            <A class="sidebar-wordmark" href="/workspace" aria-label="AgentZuno home">
+              <img
+                src={
+                  theme() === 'light' ? '/agentzuno-wordmark-light.svg' : '/agentzuno-wordmark.svg'
+                }
+                alt="AgentZuno"
+                width="104"
+                height="26"
+              />
+            </A>
+            <button
+              type="button"
+              class="rail-link rail-drawer-toggle"
+              aria-label={isNavigationExpanded() ? 'Collapse navigation' : 'Expand navigation'}
+              aria-expanded={isNavigationExpanded()}
+              aria-controls="workspace-navigation"
+              onClick={toggleNavigation}
+            >
+              <img
+                class="sidebar-brand-mark"
+                src="/agentzuno-mark.svg"
+                width="28"
+                height="28"
+                alt=""
+              />
+              <Icon name="drawer" />
+              <span class="rail-tooltip" aria-hidden="true">
+                Menu
+              </span>
+            </button>
+            <Show when={isNavigationExpanded()}>
+              <button
+                class="rail-link rail-search"
+                aria-label="Search"
+                aria-haspopup="dialog"
+                onClick={() => showOverlay(searchDialog)}
+              >
+                <Icon name="search" />
+                <span class="rail-tooltip" aria-hidden="true">
+                  Search
+                </span>
+              </button>
+            </Show>
+          </div>
           <button
             class="rail-link rail-create"
             aria-label="Create new item"
@@ -201,17 +239,19 @@ function WorkspaceShell(props) {
               Create
             </span>
           </button>
-          <button
-            class="rail-link rail-search"
-            aria-label="Search"
-            aria-haspopup="dialog"
-            onClick={() => showOverlay(searchDialog)}
-          >
-            <Icon name="search" />
-            <span class="rail-tooltip" aria-hidden="true">
-              Search
-            </span>
-          </button>
+          <Show when={!isNavigationExpanded()}>
+            <button
+              class="rail-link rail-search"
+              aria-label="Search"
+              aria-haspopup="dialog"
+              onClick={() => showOverlay(searchDialog)}
+            >
+              <Icon name="search" />
+              <span class="rail-tooltip" aria-hidden="true">
+                Search
+              </span>
+            </button>
+          </Show>
         </div>
         <div class="rail-separator" aria-hidden="true" />
         <nav id="workspace-navigation" aria-label="Workspace navigation">
@@ -274,7 +314,7 @@ function WorkspaceShell(props) {
                       setError(error.message);
                       return;
                     }
-                    navigate(`/workspace/${params.workspaceId}/chat`);
+                    navigate(workspacePath('/workspace/chat', params.workspaceId));
                   }}
                 />
               </label>
@@ -290,7 +330,7 @@ function WorkspaceShell(props) {
               href="/workspace/profile"
               onClick={() => document.getElementById('profile-popover').hidePopover()}
             >
-              <Icon name="user" />
+              <Icon name="profile" />
               Profile
             </A>
             <Show when={isAdmin()}>
@@ -389,7 +429,30 @@ function WorkspaceShell(props) {
         class="workspace-body"
         inert={!!activeDialog() || (isNarrow() && isNavigationExpanded())}
       >
-        <AIProviderBanner />
+        <Show when={session()?.user?.isInteractiveDemo} fallback={<AIProviderBanner />}>
+          <div class="ai-provider-banner interactive-demo-banner">
+            <span>Interactive Demo · Fictional Data</span>
+            <div>
+              <button
+                type="button"
+                class="workspace-button secondary small"
+                onClick={async () => {
+                  if (
+                    await confirmAction('Reset changes made in this demo?', 'Reset Demo', 'Reset')
+                  ) {
+                    await api('/api/demo/reset', { method: 'POST', body: '{}' });
+                    window.location.assign('/demo');
+                  }
+                }}
+              >
+                Reset Demo
+              </button>
+              <A class="workspace-button small" href="/register">
+                Get Access
+              </A>
+            </div>
+          </div>
+        </Show>
         <main id="workspace-main" class="workspace-main">
           <Show when={props.previewRole && props.previewRole !== 'admin'}>
             <div class="role-preview-banner" role="status">
@@ -478,6 +541,8 @@ export default function WorkspaceLayout(props) {
           : '/login',
         { replace: true },
       );
+    else if (session()?.user?.isInteractiveDemo && location.pathname.replace(/\/$/, '') === '/demo')
+      navigate('/demo/my-work', { replace: true });
     else if (
       !access.loading &&
       !access.error &&
@@ -487,7 +552,7 @@ export default function WorkspaceLayout(props) {
         `/workspace/${params.workspaceId}/${['admin', 'agent'].includes(access()?.role) ? 'my-work' : 'chat'}${location.search}`,
         { replace: true },
       );
-    else if (session()?.user && !params.workspaceId)
+    else if (session()?.user && !session().user.isInteractiveDemo && !params.workspaceId)
       navigate(
         location.pathname.replace('/workspace', `/workspace/${session().user.workspaceId}`) +
           location.search,

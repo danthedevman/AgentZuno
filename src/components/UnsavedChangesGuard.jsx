@@ -1,11 +1,16 @@
-import { createSignal, onMount, onCleanup } from 'solid-js';
+import { createSignal, createEffect, onMount, onCleanup } from 'solid-js';
 import { useBeforeLeave, useLocation } from '@solidjs/router';
 import { confirmAction } from '../services/confirmations.js';
 export default function UnsavedChangesGuard() {
   const location = useLocation();
   const [dirty, setDirty] = createSignal(false);
   let pending = false;
+  const inApp = () => /^\/workspace(?:\/|$)/.test(location.pathname);
+  createEffect(() => {
+    if (!inApp()) setDirty(false);
+  });
   const edit = (event) => {
+    if (!inApp()) return;
     const field = event.target;
     if (
       field.closest(
@@ -22,6 +27,7 @@ export default function UnsavedChangesGuard() {
       setDirty(true);
   };
   const toggle = (event) => {
+    if (!inApp()) return;
     if (
       event.target.closest('button[role="switch"], .workflow-form-field button[aria-pressed]') ||
       (event.target.closest('[role="option"]') &&
@@ -31,7 +37,7 @@ export default function UnsavedChangesGuard() {
   };
   const saved = () => setDirty(false);
   const unload = (event) => {
-    if (dirty()) {
+    if (inApp() && dirty()) {
       event.preventDefault();
       event.returnValue = '';
     }
@@ -52,6 +58,7 @@ export default function UnsavedChangesGuard() {
   });
   useBeforeLeave((event) => {
     if (
+      !inApp() ||
       !dirty() ||
       (typeof event.to === 'string' && event.to.split('?')[0].split('#')[0] === location.pathname)
     )

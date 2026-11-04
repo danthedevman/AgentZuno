@@ -1,11 +1,9 @@
 import { randomUUID } from 'node:crypto';
-import { MongoClient, ObjectId } from 'mongodb';
+import { ObjectId } from 'mongodb';
 import { createIntegrationStore } from './integrationStore.js';
 import { createSemanticService } from './semantic.js';
 
-process.env.MONGODB_DATABASE = `agentzuno_semantic_check_${randomUUID().replaceAll('-', '')}`;
 const store = createIntegrationStore();
-const cleanup = new MongoClient(process.env.MONGODB_URI);
 const service = createSemanticService(store);
 const ownerId = randomUUID();
 const document = {
@@ -49,7 +47,7 @@ try {
     .collection('knowledgeDocuments')
     .updateOne({ _id: document._id }, { $set: { deletedAt: new Date() } });
   await service.cleanup();
-  await cleanup.db(process.env.MONGODB_DATABASE).dropDatabase();
-  await cleanup.close();
+  for (const collection of ['knowledgeDocuments', 'knowledgeChunks', 'sourceConnections'])
+    await store.collection(collection).deleteMany({ ownerId, workspaceId: ownerId });
   await store.close();
 }

@@ -1,9 +1,13 @@
 import { helpdeskScope, requireRole } from './helpdeskRoles.js';
-export async function userReferenceOptions(store, user) {
+export async function userReferenceOptions(store, user, includeDemo = false) {
   requireRole(user, ['admin']);
   const members = await store
     .collection('helpdeskMembers')
-    .find({ ...helpdeskScope(user), active: true })
+    .find({
+      ...helpdeskScope(user),
+      active: true,
+      ...(!includeDemo ? { demoDatasetId: { $exists: false } } : {}),
+    })
     .toArray();
   const accounts = await store
     .collection('users')

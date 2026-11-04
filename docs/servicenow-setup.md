@@ -1,5 +1,7 @@
 > The Connected agents UI and external token/MCP endpoints are retired. Any client setup instructions below are historical; current use is through authenticated workspace search. Source ACL and vector indexing requirements still apply.
 
+This guide is for Admins configuring the installation or its connections. Agents and Users use the published features their permissions allow; Read Only users inspect permitted records without changing configuration. See [roles and everyday features](roles-and-features.md) for practical steps and access rules.
+
 # ServiceNow knowledge setup
 
 ServiceNow is the only built-in source. Custom JSON/API snapshots remain available from the Custom connection action. Other provider adapters are retained only for legacy records and are not offered for new connections.

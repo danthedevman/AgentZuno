@@ -7,6 +7,7 @@ export default function ReferenceLookup(props) {
       label={props.label}
       name={props.name}
       options={props.options}
+      onSearch={props.onSearch}
       value={props.value ? [props.value] : []}
       onChange={(values) => props.onChange?.(values[0] || '')}
       required={props.required}

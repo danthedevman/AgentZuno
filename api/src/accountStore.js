@@ -1,9 +1,11 @@
+import { createStorageClient } from './storage/index.js';
 import { auditDatabase } from './recordAudit.js';
-import { MongoClient } from 'mongodb';
 import { createHash } from 'node:crypto';
 
-export function createAccountStore(uri = process.env.MONGODB_URI) {
-  const client = uri ? new MongoClient(uri, { serverSelectionTimeoutMS: 5000 }) : null;
+export function createAccountStore(uri = process.env.MONGODB_URI, databaseOverride) {
+  const client = databaseOverride
+    ? { configured: true, db: () => databaseOverride, close: async () => {} }
+    : createStorageClient(uri);
   let indexes;
   const database = () => {
     if (!client) throw Object.assign(new Error('MongoDB is not configured.'), { status: 503 });
@@ -19,17 +21,17 @@ export function createAccountStore(uri = process.env.MONGODB_URI) {
   }
   return {
     async findById(id) {
-      return client ? database().collection('users').findOne({ id }) : null;
+      return client.configured ? database().collection('users').findOne({ id }) : null;
     },
     async findUser(email) {
-      return client ? database().collection('users').findOne({ email }) : null;
+      return client.configured ? database().collection('users').findOne({ email }) : null;
     },
     async createUser(user) {
       await ready();
       await database().collection('users').insertOne(user);
     },
     async saveSession(token, user, expiresAt) {
-      if (client) {
+      if (client.configured) {
         await ready();
         await database()
           .collection('sessions')
@@ -37,7 +39,7 @@ export function createAccountStore(uri = process.env.MONGODB_URI) {
       }
     },
     async session(token) {
-      return client && token
+      return client.configured && token
         ? database()
             .collection('sessions')
             .findOne({ _id: hash(token), expiresAt: { $gt: new Date() } })
@@ -53,7 +55,7 @@ export function createAccountStore(uri = process.env.MONGODB_URI) {
       return result.matchedCount === 1;
     },
     async deleteSession(token) {
-      if (client && token)
+      if (client.configured && token)
         await database()
           .collection('sessions')
           .deleteOne({ _id: hash(token) });

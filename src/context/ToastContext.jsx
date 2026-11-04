@@ -1,9 +1,28 @@
-import { createContext, createSignal, For, Show, onCleanup, useContext } from 'solid-js';
+import {
+  createContext,
+  createEffect,
+  createSignal,
+  For,
+  Show,
+  onCleanup,
+  useContext,
+} from 'solid-js';
 import Icon from '../components/Icon.jsx';
+import { useLocation } from '@solidjs/router';
 const ToastContext = createContext();
 export function ToastProvider(props) {
   const [toasts, setToasts] = createSignal([]);
   const timers = new Map();
+  const location = useLocation();
+  let previousRoute = `${location.pathname}${location.search}`;
+  createEffect(() => {
+    const route = `${location.pathname}${location.search}`;
+    if (route === previousRoute) return;
+    previousRoute = route;
+    for (const timer of timers.values()) clearTimeout(timer);
+    timers.clear();
+    setToasts([]);
+  });
   function dismiss(id) {
     clearTimeout(timers.get(id));
     timers.delete(id);
@@ -63,5 +82,10 @@ export function ToastProvider(props) {
   );
 }
 export function useToasts() {
-  return useContext(ToastContext);
+  const context = useContext(ToastContext);
+  let active = true;
+  onCleanup(() => {
+    active = false;
+  });
+  return { ...context, notify: (input) => (active ? context.notify(input) : undefined) };
 }

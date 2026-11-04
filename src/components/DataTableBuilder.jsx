@@ -1,6 +1,8 @@
+import { followChatProgress } from '../services/chatFollow.js';
+import ConversationSkeleton from './ConversationSkeleton.jsx';
 import SplitResizeHandle from './SplitResizeHandle.jsx';
 import Breadcrumbs from './Breadcrumbs.jsx';
-import ChatSendButton from './ChatSendButton.jsx';
+import ChatPrompt from './ChatPrompt.jsx';
 import { workflowChatText } from '../services/workflowChatText.js';
 import CodeBlock from './CodeBlock.jsx';
 import { For, Show, createSignal, createEffect } from 'solid-js';
@@ -14,6 +16,10 @@ import ToastMessage from './ToastMessage.jsx';
 export default function DataTableBuilder(props) {
   const [tab, setTab] = createSignal('fields');
   let messageList;
+  followChatProgress(
+    () => messageList,
+    () => JSON.stringify(props.messages || []),
+  );
   createEffect(() => {
     if (!props.scrollRevision) return;
     requestAnimationFrame(() => {
@@ -41,7 +47,7 @@ export default function DataTableBuilder(props) {
           class="workflow-breadcrumbs"
           label="Data table location"
           items={[
-            { label: 'Data', href: '/workspace/data' },
+            { label: 'Data Tables', href: '/workspace/data' },
             !props.isNew && {
               label: props.value.name || 'Table',
               href: `/workspace/data/${props.tableId}`,
@@ -79,7 +85,10 @@ export default function DataTableBuilder(props) {
             <Show when={props.error}>
               <ToastMessage tone="error">{props.error}</ToastMessage>
             </Show>
-            <For each={props.messages}>
+            <Show when={props.loading}>
+              <ConversationSkeleton />
+            </Show>
+            <For each={props.loading ? [] : props.messages}>
               {(message) => (
                 <article class={`workflow-chat-message ${message.role}`}>
                   <strong>{message.role === 'user' ? 'You' : 'Admin Agent'}</strong>
@@ -97,33 +106,14 @@ export default function DataTableBuilder(props) {
               )}
             </For>
           </div>
-          <form class="workflow-composer" novalidate onSubmit={props.onSend}>
-            <label class="sr-only" for="data-prompt">
-              Describe your table
-            </label>
-            <div class="composer-input-surface">
-              <textarea
-                id="data-prompt"
-                maxlength="4000"
-                rows="4"
-                value={props.prompt}
-                onInput={(event) => props.onPrompt(event.currentTarget.value)}
-                placeholder="Describe fields to add or changes to this table…"
-              />
-              <ChatSendButton
-                disabled={props.sending || props.processing || props.failed || !props.prompt.trim()}
-              />
-            </div>
-          </form>
-          <div class="workflow-chat-footer">
-            <button
-              type="button"
-              class="workspace-button secondary small"
-              disabled={props.sending || props.processing}
-              onClick={props.onNewConversation}
-            >
-              New Conversation
-            </button>
+          <div class="builder-chat-composer">
+            <ChatPrompt
+              value={props.prompt}
+              onInput={props.onPrompt}
+              onSubmit={props.onSend}
+              placeholder="Describe fields to add or changes to this table…"
+              disabled={props.sending || props.processing || props.failed}
+            />
           </div>
         </section>
         <section class="workflow-design" aria-label="Table design">

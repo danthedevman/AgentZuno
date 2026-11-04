@@ -1,3 +1,6 @@
+import { validateWorkflowReferenceAnswers } from './workflowReferences.js';
+import { installGlobalSearch } from './globalSearch.js';
+import { createRequestTasks, installRequestTaskRoutes } from './requestTasks.js';
 import { installRequestAttachmentRoutes } from './requestAttachments.js';
 import { installDemoRoutes } from './demoMode.js';
 import { validateRequestAction, ownChatRequest } from './requestChatActions.js';
@@ -325,7 +328,9 @@ export function createHelpdeskService(store, chats) {
       return safeRequest(existing, user);
     }
     await ensureOrigin(user, record, context);
-    await createWorkflowExecution(store).ensureRun(record);
+    const execution = createWorkflowExecution(store);
+    const runId = await execution.ensureRun(record);
+    if (user.isInteractiveDemo && runId) await execution.process(runId);
     return safeRequest(record, user);
   }
   async function update(user, id, input, action) {
@@ -560,7 +565,22 @@ export function createHelpdeskService(store, chats) {
     });
   }
   async function createSupport(user, input) {
-    fields(input, ['requestId', 'text', 'attachmentIds', 'workflowId']);
+    fields(input, ['requestId', 'text', 'attachmentIds', 'workflowId', 'relatedRequestId']);
+    if (input.relatedRequestId) {
+      const record = await get(user, input.relatedRequestId);
+      requireRequestOperator(user, record);
+      return chats.create(
+        user,
+        { requestId: input.requestId, text: text(input.text, 'Message', 7000) },
+        {
+          providerOwnerId: user.helpdeskOwnerId || user.id,
+          assistantType: 'support',
+          helpdeskPurpose: 'support',
+          helpdeskRequestId: input.relatedRequestId,
+          operatorRequestId: input.relatedRequestId,
+        },
+      );
+    }
     if (input.workflowId) {
       const workflow = (await catalog(user)).find((item) => item.id === input.workflowId);
       if (!workflow) fail('Catalog item not found.', 404);
@@ -663,6 +683,14 @@ export function createHelpdeskService(store, chats) {
       chat.providerOwnerId !== (user.helpdeskOwnerId || user.id)
     )
       fail('Support conversation not found.', 404);
+    if (chat.operatorRequestId) {
+      const record = await get(user, chat.operatorRequestId);
+      requireRequestOperator(user, record);
+      chat.requests = [safeRequest(record, user)];
+      chat.ticketSubmitted = true;
+      chat.requestForm = null;
+      return chat;
+    }
     chat.supportIdentity = supportIdentity(
       await store.collection('helpdeskSettings').findOne(scope(user)),
     );
@@ -739,7 +767,7 @@ export function createHelpdeskService(store, chats) {
       );
       return { id, status: 'complete' };
     }
-    if (input.activeRequestId) {
+    if (input.activeRequestId && !current.operatorRequestId) {
       const selected = await requests().findOne({
         ...scope(user),
         requesterId: user.id,
@@ -799,12 +827,21 @@ export function createHelpdeskService(store, chats) {
     if (!claimed.modifiedCount) fail('This action is already being processed.', 409);
     try {
       const { action: kind, ...changes } = value;
-      const result = await update(
-        user,
-        requestId,
-        { version, ...changes },
-        kind === 'comment' ? 'requester-message' : kind === 'update' ? 'update' : kind,
-      );
+      const taskService = createRequestTasks(store);
+      const result =
+        kind === 'create-task'
+          ? await taskService.create(user, requestId, changes, `${id}:${input.messageId}`)
+          : kind === 'close-task'
+            ? await taskService.update(user, requestId, changes.taskId, {
+                status: 'closed',
+                version: changes.taskVersion,
+              })
+            : await update(
+                user,
+                requestId,
+                { version, ...changes },
+                kind === 'comment' ? 'requester-message' : kind === 'update' ? 'update' : kind,
+              );
       await store.collection('chats').updateOne(
         {
           _id: chat._id,
@@ -859,6 +896,7 @@ export function createHelpdeskService(store, chats) {
   async function submitSupportTicket(user, id, input) {
     fields(input, ['title', 'text', 'priority']);
     const chat = await getSupport(user, id);
+    if (chat.operatorRequestId) fail('Use an employee conversation to submit a new request.', 403);
     if (!['complete', 'failed'].includes(chat.status))
       fail('Wait for the current response before submitting a ticket.', 409);
     if (chat.helpdeskRequestId) {
@@ -889,6 +927,7 @@ export function createHelpdeskService(store, chats) {
   async function submitForm(user, id, input) {
     fields(input, ['workflowId', 'workflowVersion', 'answers', 'offerId']);
     const chat = await getSupport(user, id);
+    if (chat.operatorRequestId) fail('Use an employee conversation to submit a new request.', 403);
     if (!['complete', 'failed'].includes(chat.status))
       fail('Wait for the current response before submitting.', 409);
     const offerId = input.offerId || chat.responseId;
@@ -931,6 +970,12 @@ export function createHelpdeskService(store, chats) {
       !(await matchesWorkflowDepartment(store, user, published.definition))
     )
       fail('Workflow access changed. Reload the conversation.', 403);
+    await validateWorkflowReferenceAnswers(
+      store,
+      user,
+      { ...currentWorkflow, ...published },
+      answers,
+    );
     const routing = published.source
       ? {
           action: published.action,
@@ -1096,6 +1141,8 @@ export function installHelpdeskRoutes(app, store, service) {
   });
   installMyWorkRoutes(app, store);
   installRequestAttachmentRoutes(app, store, service);
+  installRequestTaskRoutes(app, store);
+  installGlobalSearch(app, store, service);
   installDemoRoutes(app, store, service);
   installBulkDeletionRoutes(app, store);
   installChatAttachmentRoutes(app, store);

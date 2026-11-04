@@ -55,7 +55,7 @@ export default function KnowledgeOverviewPage(props) {
           ]}
         />
         <button
-          class="knowledge-refresh-button"
+          class="knowledge-refresh-button refresh-icon-button"
           type="button"
           aria-label="Refresh knowledge statistics"
           title="Refresh"

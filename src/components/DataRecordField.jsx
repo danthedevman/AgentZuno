@@ -4,7 +4,10 @@ import { api } from '../services/api.js';
 export default function DataRecordField(props) {
   const [options] = createResource(
     () => (props.field.type === 'reference' ? props.field.referenceTable : false),
-    (id) => api(`/api/helpdesk/data/tables/${id}/options`),
+    (id) =>
+      api(
+        `/api/helpdesk/data/tables/${id}/options${props.includeDemo || props.readOnly ? '?includeDemo=1' : ''}`,
+      ),
   );
   return (
     <Switch>

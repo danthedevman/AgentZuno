@@ -1,3 +1,4 @@
+import { requireCompatibleDemoReferences } from './demoReferences.js';
 import { ObjectId } from 'mongodb';
 
 const failure = (message, status = 400) =>
@@ -306,6 +307,10 @@ export function createKnowledgeAnalytics(store, loadWorkspace, integrationServic
         ))
     )
       throw failure('Choose a knowledge base and its articles from this workspace.');
+    await requireCompatibleDemoReferences(store, user, existing, {
+      knowledgeBaseId: input.knowledgeBaseId || existing?.knowledgeBaseId,
+      articleIds: input.articleIds,
+    });
     const record = {
       ...(input.knowledgeBaseId
         ? { knowledgeBaseId: input.knowledgeBaseId }

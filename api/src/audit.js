@@ -1,9 +1,12 @@
+import { databaseConfiguration, needsDatabaseSetup } from './storage/configuration.js';
 import { listResponse } from './listQuery.js';
 import { auditContext } from './recordAudit.js';
+import { auditDetails } from './auditDetails.js';
+import { ObjectId } from 'mongodb';
 import { randomUUID } from 'node:crypto';
 import { requireRole, helpdeskScope } from './helpdeskRoles.js';
 
-export function installAuditMiddleware(app, store, auth) {
+export function installAuditMiddleware(app, store, auth, options = {}) {
   app.locals.auditPending = new Set();
   const track = (operation) => {
     app.locals.auditPending.add(operation);
@@ -15,9 +18,33 @@ export function installAuditMiddleware(app, store, auth) {
     request.user = await auth.currentUser(request);
     const path = request.path;
     const isPublicRead = request.method === 'GET' && ['/site', '/auth/session'].includes(path);
-    if (isPublicRead || !process.env.MONGODB_URI) return next();
+    if (needsDatabaseSetup() && !options.forceStorage) {
+      if (request.method === 'GET' && ['/site', '/auth/session', '/portal'].includes(path))
+        return next();
+      return response.status(503).json({
+        error: 'Complete database setup before signing in or registering.',
+        setupRequired: true,
+      });
+    }
+    if (isPublicRead || (!options.forceStorage && !databaseConfiguration())) return next();
     // Never retain query strings, headers, request/response bodies, tokens, or model prompts.
     const target = path.replace(/[^a-zA-Z0-9/_-]/g, '').slice(0, 240);
+    const details = auditDetails({
+      triggerType: /workflow-conversations/.test(path)
+        ? 'admin-chat'
+        : /\/decisions$/.test(path)
+          ? 'approval-decision'
+          : /\/form$/.test(path)
+            ? 'request-submission'
+            : /\/workflows(?:\/|$)/.test(path) && request.method !== 'GET'
+              ? 'workflow-configuration'
+              : 'api-request',
+      triggerLabel: `${request.method} ${target}`,
+      workflowId:
+        typeof request.body?.workflowId === 'string' && ObjectId.isValid(request.body.workflowId)
+          ? request.body.workflowId
+          : path.match(/\/workflows\/([a-f0-9]{24})(?:\/|$)/)?.[1],
+    });
     const auditId = randomUUID();
     try {
       await store.collection('governanceAudit').insertOne({
@@ -27,6 +54,7 @@ export function installAuditMiddleware(app, store, auth) {
         actorType: request.user ? (request.user.isDemo ? 'demo' : 'account') : 'anonymous',
         method: request.method,
         target,
+        ...details,
         startedAt: new Date(),
         outcome: 'started',
       });
@@ -131,7 +159,7 @@ export function installAuditMiddleware(app, store, auth) {
             ),
         );
     });
-    auditContext.run({ request, auditId }, next);
+    auditContext.run({ request, auditId, details }, next);
   });
 }
 
@@ -166,6 +194,22 @@ export function installAuditRoutes(app, store) {
     response.json({ recorded: true });
   });
   const auditProjection = { ownerId: 0, workspaceId: 0 };
+  app.get('/api/helpdesk/audit/workflows', async (request, response) => {
+    requireRole(request.helpdeskUser, ['admin']);
+    const q = request.query.q || '';
+    if (typeof q !== 'string' || q.length > 200)
+      return response.status(400).json({ error: 'Invalid workflow search.' });
+    const filter = { ...helpdeskScope(request.helpdeskUser) };
+    if (q.trim())
+      filter.name = { $regex: q.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' };
+    const rows = await store
+      .collection('helpdeskWorkflows')
+      .find(filter, { projection: { name: 1 } })
+      .sort({ name: 1 })
+      .limit(100)
+      .toArray();
+    response.json(rows.map((item) => ({ value: String(item._id), label: item.name })));
+  });
   async function auditRecord(user, id) {
     requireRole(user, ['admin']);
     if (typeof id !== 'string' || !/^[a-f0-9-]{36}$/.test(id)) return null;
@@ -226,6 +270,8 @@ export function installAuditRoutes(app, store) {
         Outcome: 'outcome',
         Role: 'role',
         Version: 'versionAfter',
+        Workflow: 'workflowName',
+        Trigger: 'triggerLabel',
       };
       const pageSize = Number(request.query.pageSize || 20),
         page = Number(request.query.page || 1),
@@ -257,9 +303,62 @@ export function installAuditRoutes(app, store) {
           ...(until ? { $lte: until } : {}),
         },
       };
+      if (request.query.workflowId) {
+        if (
+          typeof request.query.workflowId !== 'string' ||
+          !ObjectId.isValid(request.query.workflowId)
+        )
+          return response.status(400).json({ error: 'Choose a valid workflow.' });
+        const id = request.query.workflowId;
+        const associations = await store
+          .collection('helpdeskWorkflowConversations')
+          .find(
+            { ...helpdeskScope(request.helpdeskUser), workflowId: id },
+            { projection: { chatId: 1 } },
+          )
+          .limit(1000)
+          .toArray();
+        filter.$and = [
+          {
+            $or: [
+              { workflowId: id },
+              { target: { $regex: `/workflows/${id}(?:/|$)` } },
+              { sourceChatId: { $in: associations.map((item) => item.chatId) } },
+            ],
+          },
+        ];
+      }
+      if (request.query.triggerType) {
+        if (
+          ![
+            'admin-chat',
+            'support-chat',
+            'request-submission',
+            'workflow-step',
+            'approval-decision',
+            'workflow-configuration',
+            'record-update',
+            'api-request',
+          ].includes(request.query.triggerType)
+        )
+          return response.status(400).json({ error: 'Choose a valid trigger.' });
+        filter.triggerType = request.query.triggerType;
+      }
       if (q.trim()) {
         const escaped = q.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        filter.$or = ['actorId', 'action', 'target', 'outcome', 'role', 'method'].map((key) => ({
+        filter.$or = [
+          'actorId',
+          'action',
+          'target',
+          'outcome',
+          'role',
+          'method',
+          'workflowName',
+          'workflowId',
+          'workflowRunId',
+          'triggerLabel',
+          'triggerType',
+        ].map((key) => ({
           [key]: { $regex: escaped, $options: 'i' },
         }));
       }
@@ -272,6 +371,39 @@ export function installAuditRoutes(app, store) {
         .skip((currentPage - 1) * pageSize)
         .limit(pageSize)
         .toArray();
+      const associations = await store
+        .collection('helpdeskWorkflowConversations')
+        .find(
+          {
+            ...helpdeskScope(request.helpdeskUser),
+            chatId: { $in: rows.map((item) => item.sourceChatId).filter(Boolean) },
+          },
+          { projection: { chatId: 1, workflowId: 1 } },
+        )
+        .toArray();
+      for (const row of rows)
+        row.workflowId ||= associations.find(
+          (item) => item.chatId === row.sourceChatId,
+        )?.workflowId;
+      const workflowIds = [
+        ...new Set(
+          rows
+            .map((item) => item.workflowId)
+            .filter((id) => typeof id === 'string' && ObjectId.isValid(id)),
+        ),
+      ];
+      const workflows = await store
+        .collection('helpdeskWorkflows')
+        .find(
+          {
+            ...helpdeskScope(request.helpdeskUser),
+            _id: { $in: workflowIds.map((id) => new ObjectId(id)) },
+          },
+          { projection: { name: 1 } },
+        )
+        .toArray();
+      for (const row of rows)
+        row.workflowName ||= workflows.find((item) => String(item._id) === row.workflowId)?.name;
       return response.json({
         rows: rows.map(({ _id, ...record }) => ({ id: String(_id), ...record })),
         total,
@@ -290,8 +422,9 @@ export function installAuditRoutes(app, store) {
   });
 }
 
-export async function auditOperation(store, actor, action, target, perform) {
+export async function auditOperation(store, actor, action, target, perform, details = {}) {
   const id = randomUUID();
+  const contextDetails = auditDetails({ ...auditContext.getStore()?.details, ...details });
   await store.collection('governanceAudit').insertOne({
     _id: id,
     ownerId: actor.ownerId || actor.id,
@@ -301,6 +434,7 @@ export async function auditOperation(store, actor, action, target, perform) {
     method: 'JOB',
     target,
     action,
+    ...contextDetails,
     startedAt: new Date(),
     outcome: 'started',
   });
@@ -310,6 +444,7 @@ export async function auditOperation(store, actor, action, target, perform) {
       {
         ...currentContext,
         auditId: id,
+        details: contextDetails,
         actorType: 'worker',
         request: currentContext?.request || {
           helpdeskUser: { ...actor, helpdeskOwnerId: actor.ownerId || actor.id },

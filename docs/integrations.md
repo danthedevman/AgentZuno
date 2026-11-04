@@ -1,5 +1,7 @@
 # Connections and identity
 
+This guide is for Admins configuring the installation or its connections. Agents and Users use the published features their permissions allow; Read Only users inspect permitted records without changing configuration. See [roles and everyday features](roles-and-features.md) for practical steps and access rules.
+
 Configure application credentials by opening the relevant Connector page. Values are encrypted in MongoDB and are not returned as plaintext to the browser. Setup instructions and callback URLs are shown in the application.
 
 | Connector       | Current capability                                                                                                                  |

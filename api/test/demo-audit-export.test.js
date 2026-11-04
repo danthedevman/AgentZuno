@@ -70,6 +70,7 @@ test(
         await db.collection('helpdeskRequests').countDocuments({ ownerId: admin.id }),
         4,
       );
+      assert.equal(await db.collection('helpdeskTasks').countDocuments({ ownerId: admin.id }), 4);
       const catalog = await call(admin, '/helpdesk/catalog');
       assert.equal(catalog.status, 200);
       assert.equal(catalog.body.length, 4);
@@ -171,6 +172,36 @@ test(
         ).demoDatasetId,
         'demo-v1-retail',
       );
+      const demoWorkflow = await db
+        .collection('helpdeskWorkflows')
+        .findOne({ ownerId: admin.id, demoDatasetId: { $exists: true } });
+      const categoryId = demoWorkflow.definition.settings.category;
+      assert.ok(
+        !(await call(admin, '/helpdesk/data/tables/ref-catalog-category/options')).body.some(
+          (item) => item.value === categoryId,
+        ),
+      );
+      assert.ok(
+        (
+          await call(admin, '/helpdesk/data/tables/ref-catalog-category/options?includeDemo=1')
+        ).body.some((item) => item.value === categoryId),
+      );
+      const blocked = await call(admin, '/helpdesk/workflows', 'POST', {
+        source: demoWorkflow.source,
+        enabled: false,
+      });
+      assert.equal(blocked.status, 400, JSON.stringify(blocked.body));
+      assert.match(blocked.body.error, /Demo records/);
+      // Legacy references remain valid without rewriting published source or revisions.
+      const legacy = { ...demoWorkflow, _id: new ObjectId(), name: 'Real Legacy Workflow' };
+      delete legacy.demo;
+      delete legacy.demoDatasetId;
+      delete legacy.demoIndustry;
+      await db.collection('helpdeskWorkflows').insertOne(legacy);
+      const preview = await call(admin, '/helpdesk/demo/removal-preview');
+      assert.equal(preview.status, 200);
+      assert.ok(preview.body.retained.some((item) => item.type === 'approvalGroups'));
+      assert.ok(preview.body.retained.some((item) => item.type === 'workforceReferences'));
       await db.collection('workforceReferences').insertOne({
         ownerId: admin.id,
         workspaceId: admin.workspaceId,
@@ -192,6 +223,7 @@ test(
         0,
       );
       assert.equal(await db.collection('articles').countDocuments({ ownerId: admin.id }), 0);
+      assert.equal(await db.collection('helpdeskTasks').countDocuments({ ownerId: admin.id }), 0);
       assert.equal(
         await db
           .collection('workforceReferences')
@@ -211,7 +243,37 @@ test(
         .collection('helpdeskMembers')
         .findOne({ ownerId: admin.id, userId: admin.id });
       assert.equal(memberAfterRemoval.canApprove, false);
-      assert.ok(!memberAfterRemoval.queues.some((name) => name.startsWith('Demo ')));
+      assert.ok(memberAfterRemoval.queues.includes(demoWorkflow.queueName));
+      const unchanged = await db.collection('helpdeskWorkflows').findOne({ _id: legacy._id });
+      assert.equal(unchanged.source, legacy.source);
+      assert.deepEqual(unchanged.publishedConfig, legacy.publishedConfig);
+      const retainedCategory = await db
+        .collection('workforceReferences')
+        .findOne({ _id: categoryId });
+      assert.ok(retainedCategory.retainedFromDemo);
+      assert.equal(retainedCategory.demoDatasetId, undefined);
+      assert.equal((await call(admin, '/helpdesk/demo/settings')).body.loaded, false);
+      assert.equal(
+        (
+          await call(admin, '/helpdesk/demo/settings', 'PUT', {
+            action: 'load',
+            industry: 'retail',
+            enableApprovals: true,
+          })
+        ).status,
+        200,
+      );
+      assert.equal(
+        (
+          await call(admin, '/helpdesk/demo/settings', 'PUT', {
+            action: 'remove',
+            industry: 'retail',
+            confirmed: true,
+          })
+        ).status,
+        200,
+      );
+      assert.ok(await db.collection('workforceReferences').findOne({ _id: categoryId }));
       const actions = { receiveMessages: true, respondToUsers: true, workflowNotifications: false };
       assert.equal(
         (await call(admin, '/helpdesk/channels/slack/actions', 'PUT', { version: 0, actions }))

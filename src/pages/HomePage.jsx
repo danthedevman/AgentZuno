@@ -94,8 +94,8 @@ export default function HomePage() {
             <A class="start-button" href="/register">
               Get access
             </A>
-            <A class="start-button demo-button" href="/workspace">
-              Open workspace
+            <A class="start-button demo-button" href="/demo">
+              Try It
             </A>
           </div>
         </div>
@@ -134,10 +134,13 @@ export default function HomePage() {
             TypeScript before publishing.
           </p>
           <A href="/docs/workflows">
-            Explore the workflow SDK <span aria-hidden="true">↗</span>
+            Explore the workflow SDK <span aria-hidden="true">→</span>
           </A>
         </div>
-        <div class="marketing-workflow-preview" aria-label="Laptop request workflow">
+        <div
+          class="marketing-workflow-preview marketing-text-preview"
+          aria-label="Laptop request workflow"
+        >
           <div class="marketing-preview-top">
             <span>Laptop Request</span>
           </div>
@@ -174,10 +177,10 @@ export default function HomePage() {
             and require approval before they are saved.
           </p>
           <A href="/docs#runtime-security">
-            Learn about access controls <span aria-hidden="true">↗</span>
+            Learn about access controls <span aria-hidden="true">→</span>
           </A>
         </div>
-        <div class="marketing-knowledge-preview">
+        <div class="marketing-knowledge-preview marketing-text-preview">
           <div class="marketing-preview-top">Knowledge Center</div>
           <div class="marketing-knowledge-folders">
             <span>Getting Started</span>
@@ -236,9 +239,9 @@ export default function HomePage() {
       >
         <div class="marketing-copy">
           <h2 id="open-source-feature-title">
-            An agent to build
+            One agent builds.
             <br />
-            An agent to help
+            The other helps
           </h2>
           <p>
             Two agents work with clear responsibilities. The Admin agent helps your administrators
@@ -254,12 +257,11 @@ export default function HomePage() {
               Get Access
             </A>
             <A href="/docs">
-              Read the Docs <span aria-hidden="true">↗</span>
+              Read the Docs <span aria-hidden="true">→</span>
             </A>
           </div>
         </div>
         <div class="marketing-platform-preview marketing-agents-preview">
-          <span class="marketing-platform-label">AgentZuno</span>
           <h3>Two agents, one connected help desk</h3>
           <article>
             <Icon name="agent" class="marketing-agent-mark" />
@@ -279,6 +281,108 @@ export default function HomePage() {
               <small>Employee Support</small>
             </div>
           </article>
+        </div>
+      </MarketingSection>
+      <MarketingSection
+        class="marketing-section marketing-split marketing-ownership"
+        aria-labelledby="ownership-title"
+      >
+        <div
+          class="marketing-copy ownership-graphic"
+          aria-label="An open source alternative to Zendesk, JSM, Freshservice, and Serval"
+        >
+          <div class="ownership-vendors" aria-hidden="true">
+            <span>Zendesk</span>
+            <span>JSM</span>
+            <span>Freshservice</span>
+            <span>Serval</span>
+          </div>
+          <div class="ownership-brand">
+            <img src="/agentzuno-wordmark.svg" width="192" height="48" alt="AgentZuno" />
+            <p>Build on your own terms</p>
+          </div>
+        </div>
+        <div class="marketing-copy">
+          <h2 id="ownership-title">
+            Your infrastructure
+            <br />
+            Your terms
+          </h2>
+          <p>
+            Host AgentZuno on infrastructure you already control and put your budget toward your
+            team. The open source platform comes without mandatory per-user license fees or a
+            platform contract.
+          </p>
+          <p>
+            Keep control of your code, your data, and your choice of AI provider. Hosting, AI usage,
+            and any third-party services are yours to choose and budget for.
+          </p>
+          <div class="ownership-benefits">
+            <span>No expensive platform contracts</span>
+            <span>No vendor lock-in</span>
+            <span>No drama</span>
+          </div>
+        </div>
+      </MarketingSection>
+      <MarketingSection
+        class="marketing-section marketing-open-source"
+        aria-labelledby="make-it-yours-title"
+      >
+        <div class="marketing-section-intro">
+          <h2 id="make-it-yours-title">Make it your own</h2>
+          <p>
+            Download the code, run it in your environment, and test it with your team. Change the
+            experience, extend a workflow, or build something entirely your own.
+          </p>
+          <p>
+            Bring your favorite AI provider to help you understand the code and make the updates you
+            want. You have the source and the freedom to keep building.
+          </p>
+          <div class="marketing-provider-links">
+            <a
+              href="https://openai.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="OpenAI"
+            >
+              <span class="provider-logo">
+                <img src="/provider-logos/openai.svg" width="32" height="32" alt="" />
+              </span>
+            </a>
+            <a
+              href="https://www.anthropic.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Anthropic"
+            >
+              <span class="provider-logo">
+                <img src="/provider-logos/anthropic.svg" width="32" height="32" alt="" />
+              </span>
+            </a>
+            <a
+              href="https://gemini.google.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Google Gemini"
+            >
+              <span class="provider-logo">
+                <img src="/provider-logos/gemini.png" width="32" height="32" alt="" />
+              </span>
+            </a>
+          </div>
+          <div class="landing-actions">
+            <a
+              class="start-button"
+              href="https://github.com/danthedevman/AgentZuno"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Get the Code <span aria-hidden="true">→</span>
+            </a>
+            <A class="start-button demo-button" href="/docs">
+              Start Building
+            </A>
+          </div>
         </div>
       </MarketingSection>
       <footer class="marketing-footer">

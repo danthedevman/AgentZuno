@@ -1,8 +1,10 @@
 # Installation and development
 
+Admins use this guide to install and configure AgentZuno. Agents handle assigned support work, Users ask for help and submit requests, and Read Only users review permitted records and reports. See [roles and everyday features](roles-and-features.md) for practical steps and access rules.
+
 ## Docker
 
-Install Docker with Compose, then clone the repository and create a local configuration:
+Install [Docker with Compose](https://docs.docker.com/get-started/get-docker/), then clone the repository and create a local configuration:
 
 ```sh
 git clone https://github.com/danthedevman/AgentZuno.git

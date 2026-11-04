@@ -1,3 +1,5 @@
+import { workflowAuditDetails } from './auditDetails.js';
+import { createRequestTasks } from './requestTasks.js';
 import { slackWorkflowDestination } from './slackWorkflowDestination.js';
 import { requireConnectorAction } from './connectorActions.js';
 import { matchesWorkflowDepartment } from './workflowDepartments.js';
@@ -121,7 +123,7 @@ export function createWorkflowExecution(store, fetcher = fetch) {
       typeof input !== 'object'
     )
       deny('Invalid workflow action.', 400);
-    if (!['route', 'handoff', 'approval', 'slack.postMessage'].includes(action))
+    if (!['route', 'handoff', 'approval', 'slack.postMessage', 'task.create'].includes(action))
       deny('Unsupported workflow action.', 400);
     const allowed = [
       ...definition.steps,
@@ -139,6 +141,17 @@ export function createWorkflowExecution(store, fetcher = fetch) {
         input.queueName !== declared.params.queueName
       )
         deny('Queue is outside the workflow grant.');
+    } else if (action === 'task.create') {
+      if (
+        Object.keys(input).some((key) => !['queueName', 'title', 'description'].includes(key)) ||
+        input.queueName !== declared.params.queueName ||
+        typeof input.title !== 'string' ||
+        !input.title.trim() ||
+        input.title.length > 160 ||
+        typeof input.description !== 'string' ||
+        input.description.length > 2000
+      )
+        deny('Invalid task details or assignment group.', 400);
     } else if (action === 'slack.postMessage') {
       if (
         Object.keys(input).some((key) => !['channel', 'text'].includes(key)) ||
@@ -370,6 +383,7 @@ export function createWorkflowExecution(store, fetcher = fetch) {
               'workflow.approval.requested',
               `/workflow-runs/${run._id}/${stepId}`,
               () => runs().updateOne(filter, { $set: { status: 'awaiting-approval' } }),
+              workflowAuditDetails(run, stepId),
             );
             throw paused();
           }
@@ -414,6 +428,15 @@ export function createWorkflowExecution(store, fetcher = fetch) {
                   },
                 );
                 return { queueName: input.queueName };
+              }
+              if (action === 'task.create') {
+                const task = await createRequestTasks(store).createForWorkflow(
+                  run,
+                  stepId,
+                  input,
+                  actor,
+                );
+                return { id: task.id, queueName: task.queueName };
               }
               const source = await store
                 .collection('helpdeskChannels')
@@ -495,6 +518,7 @@ export function createWorkflowExecution(store, fetcher = fetch) {
               if (!sent.ok || !sent.ts) throw new Error('Slack delivery failed.');
               return { messageId: sent.ts };
             },
+            workflowAuditDetails(run, stepId),
           );
           await runs().updateOne(
             { ...filter, 'steps.id': stepId },
@@ -562,30 +586,39 @@ export function createWorkflowExecution(store, fetcher = fetch) {
     await authorize(run);
     if (!(await resolveWorkflowApprovers(store, run, step.input)).includes(user.id))
       deny('Approval assignment changed.', 403);
-    const result = await runs().updateOne(
-      {
-        _id: id,
-        ...helpdeskScope(user),
-        status: 'awaiting-approval',
-        steps: { $elemMatch: { id: stepId, status: 'awaiting-approval' } },
+    await auditOperation(
+      store,
+      { ...user, ownerId: run.ownerId },
+      'workflow.approval.decided',
+      `/workflow-runs/${run._id}/${stepId}`,
+      async () => {
+        const result = await runs().updateOne(
+          {
+            _id: id,
+            ...helpdeskScope(user),
+            status: 'awaiting-approval',
+            steps: { $elemMatch: { id: stepId, status: 'awaiting-approval' } },
+          },
+          {
+            $set: {
+              'steps.$.status': 'complete',
+              'steps.$.result': { approved, decidedBy: user.id, comment: comment.trim() },
+              'steps.$.completedAt': new Date(),
+              status: 'queued',
+              updatedAt: new Date(),
+            },
+          },
+        );
+        if (!result.modifiedCount) deny('Approval changed.', 409);
+        await store.collection('helpdeskRequests').updateOne(
+          { ...helpdeskScope(user), _id: new ObjectId(run.requestId) },
+          {
+            $set: { approvalUserIds: [], status: 'open', updatedAt: new Date() },
+            $inc: { version: 1 },
+          },
+        );
       },
-      {
-        $set: {
-          'steps.$.status': 'complete',
-          'steps.$.result': { approved, decidedBy: user.id, comment: comment.trim() },
-          'steps.$.completedAt': new Date(),
-          status: 'queued',
-          updatedAt: new Date(),
-        },
-      },
-    );
-    if (!result.modifiedCount) deny('Approval changed.', 409);
-    await store.collection('helpdeskRequests').updateOne(
-      { ...helpdeskScope(user), _id: new ObjectId(run.requestId) },
-      {
-        $set: { approvalUserIds: [], status: 'open', updatedAt: new Date() },
-        $inc: { version: 1 },
-      },
+      workflowAuditDetails(run, stepId, 'approval-decision'),
     );
     return { status: 'queued' };
   }
@@ -707,14 +740,14 @@ export function installWorkflowExecutionRoutes(app, store) {
       Object.keys(request.body).some((key) => !['stepId', 'approved', 'comment'].includes(key))
     )
       deny('Invalid decision.', 400);
-    response.json(
-      await service.decide(
-        request.helpdeskUser,
-        request.params.id,
-        request.body.stepId,
-        request.body.approved,
-        request.body.comment,
-      ),
+    const result = await service.decide(
+      request.helpdeskUser,
+      request.params.id,
+      request.body.stepId,
+      request.body.approved,
+      request.body.comment,
     );
+    if (app.locals.isInteractiveDemo) await service.process(request.params.id);
+    response.json(result);
   });
 }

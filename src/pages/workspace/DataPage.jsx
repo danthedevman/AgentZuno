@@ -59,11 +59,21 @@ export default function DataPage() {
   let previousProposal = '';
   createEffect(() => {
     setMessages(
-      reconcile(chatId() && !conversation.error ? conversation()?.messages || [] : [], {
-        key: 'id',
-      }),
+      reconcile(
+        chatId() && conversation()?.id === chatId() && !conversation.error
+          ? conversation()?.messages || []
+          : [],
+        {
+          key: 'id',
+        },
+      ),
     );
-    if (chatId() && !conversation.error && conversation()?.definition) {
+    if (
+      chatId() &&
+      conversation()?.id === chatId() &&
+      !conversation.error &&
+      conversation()?.definition
+    ) {
       const proposal = JSON.stringify(conversation().definition);
       if (proposal !== previousProposal) {
         previousProposal = proposal;
@@ -76,7 +86,10 @@ export default function DataPage() {
     }
   });
   const processing = () =>
-    !!chatId() && !conversation.error && ['queued', 'responding'].includes(conversation()?.status);
+    !!chatId() &&
+    conversation()?.id === chatId() &&
+    !conversation.error &&
+    ['queued', 'responding'].includes(conversation()?.status);
   createEffect(() => {
     if (processing()) {
       const timer = setInterval(() => refreshConversation().catch(() => {}), 600);
@@ -162,7 +175,7 @@ export default function DataPage() {
           fallback={
             <>
               <Show when={!designing()}>
-                <BackLink href="/workspace/data">Data</BackLink>
+                <BackLink href="/workspace/data">Data Tables</BackLink>
                 <div class="connections-heading">
                   <PageHeading title={isNew() ? 'New Table' : table()?.name || 'Table'} />
                   <Show when={!designing() && table()}>
@@ -305,6 +318,9 @@ export default function DataPage() {
                   processing={processing()}
                   failed={!conversation.error && conversation()?.status === 'failed'}
                   error={conversation.error?.message}
+                  loading={
+                    !!query.chat && conversation.loading && conversation()?.id !== query.chat
+                  }
                   messages={messages}
                 />
               </Show>
@@ -312,7 +328,7 @@ export default function DataPage() {
           }
         >
           <div class="connections-heading">
-            <PageHeading title="Data" />
+            <PageHeading title="Data Tables" />
             <A class="workspace-button small" href="/workspace/data/new">
               New Table
             </A>

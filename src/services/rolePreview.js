@@ -1,3 +1,4 @@
+import { api } from './api.js';
 export function getRolePreview(workspaceId) {
   try {
     const value = localStorage.getItem(`agentzuno-role-preview-${workspaceId}`);
@@ -7,14 +8,10 @@ export function getRolePreview(workspaceId) {
   }
 }
 export async function setRolePreview(workspaceId, role) {
-  const response = await fetch('/api/auth/impersonation', {
+  await api('/api/auth/impersonation', {
     method: 'POST',
-    credentials: 'same-origin',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ workspaceId, role }),
   });
-  const result = await response.json();
-  if (!response.ok) throw new Error(result.error || 'Impersonation could not be changed.');
   try {
     if (role === 'admin') localStorage.removeItem(`agentzuno-role-preview-${workspaceId}`);
     else localStorage.setItem(`agentzuno-role-preview-${workspaceId}`, role);

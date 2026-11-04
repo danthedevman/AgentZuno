@@ -1,12 +1,18 @@
 /** @deprecated Legacy routing label. Use trigger.departmentId for a configured department. */
 export type Department = string;
 export type WorkflowStep =
+  | {
+      id: string;
+      action: 'task.create';
+      params: { queueName: string; title: string; description: string };
+    }
   | { id: string; action: 'route' | 'handoff'; params: { queueName: string } }
   | {
       id: string;
       action: 'approval';
       params: {
         reason: string;
+        requireRejectionComment?: boolean;
         target?: 'user' | 'group' | 'manager';
         userId?: string;
         groupId?: string;
@@ -49,9 +55,10 @@ export interface RequestForm {
   fields: Array<{
     id: string;
     label: string;
-    type: 'text' | 'textarea' | 'select' | 'boolean';
+    type: 'text' | 'textarea' | 'select' | 'boolean' | 'reference';
     required: boolean;
     options?: string[];
+    referenceTable?: string;
   }>;
 }
 export function defineRequestForm(input: RequestForm): RequestForm;
@@ -164,6 +171,12 @@ export interface ExecutionContext {
       id: string,
       options: { channel: string; text: string },
     ): Promise<{ messageId: string }>;
+  };
+  readonly tasks: {
+    create(
+      id: string,
+      options: { queueName: string; title: string; description: string },
+    ): Promise<{ id: string }>;
   };
 }
 export interface ExecutableWorkflow extends WorkflowDefinition {

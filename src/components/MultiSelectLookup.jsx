@@ -36,6 +36,7 @@ export default function MultiSelectLookup(props) {
     if (readOnly()) return;
     setIsOpen(false);
     setQuery('');
+    props.onSearch?.('');
     update(
       props.single
         ? [value]
@@ -183,6 +184,7 @@ export default function MultiSelectLookup(props) {
           onClick={open}
           onInput={(event) => {
             setQuery(event.currentTarget.value);
+            props.onSearch?.(event.currentTarget.value);
             open();
           }}
           onKeyDown={handleKeyDown}

@@ -1,3 +1,4 @@
+import RequestTasks from './RequestTasks.jsx';
 import RequestAttachments from './RequestAttachments.jsx';
 import { Portal } from 'solid-js/web';
 import Breadcrumbs from './Breadcrumbs.jsx';
@@ -10,7 +11,7 @@ import Icon from './Icon.jsx';
 import { displayLabel, statusLabel } from '../services/displayLabels.js';
 import ToastMessage from './ToastMessage.jsx';
 import { For, Show, createResource, createSignal, createEffect, onCleanup } from 'solid-js';
-import { useParams } from '@solidjs/router';
+import { useParams, useSearchParams } from '@solidjs/router';
 import { useWorkspace } from '../context/WorkspaceContext.jsx';
 import { api } from '../services/api.js';
 import Dropdown from './Dropdown.jsx';
@@ -21,6 +22,7 @@ const labels = (value) => statusLabel(value) || '—';
 export default function RequestPanel(props) {
   let panel;
   const params = useParams();
+  const [query] = useSearchParams();
   const requestId = () => props.requestId || params.id;
   createEffect(() => {
     requestId();
@@ -61,7 +63,7 @@ export default function RequestPanel(props) {
   const [workNote, setWorkNote] = createSignal('');
   const [error, setError] = createSignal('');
   const [saving, setSaving] = createSignal(false);
-  const [detailTab, setDetailTab] = createSignal('details');
+  const [detailTab, setDetailTab] = createSignal(query.tab === 'tasks' ? 'tasks' : 'details');
   const [isEditing, setIsEditing] = createSignal(false);
   const [editVersion, setEditVersion] = createSignal(null);
   function beginEdit() {
@@ -227,7 +229,26 @@ export default function RequestPanel(props) {
               >
                 Attachments
               </button>
+              <button
+                role="tab"
+                aria-selected={detailTab() === 'tasks'}
+                onClick={() => setDetailTab('tasks')}
+              >
+                Tasks
+              </button>
             </div>
+            <Show when={detailTab() === 'tasks'}>
+              <RequestTasks
+                refreshKey={props.refreshKey}
+                requestId={requestId()}
+                workspaceId={params.workspaceId}
+                canManage={canWork() && current()?.status !== 'resolved' && !isEditing()}
+                onChanged={async () => {
+                  await refetch();
+                  await props.onChanged?.();
+                }}
+              />
+            </Show>
             <Show when={detailTab() === 'attachments'}>
               <RequestAttachments
                 requestId={requestId()}
@@ -245,8 +266,7 @@ export default function RequestPanel(props) {
             </Show>
             <div class="ticket-detail-layout" hidden={detailTab() !== 'details'}>
               <div class="ticket-detail-content">
-                <section class="ticket-description">
-                  <h3>Details</h3>
+                <section class="ticket-description" aria-label="Request description">
                   <p>{item().description}</p>
                 </section>
                 <Show when={item().formSubmission}>
@@ -262,7 +282,7 @@ export default function RequestPanel(props) {
                                 ? answer.value
                                   ? 'Yes'
                                   : 'No'
-                                : answer.value || '—'}
+                                : answer.displayValue || answer.value || '—'}
                             </dd>
                           </div>
                         )}

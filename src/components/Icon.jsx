@@ -1,6 +1,8 @@
 import { Show } from 'solid-js';
 
 const icons = {
+  drawer: 'view_sidebar',
+  profile: 'account_circle',
   'menu-open': 'menu',
   'menu-close': 'menu_open',
   info: 'info',

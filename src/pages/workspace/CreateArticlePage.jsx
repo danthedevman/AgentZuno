@@ -1,3 +1,5 @@
+import { followChatProgress } from '../../services/chatFollow.js';
+import ConversationSkeleton from '../../components/ConversationSkeleton.jsx';
 import SplitResizeHandle from '../../components/SplitResizeHandle.jsx';
 import AttachmentPanel from '../../components/AttachmentPanel.jsx';
 import Skeleton from '../../components/Skeleton.jsx';
@@ -65,12 +67,21 @@ export default function CreateArticlePage(props) {
     (id) => api(`/api/helpdesk/article-conversations/${id}`),
   );
   createEffect(() => setChatId(query.chat || ''));
-  const currentConversation = () => (conversation.error ? null : conversation());
+  const currentConversation = () =>
+    !chatId() || conversation.error || conversation()?.id !== chatId() ? null : conversation();
   createEffect(() => {
     if (!base() && !query.base && workspace()?.knowledgeBases?.length)
-      setBase(workspace().knowledgeBases[0].id);
+      setBase(
+        workspace().knowledgeBases.find(
+          (item) => props.article.demoDatasetId || !item.demoDatasetId,
+        )?.id || '',
+      );
   });
   let history;
+  followChatProgress(
+    () => history,
+    () => JSON.stringify(currentConversation()?.messages || []),
+  );
   createEffect(() => {
     if (!['queued', 'responding'].includes(currentConversation()?.status)) return;
     const timer = setTimeout(() => refetch(), 500);
@@ -298,6 +309,9 @@ export default function CreateArticlePage(props) {
         <SplitResizeHandle storageKey="builder" />
         <section class="workflow-chat" aria-label="Article conversation">
           <div ref={history} class="workflow-chat-history">
+            <Show when={chatId() && conversation.loading && !currentConversation()}>
+              <ConversationSkeleton />
+            </Show>
             <For each={currentConversation()?.messages || []}>
               {(message) => (
                 <article class={`workflow-chat-message ${message.role}`}>
@@ -342,19 +356,6 @@ export default function CreateArticlePage(props) {
               }
               onSubmit={chat}
             />
-          </div>
-          <div class="workflow-chat-footer">
-            <button
-              type="button"
-              class="workspace-button secondary small"
-              onClick={() => {
-                setChatId('');
-                setQuery({ chat: undefined });
-                setTab('editor');
-              }}
-            >
-              New Conversation
-            </button>
           </div>
         </section>
         <section class="workflow-design" aria-label="Article draft">
@@ -469,11 +470,13 @@ export default function CreateArticlePage(props) {
                   name="knowledgeBaseId"
                   required
                   value={base()}
-                  options={(workspace()?.knowledgeBases || []).map((item) => ({
-                    value: item.id,
-                    href: `/workspace/knowledge/bases/${item.id}`,
-                    label: item.name,
-                  }))}
+                  options={(workspace()?.knowledgeBases || [])
+                    .filter((item) => props.article.demoDatasetId || !item.demoDatasetId)
+                    .map((item) => ({
+                      value: item.id,
+                      href: `/workspace/knowledge/bases/${item.id}`,
+                      label: item.name,
+                    }))}
                   onChange={(value) => {
                     setBase(value);
                     changed();
@@ -484,11 +487,13 @@ export default function CreateArticlePage(props) {
                   required
                   name="topicIds"
                   value={topics()}
-                  options={(workspace()?.topics || []).map((item) => ({
-                    value: item.id,
-                    href: `/workspace/records/topic/${item.id}/edit`,
-                    label: item.name,
-                  }))}
+                  options={(workspace()?.topics || [])
+                    .filter((item) => props.article.demoDatasetId || !item.demoDatasetId)
+                    .map((item) => ({
+                      value: item.id,
+                      href: `/workspace/records/topic/${item.id}/edit`,
+                      label: item.name,
+                    }))}
                   onChange={(value) => {
                     setTopics(value);
                     changed();

@@ -5,8 +5,12 @@ import Dropdown from './Dropdown.jsx';
 import MultiSelectLookup from './MultiSelectLookup.jsx';
 import ToastMessage from './ToastMessage.jsx';
 export default function WorkflowPermissionsEditor(props) {
-  const [users] = createResource(() => api('/api/helpdesk/reference-records'));
-  const [queues] = createResource(() => api('/api/helpdesk/queues'));
+  const [users] = createResource(() =>
+    api(`/api/helpdesk/reference-records${props.includeDemo ? '?includeDemo=1' : ''}`),
+  );
+  const [queues] = createResource(() =>
+    api(`/api/helpdesk/queues?reference=1${props.includeDemo ? '&includeDemo=1' : ''}`),
+  );
   const value = () => props.value || { audience: 'workspace', userIds: [], queueNames: [] };
   return (
     <div class="create-form">

@@ -1,5 +1,7 @@
 # AgentZuno executable workflow SDK
 
+Admins author and publish workflows. Agents and Users can submit permitted published forms; they cannot change workflow code. Read Only users may inspect permitted configuration but cannot publish or execute it. Assigned approvers also need approval permission. See the [roles and features guide](../../../docs/roles-and-features.md).
+
 Install with `npm install ./api/sdk/workflows`. The package includes JavaScript helpers and TypeScript declarations. The application executes the published TypeScript's `run(ctx)` function; the TypeScript tab is editable source, not an export-only example.
 
 ```typescript
@@ -67,3 +69,19 @@ Optional `settings` metadata supports `description` (500 characters), `category`
 Approval steps support user, group (any one eligible member), and requester-manager targets. Use `when.departmentIds` and/or typed form-value conditions to request approval only when applicable. Set `requireRejectionComment: true` on an approval step when a rejection must include a comment. The backend resolves current membership and manager assignments and enforces the requirement.
 
 Workflow department scope references the configured Departments Data table through `trigger.departmentId`. Omit it for Any Department. The API validates that the record belongs to the current workspace, and discovery, catalog submission, and workflow execution recheck the requester's current profile reference. The SDK validates reference format; it cannot verify database ownership offline. The deprecated `trigger.department` string remains readable for older workflows and events; it is not an organization department reference. New workflows should use `departmentId`.
+
+## Reference fields
+
+Forms can select existing users or built-in/custom Data records:
+
+```typescript
+{ id: 'requested-for', label: 'Requested For', type: 'reference', referenceTable: 'users', required: true }
+```
+
+Use the configured Data table ID for other sources. Admin chat receives available table IDs and names; the form editor has a Reference type and table selector. `ctx.answers['requested-for']` is the canonical selected ID. Submission validates current record availability and permissions and stores a display-label snapshot on the request. Publishing a reference field permits workflow users to search labels/IDs; full record access remains subject to existing permissions. Request/task references stay limited to the submitter's accessible records.
+
+## Create a fulfillment task
+
+Declare a `task.create` step with an existing assignment group's `queueName`, a title, and a description. Call `await ctx.tasks.create('step-id', { queueName: 'App Support', title: 'Set up the board', description: String(ctx.answers.justification) })` using the same step ID and group as the manifest. Route the parent request first when both should go to that group.
+
+The server creates the task only for a submitted request after checking the published workflow grant and current requester access. Retries reuse the same task. A published task action does not give employees permission to create or close tasks through ordinary request APIs.

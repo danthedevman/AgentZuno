@@ -6,6 +6,7 @@ COPY index.html vite.config.js jsconfig.json ./
 COPY src ./src
 COPY public ./public
 COPY api/sdk ./api/sdk
+COPY docs ./docs
 RUN npm run build
 
 FROM nginxinc/nginx-unprivileged:alpine

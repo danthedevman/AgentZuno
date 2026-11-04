@@ -10,6 +10,7 @@ import Skeleton from '../../components/Skeleton.jsx';
 import ToastMessage from '../../components/ToastMessage.jsx';
 import CodeBlock from '../../components/CodeBlock.jsx';
 import { displayLabel } from '../../services/displayLabels.js';
+import A from '../../components/WorkspaceLink.jsx';
 
 export default function AuditRecordPage() {
   const params = useParams(),
@@ -24,6 +25,28 @@ export default function AuditRecordPage() {
   const current = () => (record.error ? null : record());
   const date = (value) => (value ? new Date(value).toLocaleString() : '—');
   const details = () => [
+    [
+      'Workflow',
+      current()?.workflowId ? (
+        <A href={`/workspace/workflows/${current().workflowId}/edit`}>
+          {current().workflowName || 'Open Workflow'}
+        </A>
+      ) : (
+        '—'
+      ),
+    ],
+    ['Trigger', displayLabel(current()?.triggerType || 'Recorded Operation')],
+    ['Triggered By', current()?.triggerLabel || current()?.action || current()?.method],
+    ['Workflow Run', current()?.workflowRunId || '—'],
+    ['Workflow Step', current()?.stepId || '—'],
+    [
+      'Request',
+      current()?.requestId ? (
+        <A href={`/workspace/requests/${current().requestId}`}>Open Request</A>
+      ) : (
+        '—'
+      ),
+    ],
     ['Actor', current()?.actorId || current()?.actorType || 'System'],
     ['Actor Type', displayLabel(current()?.actorType || 'System')],
     ['Effective Role', displayLabel(current()?.role || 'System')],

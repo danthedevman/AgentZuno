@@ -1,3 +1,4 @@
+import DatabaseSetupPage from './pages/DatabaseSetupPage.jsx';
 import SetupPage from './pages/workspace/SetupPage.jsx';
 import AuditRecordPage from './pages/workspace/AuditRecordPage.jsx';
 import MyWorkPage from './pages/workspace/MyWorkPage.jsx';
@@ -56,8 +57,9 @@ export default function App() {
       <Route path="/login" component={LoginPage} />
       <Route path="/preview/:workspaceId/proposals/:id" component={ArticlePreviewPage} />
       <Route path="/invite" component={InvitePage} />
+      <Route path="/setup/database" component={DatabaseSetupPage} />
       <Route path="/register" component={RegisterPage} />
-      <Route path={['/workspace', '/workspace/:workspaceId']} component={WorkspaceLayout}>
+      <Route path={['/workspace', '/workspace/:workspaceId', '/demo']} component={WorkspaceLayout}>
         <Route path="/" component={WorkspaceHomePage} />
         <Route path="/setup" component={SetupPage} />
         <Route path="/my-work" component={MyWorkPage} />

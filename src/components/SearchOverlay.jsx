@@ -1,3 +1,4 @@
+import Skeleton from './Skeleton.jsx';
 import A from './WorkspaceLink.jsx';
 import {
   For,
@@ -12,7 +13,6 @@ import {
 import { releaseDialog } from '../services/dialogs.js';
 import { api } from '../services/api.js';
 import { useSession } from '../context/SessionContext.jsx';
-import { useWorkspace } from '../context/WorkspaceContext.jsx';
 import Icon from './Icon.jsx';
 
 export default function SearchOverlay(props) {
@@ -31,14 +31,21 @@ export default function SearchOverlay(props) {
     onCleanup(() => observer.disconnect());
   });
   onCleanup(() => releaseDialog(dialog));
-  const { workspace } = useWorkspace();
   const { session } = useSession();
   const [sourceQuery, setSourceQuery] = createSignal(false);
-  const [sourceResults] = createResource(sourceQuery, (query) =>
-    api('/api/knowledge/browser-search', { method: 'POST', body: JSON.stringify({ query }) }),
-  );
+  const [sourceResults] = createResource(sourceQuery, async (query) => ({
+    ...(await api('/api/knowledge/browser-search', {
+      method: 'POST',
+      body: JSON.stringify({ query }),
+    })),
+    query,
+  }));
   const imported = () =>
-    !session()?.user || !sourceQuery() || sourceResults.loading || sourceResults.error
+    !session()?.user ||
+    !sourceQuery() ||
+    sourceResults.loading ||
+    sourceResults.error ||
+    sourceResults()?.query !== query().trim()
       ? []
       : sourceResults()?.results?.filter((item) => item.sourceDocumentId) || [];
   const [query, setQuery] = createSignal('');
@@ -53,17 +60,32 @@ export default function SearchOverlay(props) {
     () => props.active && !query().trim() && !!session()?.user,
     () => api('/api/helpdesk/recent-views'),
   );
-  const [localResults] = createResource(localQuery, (value) =>
-    api(`/api/helpdesk/lists/search?list=1&sort=Name&q=${encodeURIComponent(value)}`),
-  );
+  const [localResults] = createResource(localQuery, async (value) => ({
+    ...(await api(
+      `/api/helpdesk/global-search?list=1&sort=Name&pageSize=50&q=${encodeURIComponent(value)}`,
+    )),
+    query: value,
+  }));
   const results = () =>
     query().trim()
-      ? !localResults.error && localQuery() === query().trim()
+      ? !localResults.error && !localResults.loading && localResults()?.query === query().trim()
         ? localResults()?.rows || []
         : []
       : !recent.error
         ? recent() || []
         : [];
+  const localPending = () =>
+    !!query().trim() &&
+    !localResults.error &&
+    (localQuery() !== query().trim() ||
+      localResults.loading ||
+      localResults()?.query !== query().trim());
+  const sourcePending = () =>
+    query().trim().length >= 2 &&
+    !sourceResults.error &&
+    (sourceQuery() !== query().trim() ||
+      sourceResults.loading ||
+      sourceResults()?.query !== query().trim());
   createEffect(() => {
     const value = props.active ? query().trim() : '';
     setLocalQuery(false);
@@ -112,6 +134,7 @@ export default function SearchOverlay(props) {
         <input
           autofocus
           type="search"
+          maxlength="200"
           aria-label="Search workspace content"
           placeholder="Search workspace…"
           value={query()}
@@ -119,10 +142,13 @@ export default function SearchOverlay(props) {
         />
       </label>
       <p class="overlay-result-count" role="status">
-        {query().trim() ? `${results().length + imported().length} results` : 'Recently Viewed'}
+        {query().trim() ? 'Search Results' : 'Recently Viewed'}
       </p>
       <div class="search-results-region">
         <div class="overlay-search-results" ref={resultsElement} onScroll={updateOverflow}>
+          <Show when={localPending() || (!query().trim() && recent.loading)}>
+            <Skeleton class="search-results-skeleton" label="Loading search results" lines={5} />
+          </Show>
           <For each={results()}>
             {(item) => (
               <A href={item.href} onClick={() => dialog.close()}>
@@ -138,8 +164,11 @@ export default function SearchOverlay(props) {
               </A>
             )}
           </For>
-          <Show when={sourceResults.loading}>
-            <p role="status">Checking connected-source permissions…</p>
+          <Show when={sourcePending() && !localPending()}>
+            <Skeleton class="search-results-skeleton" label="Loading connected results" lines={2} />
+          </Show>
+          <Show when={localResults.error && query().trim()}>
+            <p role="status">Search could not be loaded. Try again.</p>
           </Show>
           <Show when={sourceResults.error}>
             <p role="status">Connected-source access could not be verified.</p>
@@ -163,7 +192,16 @@ export default function SearchOverlay(props) {
               </A>
             )}
           </For>
-          <Show when={!results().length && !imported().length && !sourceResults.loading}>
+          <Show
+            when={
+              !results().length &&
+              !imported().length &&
+              !localPending() &&
+              !sourcePending() &&
+              !recent.loading &&
+              !localResults.error
+            }
+          >
             <p class="overlay-empty">
               {query().trim()
                 ? localResults.loading

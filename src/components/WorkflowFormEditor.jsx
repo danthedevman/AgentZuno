@@ -1,6 +1,7 @@
+import { api } from '../services/api.js';
 import { confirmRemovedFields } from '../services/confirmations.js';
 import { createStore, reconcile } from 'solid-js/store';
-import { For, Show, createEffect, createSignal } from 'solid-js';
+import { For, Show, createEffect, createResource, createSignal } from 'solid-js';
 import Dropdown from './Dropdown.jsx';
 import RequestForm from './RequestForm.jsx';
 export default function WorkflowFormEditor(props) {
@@ -9,6 +10,10 @@ export default function WorkflowFormEditor(props) {
   const [stableFields, setStableFields] = createStore([]);
   createEffect(() => setStableFields(reconcile(props.form?.fields || [], { key: 'id' })));
   const fields = () => stableFields;
+  const [tables] = createResource(
+    () => fields().some((field) => field.type === 'reference'),
+    () => api('/api/helpdesk/data/tables'),
+  );
   const changeField = (id, changes) =>
     update({
       fields: fields().map((field) => (field.id === id ? { ...field, ...changes } : field)),
@@ -75,15 +80,19 @@ export default function WorkflowFormEditor(props) {
                             { value: 'textarea', label: 'Long Text' },
                             { value: 'select', label: 'Choice' },
                             { value: 'boolean', label: 'Yes / No' },
+                            { value: 'reference', label: 'Reference' },
                           ]}
                           onChange={(type) =>
                             update({
                               fields: fields().map((item) => {
                                 if (item.id !== field.id) return item;
-                                const { options, ...rest } = item;
+                                const { options, referenceTable, ...rest } = item;
                                 return {
                                   ...rest,
                                   type,
+                                  ...(type === 'reference'
+                                    ? { referenceTable: referenceTable || 'users' }
+                                    : {}),
                                   ...(type === 'select'
                                     ? { options: options || ['Option 1', 'Option 2'] }
                                     : {}),
@@ -93,6 +102,27 @@ export default function WorkflowFormEditor(props) {
                           }
                         />
                       </label>
+                      <Show when={field.type === 'reference'}>
+                        <label>
+                          Reference Table
+                          <Dropdown
+                            ariaLabel={`Reference table for ${field.label}`}
+                            value={field.referenceTable}
+                            disabled={props.disabled || tables.loading}
+                            options={[
+                              { value: 'users', label: 'Users' },
+                              ...(tables() || [])
+                                .filter((table) => table.id !== 'ref-user')
+                                .map((table) => ({ value: table.id, label: table.name })),
+                            ]}
+                            onChange={(referenceTable) => changeField(field.id, { referenceTable })}
+                          />
+                        </label>
+                        <p>
+                          Publishing this field lets permitted users search record names. Full
+                          record access follows their existing permissions.
+                        </p>
+                      </Show>
                       <Show when={field.type === 'select'}>
                         <label>
                           Choices (one per line)

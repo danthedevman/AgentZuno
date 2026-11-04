@@ -235,6 +235,7 @@ export default function RecordTable(props) {
     setPage(1);
   });
   const viewKey = () => `${props.source || ''}:${JSON.stringify(props.sourceParams || {})}`;
+  let loadedViewKey;
   const [result, { refetch }] = createResource(
     () => {
       props.refreshKey;
@@ -257,9 +258,21 @@ export default function RecordTable(props) {
         viewKey: viewKey(),
       };
     },
-    async (source) => ({ ...(await api(source.url)), viewKey: source.viewKey }),
+    async (source) => {
+      const started = performance.now();
+      const changedView = loadedViewKey !== source.viewKey;
+      const data = await api(source.url);
+      // Keep tab placeholders visible for one short transition rather than a single flash.
+      if (changedView)
+        await new Promise((resolve) =>
+          setTimeout(resolve, Math.max(0, 160 - (performance.now() - started))),
+        );
+      if (viewKey() === source.viewKey) loadedViewKey = source.viewKey;
+      return { ...data, viewKey: source.viewKey };
+    },
   );
-  const activeResult = () => (result()?.viewKey === viewKey() ? result() : null);
+  const activeResult = () => (!result.error && result()?.viewKey === viewKey() ? result() : null);
+  const isPendingView = () => Boolean(props.source && !result.error && !activeResult());
   const [stableRows, setStableRows] = createStore([]);
   createEffect(() =>
     setStableRows(
@@ -419,10 +432,14 @@ export default function RecordTable(props) {
               </tr>
             </thead>
             <tbody>
-              <For each={rows()}>
-                {(row) => <RecordRow record={row} columns={columns()} onOpen={props.onRowClick} />}
-              </For>
-              <Show when={result.loading && !rows().length}>
+              <Show when={!isPendingView()}>
+                <For each={rows()}>
+                  {(row) => (
+                    <RecordRow record={row} columns={columns()} onOpen={props.onRowClick} />
+                  )}
+                </For>
+              </Show>
+              <Show when={isPendingView()}>
                 <For each={[0, 1, 2, 3, 4]}>
                   {() => (
                     <tr aria-hidden="true">

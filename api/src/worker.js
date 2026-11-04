@@ -1,3 +1,6 @@
+import { enableLocalInstallation, needsDatabaseSetup } from './storage/configuration.js';
+enableLocalInstallation();
+while (needsDatabaseSetup()) await new Promise((resolve) => setTimeout(resolve, 2000));
 import { createAuthoredSemantic } from './authoredSemantic.js';
 import { createInvitationDelivery } from './invitations.js';
 import { createWorkflowExecution } from './workflowExecution.js';
@@ -13,8 +16,7 @@ import { createIntegrationService } from './integrations.js';
 import { createChatService } from './chat.js';
 import { createQueues, queueNames } from './queues.js';
 
-if (!process.env.REDIS_URL || !process.env.MONGODB_URI)
-  throw new Error('The worker requires REDIS_URL and MONGODB_URI.');
+if (!process.env.REDIS_URL) throw new Error('The worker requires REDIS_URL.');
 const store = createIntegrationStore();
 await store.ready();
 const connection = new Redis(process.env.REDIS_URL, { maxRetriesPerRequest: null });

@@ -1,6 +1,9 @@
+import { hasWorkflowChanges } from '../../services/workflowPublication.js';
+import { followChatProgress } from '../../services/chatFollow.js';
+import ConversationSkeleton from '../../components/ConversationSkeleton.jsx';
 import SplitResizeHandle from '../../components/SplitResizeHandle.jsx';
 import Breadcrumbs from '../../components/Breadcrumbs.jsx';
-import ChatSendButton from '../../components/ChatSendButton.jsx';
+import ChatPrompt from '../../components/ChatPrompt.jsx';
 import WorkflowFormNode from '../../components/WorkflowFormNode.jsx';
 import WorkflowApprovalEditor from '../../components/WorkflowApprovalEditor.jsx';
 import WorkflowSettingsEditor from '../../components/WorkflowSettingsEditor.jsx';
@@ -31,12 +34,12 @@ import {
 } from 'solid-js';
 import { api } from '../../services/api.js';
 import { useWorkspace } from '../../context/WorkspaceContext.jsx';
-import ValidatedForm from '../../components/ValidatedForm.jsx';
 import Icon from '../../components/Icon.jsx';
 import AgentProgress from '../../components/AgentProgress.jsx';
-const isExternalAction = (action) => action.includes('.');
+const isExternalAction = (action) => action.includes('.') && action !== 'task.create';
 
 const actionNames = {
+  'task.create': 'Create fulfillment task',
   route: 'Route request',
   handoff: 'Hand off to support',
   approval: 'Request approval',
@@ -95,9 +98,14 @@ export default function WorkflowBuilderPage() {
   createEffect(() => {
     setActivityMessages(
       'messages',
-      reconcile(!conversation.error && chatId() ? conversation()?.messages || [] : [], {
-        key: 'id',
-      }),
+      reconcile(
+        !conversation.error && chatId() && conversation()?.id === chatId()
+          ? conversation()?.messages || []
+          : [],
+        {
+          key: 'id',
+        },
+      ),
     );
   });
   const [selected, setSelected] = createSignal('');
@@ -108,6 +116,10 @@ export default function WorkflowBuilderPage() {
   const [text, setText] = createSignal('');
   const [pendingUserText, setPendingUserText] = createSignal('');
   let messageList;
+  followChatProgress(
+    () => messageList,
+    () => JSON.stringify(conversation()?.messages || []),
+  );
   createEffect(() => {
     if (!pendingUserText()) return;
     requestAnimationFrame(() => {
@@ -189,7 +201,10 @@ export default function WorkflowBuilderPage() {
     };
   });
   const processing = () =>
-    !!chatId() && !conversation.error && ['queued', 'responding'].includes(conversation()?.status);
+    !!chatId() &&
+    conversation()?.id === chatId() &&
+    !conversation.error &&
+    ['queued', 'responding'].includes(conversation()?.status);
   const code = () => {
     try {
       return source() || (definition() ? toTypeScript(definition()) : '');
@@ -394,9 +409,7 @@ export default function WorkflowBuilderPage() {
     }
   }
   const hasPublishedChanges = () =>
-    current()?.enabled &&
-    (code() !== current()?.publishedConfig?.source ||
-      JSON.stringify(definition()) !== JSON.stringify(current()?.publishedConfig?.definition));
+    current()?.enabled && hasWorkflowChanges(definition(), code(), current()?.publishedConfig);
   function publicationReason() {
     if (!definition()) return 'Create a workflow definition before publishing.';
     try {
@@ -406,7 +419,10 @@ export default function WorkflowBuilderPage() {
     }
     if (
       definition().steps.some(
-        (step) => !['route', 'handoff', 'approval', 'slack.postMessage'].includes(step.action),
+        (step) =>
+          !['route', 'handoff', 'approval', 'slack.postMessage', 'task.create'].includes(
+            step.action,
+          ),
       )
     )
       return 'Choose a supported runtime action.';
@@ -490,7 +506,7 @@ export default function WorkflowBuilderPage() {
               </Show>
               {saveStatus() || (definition() ? publicationReason() : '')}
             </span>
-            <Show when={current()?.enabled && hasPublishedChanges()}>
+            <Show when={current()?.enabled}>
               <button
                 class="workspace-button secondary small"
                 disabled={saving() || sending() || processing()}
@@ -503,24 +519,20 @@ export default function WorkflowBuilderPage() {
               class="workspace-button small"
               type="button"
               disabled={
-                current()?.enabled && !hasPublishedChanges()
-                  ? saving() || sending() || processing()
-                  : !!publicationReason()
+                saving() ||
+                sending() ||
+                processing() ||
+                !!publicationReason() ||
+                (current()?.enabled && !hasPublishedChanges())
               }
               title={
                 current()?.enabled && !hasPublishedChanges()
-                  ? 'Unpublish this workflow'
+                  ? 'No unpublished changes'
                   : publicationReason() || 'Publish this workflow'
               }
-              onClick={() =>
-                current()?.enabled && !hasPublishedChanges() ? save(false, false, true) : save(true)
-              }
+              onClick={() => save(true)}
             >
-              {current()?.enabled
-                ? hasPublishedChanges()
-                  ? 'Publish Changes'
-                  : 'Unpublish'
-                : 'Publish'}
+              {current()?.enabled ? 'Publish Changes' : 'Publish'}
             </button>
           </div>
         </Show>
@@ -555,7 +567,9 @@ export default function WorkflowBuilderPage() {
               aria-live="polite"
               aria-relevant="additions text"
             >
-              <Show when={!chatId()}></Show>
+              <Show when={chatId() && conversation.loading && conversation()?.id !== chatId()}>
+                <ConversationSkeleton />
+              </Show>
               <For each={activityMessages.messages}>
                 {(item) => (
                   <Show when={item.role === 'assistant' || item.text || item.error}>
@@ -585,31 +599,6 @@ export default function WorkflowBuilderPage() {
                   <p>{pendingUserText()}</p>
                 </article>
               </Show>
-              <Show when={!conversation.error && conversation()?.queueProposal}>
-                <section class="workflow-queue-proposal">
-                  <p>
-                    Create Assignment Group: <strong>{conversation().queueProposal.name}</strong>
-                  </p>
-                  <button
-                    class="workspace-button small"
-                    onClick={async () => {
-                      try {
-                        await api('/api/helpdesk/queues', {
-                          method: 'POST',
-                          body: JSON.stringify(conversation().queueProposal),
-                        });
-                        setMessage(
-                          'Assignment group created. Ask the Admin agent to assign it to your workflow.',
-                        );
-                      } catch (error) {
-                        setError(error.message);
-                      }
-                    }}
-                  >
-                    Create Assignment Group
-                  </button>
-                </section>
-              </Show>
               <Show
                 when={
                   !conversation.error && !conversation.error && conversation()?.status === 'failed'
@@ -633,57 +622,18 @@ export default function WorkflowBuilderPage() {
                 </button>
               </Show>
             </div>
-            <ValidatedForm class="workflow-composer" onSubmit={send}>
-              <label class="sr-only" for="workflow-prompt">
-                Describe your workflow
-              </label>
-              <div class="composer-input-surface">
-                <textarea
-                  id="workflow-prompt"
-                  name="text"
-                  required
-                  maxlength={baseDefinition() ? 2000 : 4000}
-                  rows="4"
-                  placeholder="Describe a workflow or ask the Admin agent to change it…"
-                  value={text()}
-                  onInput={(event) => setText(event.currentTarget.value)}
-                />
-                <ChatSendButton
-                  disabled={
-                    sending() ||
-                    processing() ||
-                    !text().trim() ||
-                    (!conversation.error && conversation()?.status === 'failed')
-                  }
-                />
-              </div>
-            </ValidatedForm>
-            <div class="workflow-chat-footer">
-              {' '}
-              <button
-                class="workspace-button secondary small"
-                onClick={() => {
-                  const value = current()?.definition || definition();
-                  setBaseDefinition(value);
-                  setViewingHistory(false);
-                  setHasEdits(true);
-                  setStartingNewConversation(true);
-                  if (selected())
-                    api(`/api/helpdesk/workflows/${selected()}/view`, {
-                      method: 'PUT',
-                      body: JSON.stringify({ chatId: null }),
-                    }).catch((error) => setError(error.message));
-                  setChatId('');
-                  setManualForm(undefined);
-                  setManualRouting(undefined);
-                  setManualName(undefined);
-                  setManualPermissions(undefined);
-                  setText('');
-                  setQuery({ chat: undefined }, { replace: true });
-                }}
-              >
-                New Conversation
-              </button>
+            <div class="builder-chat-composer">
+              <ChatPrompt
+                value={text()}
+                onInput={setText}
+                onSubmit={send}
+                placeholder="Describe a workflow or ask the Admin agent to change it…"
+                disabled={
+                  sending() ||
+                  processing() ||
+                  (!conversation.error && conversation()?.status === 'failed')
+                }
+              />
             </div>
           </section>
           <section class="workflow-design" aria-label="Workflow design">
@@ -723,7 +673,7 @@ export default function WorkflowBuilderPage() {
                           : value === 'settings'
                             ? 'Settings'
                             : value === 'typescript'
-                              ? 'TypeScript'
+                              ? 'Code'
                               : value === 'test'
                                 ? 'Test'
                                 : value === 'runs'
@@ -816,11 +766,13 @@ export default function WorkflowBuilderPage() {
                               <strong>
                                 {['route', 'handoff'].includes(step.action)
                                   ? step.params.queueName
-                                  : step.action === 'approval'
-                                    ? step.params.reason
-                                    : step.action === 'slack.postMessage'
-                                      ? 'Send a message to the support channel'
-                                      : 'Complete the next step'}
+                                  : step.action === 'task.create'
+                                    ? `${step.params.title} · ${step.params.queueName}`
+                                    : step.action === 'approval'
+                                      ? step.params.reason
+                                      : step.action === 'slack.postMessage'
+                                        ? 'Send a message to the support channel'
+                                        : 'Complete the next step'}
                               </strong>
                             </li>
                           )}
@@ -874,6 +826,7 @@ export default function WorkflowBuilderPage() {
                     }}
                   />
                   <WorkflowRoutingEditor
+                    includeDemo={Boolean(current()?.demoDatasetId)}
                     form={definition()?.form}
                     rules={definition()?.routing}
                     disabled={sending() || processing()}
@@ -889,6 +842,7 @@ export default function WorkflowBuilderPage() {
               <Show when={tab() === 'approvals'}>
                 <Show when={definition()}>
                   <WorkflowApprovalEditor
+                    includeDemo={Boolean(current()?.demoDatasetId)}
                     value={definition()}
                     disabled={sending() || processing()}
                     onChange={(value) => {
@@ -905,6 +859,7 @@ export default function WorkflowBuilderPage() {
                   fallback={<p>Create a workflow before configuring its permissions.</p>}
                 >
                   <WorkflowSettingsEditor
+                    includeDemo={Boolean(current()?.demoDatasetId)}
                     value={definition()}
                     disabled={sending() || processing()}
                     onChange={(value) => {
@@ -915,6 +870,7 @@ export default function WorkflowBuilderPage() {
                     }}
                   />
                   <WorkflowPermissionsEditor
+                    includeDemo={Boolean(current()?.demoDatasetId)}
                     value={definition()?.permissions}
                     disabled={sending() || processing()}
                     onChange={(permissions) => {
@@ -978,19 +934,21 @@ export default function WorkflowBuilderPage() {
                     </Show>
                   }
                 >
-                  <button
-                    class="workspace-button secondary small"
-                    onClick={() => navigator.clipboard.writeText(code())}
-                  >
-                    Copy TypeScript
-                  </button>
-                  <button
-                    type="button"
-                    class="workspace-button secondary small"
-                    onClick={() => setEditingCode(!editingCode())}
-                  >
-                    {editingCode() ? 'View Code' : 'Edit Code'}
-                  </button>
+                  <div class="workflow-code-actions">
+                    <button
+                      class="workspace-button secondary small"
+                      onClick={() => navigator.clipboard.writeText(code())}
+                    >
+                      Copy
+                    </button>
+                    <button
+                      type="button"
+                      class="workspace-button secondary small"
+                      onClick={() => setEditingCode(!editingCode())}
+                    >
+                      {editingCode() ? 'Done' : 'Edit'}
+                    </button>
+                  </div>
                   <Show
                     when={editingCode()}
                     fallback={<CodeBlock code={code()} language="typescript" />}

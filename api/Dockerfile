@@ -8,6 +8,7 @@ COPY --chown=node:node src ./src
 COPY --chown=node:node sdk ./sdk
 COPY --chown=node:node scripts ./scripts
 COPY --chown=node:node mock-data ./mock-data
+RUN mkdir -p /app/installation && chown node:node /app/installation
 USER node
 EXPOSE 3001
 HEALTHCHECK --interval=10s --timeout=5s --start-period=3s --retries=3 \

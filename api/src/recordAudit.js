@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { randomUUID } from 'node:crypto';
+import { auditDetails } from './auditDetails.js';
 export const auditContext = new AsyncLocalStorage();
 const writes = new Set([
   'insertOne',
@@ -41,7 +42,15 @@ export function auditDatabase(database) {
               const previous =
                 record._id && !['insertOne', 'insertMany'].includes(method)
                   ? await source.findOne(args[0], {
-                      projection: { ownerId: 1, workspaceId: 1, version: 1 },
+                      projection: {
+                        ownerId: 1,
+                        workspaceId: 1,
+                        version: 1,
+                        workflowId: 1,
+                        workflowName: 1,
+                        requestId: 1,
+                        name: 1,
+                      },
                     })
                   : null;
               const ownerId =
@@ -61,6 +70,23 @@ export function auditDatabase(database) {
                 null;
               const id = randomUUID();
               const audit = target.collection('governanceAudit');
+              const details = auditDetails({
+                triggerType: 'record-update',
+                triggerLabel: `${name}.${method}`,
+                workflowId:
+                  name === 'helpdeskWorkflows'
+                    ? String(record._id || '')
+                    : record.workflowId || previous?.workflowId,
+                workflowName:
+                  name === 'helpdeskWorkflows'
+                    ? record.name || previous?.name
+                    : record.workflowName || previous?.workflowName,
+                requestId:
+                  name === 'helpdeskRequests'
+                    ? String(record._id || '')
+                    : record.requestId || previous?.requestId,
+                ...auditContext.getStore()?.details,
+              });
               await audit.insertOne({
                 _id: id,
                 ownerId,
@@ -73,6 +99,7 @@ export function auditDatabase(database) {
                 method: 'DATABASE',
                 action: `${name}.${method}`,
                 target: name,
+                ...details,
                 requestAuditId: auditContext.getStore()?.auditId || null,
                 changedFields: [
                   ...new Set([
@@ -98,6 +125,9 @@ export function auditDatabase(database) {
                   {
                     $set: {
                       outcome: 'completed',
+                      ...(name === 'helpdeskWorkflows' && (record._id || result?.insertedId)
+                        ? { workflowId: String(record._id || result.insertedId) }
+                        : {}),
                       completedAt: new Date(),
                       matchedCount: result?.matchedCount ?? null,
                       modifiedCount: result?.modifiedCount ?? null,

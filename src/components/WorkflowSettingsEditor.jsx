@@ -33,11 +33,17 @@ export default function WorkflowSettingsEditor(props) {
     }
   }
   const [departments] = createResource(() =>
-    api('/api/helpdesk/data/tables/ref-department/options'),
+    api(
+      `/api/helpdesk/data/tables/ref-department/options${props.includeDemo ? '?includeDemo=1' : ''}`,
+    ),
   );
-  const [queues] = createResource(() => api('/api/helpdesk/queues'));
+  const [queues] = createResource(() =>
+    api(`/api/helpdesk/queues?reference=1${props.includeDemo ? '&includeDemo=1' : ''}`),
+  );
   const [categories, { refetch: refreshCategories }] = createResource(() =>
-    api('/api/helpdesk/data/tables/ref-catalog-category/options'),
+    api(
+      `/api/helpdesk/data/tables/ref-catalog-category/options${props.includeDemo ? '?includeDemo=1' : ''}`,
+    ),
   );
   onMount(() => {
     const refresh = () => refreshCategories();
@@ -158,7 +164,7 @@ export default function WorkflowSettingsEditor(props) {
             target="_blank"
             rel="noopener noreferrer"
           >
-            Add Category ↗
+            Add Category →
           </A>
         </div>
       </Show>

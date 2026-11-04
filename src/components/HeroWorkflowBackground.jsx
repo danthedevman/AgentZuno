@@ -188,9 +188,6 @@ export default function HeroWorkflowBackground() {
                   : 'Publish Workflow'}
             </span>
           </button>
-          <Show when={stage() >= 11}>
-            <span class="hero-published-note">Ready in the Catalog</span>
-          </Show>
         </div>
       </div>
     </div>

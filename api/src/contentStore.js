@@ -1,9 +1,12 @@
+import { createStorageClient } from './storage/index.js';
 import { randomUUID } from 'node:crypto';
 import { auditDatabase } from './recordAudit.js';
-import { MongoClient, ObjectId, Binary } from 'mongodb';
+import { ObjectId, Binary } from 'mongodb';
 
-export function createContentStore(uri = process.env.MONGODB_URI) {
-  const client = uri ? new MongoClient(uri, { serverSelectionTimeoutMS: 5000 }) : null;
+export function createContentStore(uri = process.env.MONGODB_URI, databaseOverride) {
+  const client = databaseOverride
+    ? { configured: true, db: () => databaseOverride, close: async () => {} }
+    : createStorageClient(uri);
   const database = () => {
     if (!client) throw Object.assign(new Error('MongoDB is not configured.'), { status: 503 });
     return auditDatabase(client.db(process.env.MONGODB_DATABASE || 'agentzuno'));
@@ -11,7 +14,7 @@ export function createContentStore(uri = process.env.MONGODB_URI) {
 
   return {
     async articles(ownerId, metadataOnly = false) {
-      if (!client) return [];
+      if (!client.configured) return [];
       const records = await database()
         .collection('articles')
         .find({ ownerId }, metadataOnly ? { projection: { body: 0, sections: 0, content: 0 } } : {})
@@ -63,7 +66,7 @@ export function createContentStore(uri = process.env.MONGODB_URI) {
         .findOne({ _id: new ObjectId(id), ownerId });
     },
     async records(ownerId, types) {
-      if (!client) return [];
+      if (!client.configured) return [];
       const records = await database()
         .collection('records')
         .find({ ownerId, ...(types ? { type: { $in: types } } : {}) })

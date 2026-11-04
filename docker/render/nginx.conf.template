@@ -1,0 +1,37 @@
+server {
+    listen 8080;
+    server_name _;
+    client_max_body_size 12m;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    add_header X-Content-Type-Options nosniff always;
+    add_header Content-Security-Policy "default-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'" always;
+
+    location = /health {
+        default_type application/json;
+        return 200 '{"status":"ok","service":"agentzuno-web"}';
+    }
+
+    location /api/ {
+        proxy_pass http://${API_UPSTREAM};
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_read_timeout 180s;
+    }
+
+    location ~ ^/assets/.*\.(woff2|woff)$ {
+        try_files $uri =404;
+        add_header Cache-Control "public, max-age=31536000, immutable";
+        add_header X-Content-Type-Options nosniff always;
+    }
+
+    location ~ ^/(server|mock-data|src|test|node_modules)(/|$) {
+        return 404;
+    }
+
+    location / {
+        add_header Cache-Control no-store;
+        try_files $uri $uri/ /index.html;
+    }
+}

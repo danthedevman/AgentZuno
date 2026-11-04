@@ -1,5 +1,7 @@
 # Security and current limits
 
+Admins manage configuration and published workflows. Agents work on permitted support records, Users submit and follow their requests, and Read Only users inspect permitted records without changing them. See [roles and everyday features](roles-and-features.md) for practical steps and access rules.
+
 AgentZuno is an actively developed project. These controls describe implemented behavior and intended boundaries, not a security certification or a substitute for independent review.
 
 ## Implemented boundaries

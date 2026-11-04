@@ -9,6 +9,8 @@ export default function RequestChatAction(props) {
   const { notify } = useToasts();
   const title = () =>
     ({
+      'create-task': 'Create Task',
+      'close-task': 'Close Task',
       comment: 'Add Comment',
       'work-note': 'Add Work Note',
       'assign-self': 'Assign to Me',
@@ -19,6 +21,15 @@ export default function RequestChatAction(props) {
       <strong>
         {title()} · {props.action.number}
       </strong>
+      <Show when={props.action.title}>
+        <p>{props.action.title}</p>
+      </Show>
+      <Show when={props.action.description}>
+        <p>{props.action.description}</p>
+      </Show>
+      <Show when={props.action.taskId}>
+        <p>Task: {props.action.taskId}</p>
+      </Show>
       <Show when={props.action.text}>
         <p class="request-action-text">{props.action.text}</p>
       </Show>

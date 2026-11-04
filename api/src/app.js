@@ -1,3 +1,6 @@
+import { installInteractiveDemoRoutes } from './interactiveDemo.js';
+import { installWorkflowReferenceRoutes } from './workflowReferences.js';
+import { installDatabaseSetupRoutes } from './storage/setup.js';
 import { installArticleAttachmentRoutes } from './articleAttachments.js';
 import { installInvitationRoutes } from './invitations.js';
 import { installKnowledgeAccessRoutes } from './knowledgeAccess.js';
@@ -50,17 +53,44 @@ const collections = {
 
 export function createApi(options = {}) {
   const app = express();
-  const auth = createAuth();
-  const store = createContentStore();
-  const integrations = createIntegrationStore();
+  app.locals.isInteractiveDemo = options.isInteractiveDemo === true;
+  if (!options.isInteractiveDemo) {
+    installDatabaseSetupRoutes(app);
+    installInteractiveDemoRoutes(app, createApi);
+    app.use('/api', (request, response, next) => {
+      try {
+        if (
+          request.headers.referer &&
+          /^\/demo(?:\/|$)/.test(new URL(request.headers.referer).pathname) &&
+          !request.path.startsWith('/demo')
+        )
+          return response
+            .status(403)
+            .json({ error: 'Interactive demo actions must use isolated demo storage.' });
+      } catch {}
+      next();
+    });
+  }
+  app.get('/api/demo', async (request, response) =>
+    response.json(await readData('interactive-demo.json')),
+  );
+  const auth = options.auth || createAuth();
+  const store = createContentStore(undefined, options.database);
+  const integrations = createIntegrationStore(options.database);
   const customDomains = createCustomDomains(integrations, options.domainDns);
   const integrationService = createIntegrationService(integrations, loadWorkspace);
-  const queues = createQueues();
+  const queues = options.queues || createQueues();
   const chatService = createChatService(integrations, queues.chat);
   const analytics = createKnowledgeAnalytics(integrations, loadWorkspace, integrationService);
   app.locals.close = async () => {
     await Promise.allSettled([...(app.locals.auditPending || [])]);
-    return Promise.all([store.close(), auth.close(), integrations.close(), queues.close()]);
+    return Promise.all([
+      store.close(),
+      auth.close(),
+      integrations.close(),
+      queues.close(),
+      app.locals.closeInteractiveDemo?.(),
+    ]);
   };
   async function loadWorkspace(user, requestedSections, metadataOnly = false) {
     const sections = new Set(
@@ -147,7 +177,7 @@ export function createApi(options = {}) {
     return sections;
   }
   app.disable('x-powered-by');
-  installAuditMiddleware(app, integrations, auth);
+  installAuditMiddleware(app, integrations, auth, { forceStorage: Boolean(options.database) });
   const slack = createHelpdeskSlack(integrations, chatService, queues.slack);
   app.post(
     ['/api/helpdesk/channels/slack/events', '/api/helpdesk/channels/slack/events/:workspaceId'],
@@ -271,6 +301,8 @@ export function createApi(options = {}) {
     const personalViewWrite =
       request.method === 'POST' && request.path === '/api/helpdesk/recent-views';
     const helpdeskWrite =
+      (['POST', 'PUT'].includes(request.method) &&
+        /^\/api\/helpdesk\/requests\/[a-f0-9]{24}\/tasks(?:\/[a-f0-9]{24})?$/.test(request.path)) ||
       (request.method === 'PUT' &&
         /^\/api\/helpdesk\/workflows\/[a-f0-9]{24}\/view$/.test(request.path)) ||
       (request.method === 'DELETE' &&
@@ -295,7 +327,7 @@ export function createApi(options = {}) {
       (['POST', 'PUT'].includes(request.method) &&
         /^\/api\/helpdesk\/queues(?:\/[a-f0-9]{24})?$/.test(request.path)) ||
       (['POST', 'PUT'].includes(request.method) &&
-        /^\/api\/helpdesk\/data\/(?:tables(?:\/(?:ref-(?:department|location|organization|division|cost-center|asset|asset-model|application|vendor|contract|service|license|catalog-category|user|queue|group|workflow)|[a-f0-9]{24})(?:\/records(?:\/[a-f0-9]{24})?)?)?|conversations(?:\/[a-f0-9]{24}\/messages)?)$/.test(
+        /^\/api\/helpdesk\/data\/(?:tables(?:\/(?:ref-(?:department|location|organization|division|cost-center|asset|asset-model|application|vendor|contract|service|license|catalog-category|user|queue|group|workflow|task|request)|[a-f0-9]{24})(?:\/records(?:\/[a-f0-9]{24})?)?)?|conversations(?:\/[a-f0-9]{24}\/messages)?)$/.test(
           request.path,
         )) ||
       (request.method === 'PUT' &&
@@ -565,6 +597,7 @@ export function createApi(options = {}) {
   installProvisioningRoutes(app, integrations);
   installCustomDomainRoutes(app, customDomains);
   installHelpdeskWorkflowRoutes(app, integrations, chatService);
+  installWorkflowReferenceRoutes(app, integrations);
   installAuditRoutes(app, integrations);
   installKnowledgeAnalyticsRoutes(app, integrations, analytics);
   installConnectionOAuthRoutes(app, integrations, integrationService);

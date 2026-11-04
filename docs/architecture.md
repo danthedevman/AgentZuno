@@ -1,6 +1,8 @@
 # Architecture and workflows
 
-AgentZuno uses Solid.js and Vite for the web application, an independent Express API, MongoDB for authoritative state and uploaded binaries, and a separate BullMQ worker coordinated through Redis. Qdrant and local Ollama embeddings support separate authored-article and retained source-import indexes. Both application agents use permission-checked hybrid semantic/keyword retrieval for Published authored articles.
+Admins manage configuration and published workflows. Agents work on permitted support records, Users submit and follow their requests, and Read Only users inspect permitted records without changing them. See [roles and everyday features](roles-and-features.md) for practical steps and access rules.
+
+AgentZuno uses Solid.js and Vite for the web application, an independent Express API, MongoDB or PostgreSQL through the storage adapter for authoritative state and uploaded binaries, and a separate BullMQ worker coordinated through Redis. Qdrant and local Ollama embeddings support separate authored-article and retained source-import indexes. Both application agents use permission-checked hybrid semantic/keyword retrieval for Published authored articles.
 
 ## Two agents
 
@@ -20,7 +22,7 @@ Providers must be configured before AI generation is available. Server-side auth
 7. SDK calls cross an authorization gateway. Actions must match declared grants, destinations, current membership, and connector configuration. The sandbox has no direct filesystem, network, database, or credential access.
 8. Approvals pause execution and surface in the intended approvers' Inbox. On resumption, stored step results support replay and deduplication. External delivery is not guaranteed exactly once; uncertain delivery requires review.
 
-Implemented runtime actions cover routing, handoff, approvals, and Slack messages. ServiceNow and Jira execution are not implemented. The public workflow SDK documentation is available at `/docs/workflows`, with package sources in [api/sdk/workflows](../api/sdk/workflows/README.md).
+Implemented runtime actions cover routing, handoff, approvals, fulfillment task creation, and Slack messages. ServiceNow and Jira execution are not implemented. The public workflow SDK documentation is available at `/docs/workflows`, with package sources in [api/sdk/workflows](../api/sdk/workflows/README.md).
 
 ## Departments, groups, and data
 
@@ -81,3 +83,5 @@ My Work is restricted to the current Admin or Agent's assigned requests and offe
 ## Setup and lifecycle controls
 
 Registration opens a skippable setup wizard for the AI provider, channels, and knowledge. Invitation acceptance retains its direct route. Skipping AI setup never claims responses are generated; a slim workspace banner links Admins to AI settings. Users are managed on their profile page, with workspace access settings beside the workforce profile. Deletion removes a workspace membership while retaining the person's global account, request history and governance records. Identity-provider-enabled workspaces reject manual user deletion. Custom-table deletion requires the current name, version, and confirmation; built-in tables remain protected.
+
+Audit filters can narrow events to a workflow and initiating trigger. Workflow steps include the run, request, and step identifiers, while Admin chat records retain a conversation correlation without prompt text. Older events may lack these fields.

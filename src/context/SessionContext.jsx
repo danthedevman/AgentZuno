@@ -1,10 +1,19 @@
+import { useLocation } from '@solidjs/router';
 import { createContext, createResource, useContext } from 'solid-js';
 import { api } from '../services/api.js';
 
 const SessionContext = createContext();
 
 export function SessionProvider(props) {
-  const [session, { refetch }] = createResource(() => api('/api/auth/session'));
+  const location = useLocation();
+  const mode = () => (/^\/demo(?:\/|$)/.test(location.pathname) ? 'demo' : 'live');
+  const [resource, { refetch }] = createResource(mode, async (source) => ({
+    ...(await api('/api/auth/session', { demo: source === 'demo' })),
+    mode: source,
+  }));
+  const session = () => (!resource.error && resource()?.mode === mode() ? resource() : undefined);
+  for (const key of ['loading', 'error', 'state'])
+    Object.defineProperty(session, key, { get: () => resource[key] });
   const [preferences, { mutate: updatePreferences, refetch: refreshPreferences }] = createResource(
     () => session()?.user?.id || false,
     () => api('/api/auth/preferences'),
@@ -21,8 +30,11 @@ export function SessionProvider(props) {
     await api('/api/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
     await refetch();
   }
-  async function register(email, password) {
-    await api('/api/auth/register', { method: 'POST', body: JSON.stringify({ email, password }) });
+  async function register(email, password, name) {
+    await api('/api/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ email, password, name }),
+    });
     await refetch();
   }
   async function signOut() {

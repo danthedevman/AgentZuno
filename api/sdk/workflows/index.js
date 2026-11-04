@@ -1,13 +1,14 @@
 const actionFields = {
   route: ['queueName'],
   handoff: ['queueName'],
-  approval: ['reason', 'target', 'userId', 'groupId'],
+  'task.create': ['queueName', 'title', 'description'],
+  approval: ['reason', 'target', 'userId', 'groupId', 'requireRejectionComment'],
   'servicenow.createIncident': ['assignmentGroup', 'shortDescription'],
   'slack.postMessage': ['channel', 'text'],
   'jira.createIssue': ['project', 'issueType', 'summary'],
 };
 export const workflowActions = Object.keys(actionFields);
-export const isExternalAction = (action) => action.includes('.');
+export const isExternalAction = (action) => action.includes('.') && action !== 'task.create';
 function object(value, fields) {
   if (
     !value ||
@@ -66,6 +67,14 @@ export function defineWorkflow(input) {
     const keys = actionFields[step.action];
     object(step.params, keys);
     if (step.action === 'approval') {
+      const rejectionComment = step.requireRejectionComment ?? step.params.requireRejectionComment;
+      if (
+        (rejectionComment !== undefined && typeof rejectionComment !== 'boolean') ||
+        (step.requireRejectionComment !== undefined &&
+          step.params.requireRejectionComment !== undefined &&
+          step.requireRejectionComment !== step.params.requireRejectionComment)
+      )
+        throw new Error('Invalid rejection comment setting.');
       const target =
         step.params.target ||
         (step.params.groupId ? 'group' : step.params.userId ? 'user' : undefined);
@@ -87,9 +96,7 @@ export function defineWorkflow(input) {
           ...(step.params.groupId ? { groupId: text(step.params.groupId, 24) } : {}),
         },
         ...(step.when ? { when: step.when } : {}),
-        ...(step.requireRejectionComment !== undefined
-          ? { requireRejectionComment: step.requireRejectionComment }
-          : {}),
+        ...(rejectionComment !== undefined ? { requireRejectionComment: rejectionComment } : {}),
       };
     }
     if (step.when !== undefined) throw new Error('Approval conditions apply to approval steps.');
@@ -100,7 +107,7 @@ export function defineWorkflow(input) {
       params: Object.fromEntries(
         keys.map((key) => [
           key,
-          text(step.params[key], ['text', 'reason'].includes(key) ? 2000 : 160),
+          text(step.params[key], ['text', 'reason', 'description'].includes(key) ? 2000 : 160),
         ]),
       ),
     };
@@ -308,14 +315,21 @@ export function defineRequestForm(input) {
   if (!Array.isArray(input.fields) || !input.fields.length || input.fields.length > 20)
     throw new Error('Choose 1–20 form fields.');
   const fields = input.fields.map((field) => {
-    object(field, ['id', 'label', 'type', 'required', 'options']);
+    object(field, ['id', 'label', 'type', 'required', 'options', 'referenceTable']);
     if (
       typeof field.id !== 'string' ||
       !/^[a-z][a-z0-9-]{0,39}$/.test(field.id) ||
-      !['text', 'textarea', 'select', 'boolean'].includes(field.type) ||
+      !['text', 'textarea', 'select', 'boolean', 'reference'].includes(field.type) ||
       typeof field.required !== 'boolean'
     )
       throw new Error('Invalid form field.');
+    if (
+      field.type === 'reference'
+        ? typeof field.referenceTable !== 'string' ||
+          !/^(?:users|ref-[a-z-]+|[a-f0-9]{24})$/.test(field.referenceTable)
+        : field.referenceTable !== undefined
+    )
+      throw new Error('Choose a reference table only for reference fields.');
     let options;
     if (field.type === 'select') {
       if (!Array.isArray(field.options) || field.options.length < 2 || field.options.length > 20)
@@ -329,6 +343,7 @@ export function defineRequestForm(input) {
       type: field.type,
       required: field.required,
       ...(options ? { options } : {}),
+      ...(field.type === 'reference' ? { referenceTable: field.referenceTable } : {}),
     };
   });
   if (new Set(fields.map((field) => field.id)).size !== fields.length)
@@ -376,6 +391,8 @@ export function toTypeScript(input) {
       return `await ctx.${step.action}(${literal(step.id)}, ${literal(step.params.queueName)});`;
     if (step.action === 'slack.postMessage')
       return `await ctx.slack.postMessage(${literal(step.id)}, ${literal(step.params)});`;
+    if (step.action === 'task.create')
+      return `await ctx.tasks.create(${literal(step.id)}, ${literal(step.params)});`;
     if (step.action === 'approval')
       return `if (!(await ctx.approval(${literal(step.id)}, ${literal(step.params.target ? step.params : { ...step.params, userId: 'SELECT_APPROVER_USER_ID' })})).approved) return;`;
     return `throw new Error("This action is not supported by the runtime.");`;

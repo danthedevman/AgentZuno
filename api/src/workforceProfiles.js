@@ -1,3 +1,4 @@
+import { requireCompatibleDemoReferences } from './demoReferences.js';
 import { userReferenceOptions } from './userReferences.js';
 import { ObjectId } from 'mongodb';
 import { createHash } from 'node:crypto';
@@ -173,11 +174,14 @@ export function installWorkforceRoutes(app, store) {
     const [references, members] = await Promise.all([
       store
         .collection('workforceReferences')
-        .find(helpdeskScope(user))
+        .find({
+          ...helpdeskScope(user),
+          ...(request.query.includeDemo === '1' ? {} : { demoDatasetId: { $exists: false } }),
+        })
         .sort({ name: 1 })
         .limit(1000)
         .toArray(),
-      userReferenceOptions(store, user),
+      userReferenceOptions(store, user, request.query.includeDemo === '1'),
     ]);
     response.json({
       references: references.map(({ _id, type, name }) => ({ id: _id, type, name })),
@@ -273,6 +277,10 @@ export function installWorkforceRoutes(app, store) {
       }))
     )
       deny('Choose an active manager in this workspace.', 400);
+    const member = await store
+      .collection('helpdeskMembers')
+      .findOne({ ...helpdeskScope(user), userId: request.params.id });
+    await requireCompatibleDemoReferences(store, user, member, values);
     const filter = { ...helpdeskScope(user), userId: request.params.id };
     if (input.version === 0) {
       const id = `${user.workspaceId}:${request.params.id}`;

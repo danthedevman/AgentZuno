@@ -1,4 +1,6 @@
 import MyTeamReport from '../../components/MyTeamReport.jsx';
+import ReferenceLookup from '../../components/ReferenceLookup.jsx';
+import A from '../../components/WorkspaceLink.jsx';
 import { useNavigate } from '@solidjs/router';
 import { useWorkspacePath } from '../../services/workspaceRoutes.js';
 import Icon from '../../components/Icon.jsx';
@@ -19,6 +21,8 @@ export default function ReportsPage() {
   const navigate = useNavigate(),
     path = useWorkspacePath();
   const [query, setQuery] = useSearchParams();
+  const [workflowSearch, setWorkflowSearch] = createSignal('');
+  const [selectedWorkflow, setSelectedWorkflow] = createSignal(null);
   const canRead = () => !access.error && ['admin', 'read-only', 'agent'].includes(access()?.role);
   const report = () =>
     (access()?.role === 'agent'
@@ -31,6 +35,10 @@ export default function ReportsPage() {
         : access()?.role === 'read-only'
           ? 'audit'
           : 'knowledge';
+  const [auditWorkflows] = createResource(
+    () => (report() === 'audit' && canRead() ? workflowSearch() : false),
+    (q) => api(`/api/helpdesk/audit/workflows?q=${encodeURIComponent(q)}`),
+  );
   const days = () => (['7', '30', '90'].includes(query.days) ? query.days : '30');
   const [data, { refetch }] = createResource(
     () =>
@@ -86,7 +94,7 @@ export default function ReportsPage() {
                   />
                 </Show>
                 <button
-                  class="knowledge-refresh-button"
+                  class="knowledge-refresh-button refresh-icon-button"
                   type="button"
                   aria-label="Refresh report"
                   title="Refresh"
@@ -199,12 +207,57 @@ export default function ReportsPage() {
                 </Show>
               </Show>
               <Show when={report() === 'audit'}>
+                <div class="audit-report-filters">
+                  <ReferenceLookup
+                    label="Workflow"
+                    placeholder="All Workflows"
+                    value={query.workflowId || ''}
+                    options={[
+                      ...(auditWorkflows.error ? [] : auditWorkflows() || []),
+                      ...(selectedWorkflow() &&
+                      !(auditWorkflows() || []).some(
+                        (item) => item.value === selectedWorkflow().value,
+                      )
+                        ? [selectedWorkflow()]
+                        : []),
+                    ]}
+                    onSearch={setWorkflowSearch}
+                    onChange={(value) => {
+                      setSelectedWorkflow(
+                        (auditWorkflows() || []).find((item) => item.value === value),
+                      );
+                      setQuery({ workflowId: value || undefined });
+                    }}
+                  />
+                  <Dropdown
+                    ariaLabel="Event trigger"
+                    value={query.triggerType || ''}
+                    options={[
+                      { value: '', label: 'All Triggers' },
+                      ...[
+                        'admin-chat',
+                        'support-chat',
+                        'request-submission',
+                        'workflow-step',
+                        'approval-decision',
+                        'workflow-configuration',
+                        'record-update',
+                        'api-request',
+                      ].map((value) => ({ value, label: displayLabel(value) })),
+                    ]}
+                    onChange={(value) => setQuery({ triggerType: value || undefined })}
+                  />
+                </div>
                 <RecordTable
                   label="Audit Logs"
                   onRowClick={(item) => navigate(path(`/workspace/reports/audit/${item.id}`))}
                   refreshKey={refreshKey()}
                   source="/api/helpdesk/audit"
-                  sourceParams={{ days: days() }}
+                  sourceParams={{
+                    days: days(),
+                    ...(query.workflowId ? { workflowId: query.workflowId } : {}),
+                    ...(query.triggerType ? { triggerType: query.triggerType } : {}),
+                  }}
                   defaultSort={{ key: 'Time', direction: 'desc' }}
                   emptyText="No audit logs in this period."
                   columns={[
@@ -218,6 +271,31 @@ export default function ReportsPage() {
                       render: (item) => item.actorId || item.actorType || 'System',
                     },
                     { label: 'Action', render: (item) => item.action || item.method },
+                    {
+                      label: 'Workflow',
+                      render: (item) =>
+                        item.workflowId ? (
+                          <A
+                            href={`/workspace/workflows/${item.workflowId}/edit`}
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            {item.workflowName || 'Open Workflow'}
+                          </A>
+                        ) : (
+                          '—'
+                        ),
+                    },
+                    {
+                      label: 'Trigger',
+                      render: (item) => (
+                        <span>
+                          {displayLabel(item.triggerType || 'Recorded Operation')}
+                          <small class="record-secondary">
+                            {item.triggerLabel || item.action || item.method}
+                          </small>
+                        </span>
+                      ),
+                    },
                     {
                       label: 'Target',
                       render: (item) => (

@@ -6,8 +6,12 @@ import MultiSelectLookup from './MultiSelectLookup.jsx';
 import A from './WorkspaceLink.jsx';
 export default function WorkflowApprovalEditor(props) {
   const [users] = createResource(() => api('/api/helpdesk/members'));
-  const [groups] = createResource(() => api('/api/helpdesk/approval-groups'));
-  const [references] = createResource(() => api('/api/helpdesk/reference-records'));
+  const [groups] = createResource(() =>
+    api(`/api/helpdesk/approval-groups?reference=1${props.includeDemo ? '&includeDemo=1' : ''}`),
+  );
+  const [references] = createResource(() =>
+    api(`/api/helpdesk/reference-records${props.includeDemo ? '?includeDemo=1' : ''}`),
+  );
   const eligible = () =>
     (!users.error ? users() || [] : []).filter((user) => user.active && user.canApprove);
   const departments = () =>

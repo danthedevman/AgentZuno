@@ -27,7 +27,7 @@ export default function KnowledgePermissions(props) {
       <Show when={policy.loading || members.loading}>
         <Skeleton label="Loading permissions" lines={3} />
       </Show>
-      <div class="tab-content-reveal" hidden={policy.loading || members.loading}>
+      <div class="create-form tab-content-reveal" hidden={policy.loading || members.loading}>
         <Show when={policy.error || members.error}>
           <ToastMessage tone="error">
             {policy.error?.message || members.error?.message}
@@ -46,6 +46,7 @@ export default function KnowledgePermissions(props) {
         <Show when={mode() === 'restricted'}>
           <MultiSelectLookup
             label="Users"
+            placeholder="Search users…"
             value={userIds()}
             options={((!members.error && members()) || [])
               .filter((item) => item.active)

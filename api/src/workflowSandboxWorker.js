@@ -168,6 +168,7 @@ try {
           route: (id, queueName) => invoke('route', id, { queueName }),
           handoff: (id, queueName) => invoke('handoff', id, { queueName }),
           approval: (id, options) => invoke('approval', id, options),
+          tasks: Object.freeze({ create: (id, options) => invoke('task.create', id, options) }),
           slack: Object.freeze({ postMessage: (id, options) => invoke('slack.postMessage', id, options) })
         });
         return exports.default.run(ctx);

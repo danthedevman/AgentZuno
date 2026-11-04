@@ -12,7 +12,7 @@ export default function AgentProgress(props) {
   });
   return (
     <div class="agent-progress">
-      <details>
+      <details open>
         <summary>
           <span>Activity</span>
         </summary>

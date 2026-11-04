@@ -1,3 +1,8 @@
 node_modules
 .env
 test
+
+node_modules
+.installation
+.env
+coverage

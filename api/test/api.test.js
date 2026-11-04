@@ -39,6 +39,19 @@ test('workspace APIs require authentication and demo credentials never create se
     assert.equal(demo.status, 401);
     assert.equal(demo.headers.get('set-cookie'), null);
     assert.equal((await fetch(origin + '/api/site')).status, 200);
+    const demoFixture = await (await fetch(origin + '/api/demo')).json();
+    assert.equal(demoFixture.name, 'Northstar Demo');
+    assert.ok(demoFixture.prompts.every((prompt) => typeof prompt.reply === 'string'));
+    assert.equal(
+      (
+        await fetch(origin + '/api/demo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: '{}',
+        })
+      ).status,
+      405,
+    );
     assert.deepEqual(await (await fetch(origin + '/api/auth/session')).json(), { user: null });
     for (const path of [
       '/mock-data/private/alex.json',
@@ -59,11 +72,11 @@ test(
     const client = new MongoClient(process.env.MONGODB_URI);
     try {
       await withServer(async (origin) => {
-        async function register(email) {
+        async function register(email, name) {
           const response = await fetch(origin + '/api/auth/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password: 'Fictional-account-password!' }),
+            body: JSON.stringify({ email, password: 'Fictional-account-password!', name }),
           });
           assert.equal(response.status, 201);
           assert.match(response.headers.get('set-cookie'), /HttpOnly/i);
@@ -72,7 +85,12 @@ test(
             user: (await response.json()).user,
           };
         }
-        const alex = await register('alex@accounts.test');
+        const alex = await register('alex@accounts.test', '  Alex Test  ');
+        assert.equal(alex.user.name, 'Alex Test');
+        assert.equal(
+          (await client.db(database).collection('users').findOne({ id: alex.user.id })).name,
+          'Alex Test',
+        );
         const jordan = await register('jordan@accounts.test');
         for (const [account, other] of [
           [alex, jordan],

@@ -1,7 +1,7 @@
 import { createStore, reconcile } from 'solid-js/store';
 import CatalogItemImage from '../../components/CatalogItemImage.jsx';
 import { createSignal, createResource, createEffect, onCleanup, For, Show } from 'solid-js';
-import { useNavigate } from '@solidjs/router';
+import { useNavigate, useSearchParams } from '@solidjs/router';
 import { api } from '../../services/api.js';
 import { useWorkspacePath } from '../../services/workspaceRoutes.js';
 import { useWorkspace } from '../../context/WorkspaceContext.jsx';
@@ -12,11 +12,12 @@ import A from '../../components/WorkspaceLink.jsx';
 import ToastMessage from '../../components/ToastMessage.jsx';
 export default function CatalogPage() {
   const navigate = useNavigate();
+  const [routeQuery] = useSearchParams();
   const path = useWorkspacePath();
   const { access } = useWorkspace();
   const [error, setError] = createSignal('');
   const [opening, setOpening] = createSignal('');
-  const [query, setQuery] = createSignal('');
+  const [query, setQuery] = createSignal(routeQuery.q || '');
   const [search, setSearch] = createSignal('');
   const [page, setPage] = createSignal(1);
   const [loadedItems, setLoadedItems] = createSignal([]);

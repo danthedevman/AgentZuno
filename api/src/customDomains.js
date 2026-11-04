@@ -1,3 +1,4 @@
+import { databaseConfiguration, needsDatabaseSetup } from './storage/configuration.js';
 import { randomBytes } from 'node:crypto';
 import { domainToASCII } from 'node:url';
 import { isIP } from 'node:net';
@@ -163,7 +164,7 @@ export function createCustomDomains(store, dns = { resolveTxt, resolveCname }) {
     return safe(null);
   }
   async function resolve(host) {
-    if (!process.env.MONGODB_URI) return null;
+    if (needsDatabaseSetup() || !databaseConfiguration()) return null;
     const record = await collection().findOne({ domain: host });
     if (!record) return null;
     if (!record.enabled || !record.verified || process.env.COOKIE_SECURE !== 'true' || !target())

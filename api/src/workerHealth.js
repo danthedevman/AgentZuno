@@ -1,3 +1,5 @@
+import { needsDatabaseSetup } from './storage/configuration.js';
+if (needsDatabaseSetup()) process.exit(0);
 import Redis from 'ioredis';
 const connection = new Redis(process.env.REDIS_URL, {
   connectTimeout: 3000,
