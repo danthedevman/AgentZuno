@@ -289,7 +289,7 @@ function WorkspaceShell(props) {
               />
             </Show>
             <span class="rail-tooltip" aria-hidden="true">
-              Account
+              {isNavigationExpanded() ? session()?.user?.name || 'Profile' : 'Profile'}
             </span>
           </button>
           <div id="profile-popover" class="profile-popover" popover="auto">

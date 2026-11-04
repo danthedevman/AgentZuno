@@ -8510,3 +8510,11 @@ button.catalog-item-card {
   width: 100%;
   justify-content: center;
 }
+.workspace-shell.is-nav-expanded .profile-trigger .rail-tooltip {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
