@@ -142,6 +142,7 @@ export function installHelpdeskMemberRoutes(app, store) {
     const user = request.helpdeskUser;
     response.json({
       workspaceId: user.workspaceId,
+      ownerId: user.helpdeskOwnerId || user.id,
       role: user.role,
       actualRole: user.actualRole || user.role,
       canImpersonate: (user.actualRole || user.role) === 'admin',
@@ -242,6 +243,8 @@ export function installHelpdeskMemberRoutes(app, store) {
       if (!target) deny('Member not found.', 404);
       if (!Number.isInteger(input.version)) deny('Provide the current member version.', 400);
     }
+    if (target.id === user.id && !value.active)
+      deny('You cannot deactivate your own account.', 409);
     if (target.id === user.helpdeskOwnerId && (value.role !== 'admin' || !value.active))
       deny('The workspace owner must remain an active Admin.');
     if (target.id === user.id && target.id !== user.helpdeskOwnerId)
@@ -300,6 +303,55 @@ export function installHelpdeskMemberRoutes(app, store) {
     await store.collection('helpdeskMembershipHistory').insertOne(event);
     response.status(isNew ? 201 : 200).json(safeMember(record));
   }
+  app.delete('/api/helpdesk/members/:id', async (request, response) => {
+    const user = request.helpdeskUser;
+    requireRole(user, ['admin']);
+    const scope = helpdeskScope(user),
+      id = request.params.id;
+    if (id === scope.ownerId || id === user.id)
+      deny('The workspace owner and your own membership cannot be deleted.', 409);
+    if (await store.collection('identitySettings').findOne({ ...scope, enabled: true }))
+      deny('Users are managed by the identity provider.', 409);
+    if (request.body?.confirmed !== true || !Number.isInteger(request.body?.version))
+      deny('Confirm the current membership before deleting.', 400);
+    const member = await store.collection('helpdeskMembers').findOne({ ...scope, userId: id });
+    if (!member) deny('Member not found.', 404);
+    if (member.version !== request.body.version)
+      deny('Membership changed. Reload before deleting.', 409);
+    const deleted = await store
+      .collection('helpdeskMembers')
+      .deleteOne({ ...scope, userId: id, version: request.body.version });
+    if (!deleted.deletedCount) deny('Membership changed. Reload before deleting.', 409);
+    await store.collection('approvalGroups').updateMany(scope, {
+      $pull: { userIds: id },
+      $inc: { version: 1 },
+      $set: { updatedAt: new Date() },
+    });
+    await store.collection('workforceProfiles').deleteMany({ ...scope, userId: id });
+    await store
+      .collection('workforceProfiles')
+      .updateMany(
+        { ...scope, manager: id },
+        { $set: { manager: '', updatedAt: new Date() }, $inc: { version: 1 } },
+      );
+    await store.collection('helpdeskRequests').updateMany(
+      { ...scope, assignedToId: id },
+      {
+        $unset: { assignedToId: '', assignedToName: '' },
+        $inc: { version: 1 },
+        $set: { updatedAt: new Date() },
+      },
+    );
+    await store.collection('helpdeskMembershipHistory').insertOne({
+      ...scope,
+      actorId: user.id,
+      targetUserId: id,
+      action: 'removed',
+      version: member.version,
+      at: new Date(),
+    });
+    response.json({ removed: true });
+  });
   app.post('/api/helpdesk/members', (request, response) => save(request, response, true));
   app.put('/api/helpdesk/members/:id', (request, response) => save(request, response, false));
 }

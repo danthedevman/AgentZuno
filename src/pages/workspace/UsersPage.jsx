@@ -38,6 +38,10 @@ export default function UsersPage() {
   const [directory] = createResource(isAdmin, () => api('/api/helpdesk/directory-users'));
   const [isFormOpen, setIsFormOpen] = createSignal(false);
   function openUser(member = null) {
+    if (member) {
+      navigate(path(`/workspace/users/${member.userId || member.id}`));
+      return;
+    }
     if (!member && (provisioning.loading || provisioning.error || provisioning()?.enabled)) return;
     setSelected(member);
     setError('');
@@ -97,7 +101,16 @@ export default function UsersPage() {
       ]),
     ]
       .sort((a, b) => a.localeCompare(b))
-      .map((value) => ({ value, label: value }));
+      .map((value) => {
+        const group = (!savedQueues.error ? savedQueues() || [] : []).find(
+          (item) => item.name === value,
+        );
+        return {
+          value,
+          label: value,
+          href: group ? `/workspace/users/groups/${group.groupId || group.id}` : undefined,
+        };
+      });
   async function save(event) {
     event.preventDefault();
     setError('');
@@ -130,7 +143,7 @@ export default function UsersPage() {
   }
   return (
     <section class="reading-page helpdesk-page users-page">
-      <div class="connections-heading">
+      <div class="connections-heading" data-list-actions>
         <PageHeading title="Users" />
         <Show
           when={
@@ -245,6 +258,7 @@ export default function UsersPage() {
             <RecordTable
               onEmptyChange={setIsListEmpty}
               label="Users"
+              onRowClick={openUser}
               emptyAction={
                 !provisioning.loading && !provisioning.error && !provisioning()?.enabled
                   ? { label: 'Add User', onClick: () => openUser() }

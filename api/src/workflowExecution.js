@@ -1,3 +1,5 @@
+import { slackWorkflowDestination } from './slackWorkflowDestination.js';
+import { requireConnectorAction } from './connectorActions.js';
 import { matchesWorkflowDepartment } from './workflowDepartments.js';
 import { listResponse } from './listQuery.js';
 import {
@@ -141,7 +143,7 @@ export function createWorkflowExecution(store, fetcher = fetch) {
       if (
         Object.keys(input).some((key) => !['channel', 'text'].includes(key)) ||
         input.channel !== declared.params.channel ||
-        !/^[CG][A-Z0-9]{2,39}$/.test(input.channel) ||
+        !(input.channel === 'requester' || /^[CGUW][A-Z0-9]{2,39}$/.test(input.channel)) ||
         typeof input.text !== 'string' ||
         !input.text.trim() ||
         input.text.length > 2000
@@ -421,16 +423,25 @@ export function createWorkflowExecution(store, fetcher = fetch) {
                 (source.expiresAt && new Date(source.expiresAt) <= new Date())
               )
                 deny('Slack must be connected.');
+              await requireConnectorAction(store, source, 'workflowNotifications');
               await requireCurrentChannelApplication(store, source);
               const token = JSON.parse(decryptSecret(source.credential)).accessToken;
               if (typeof token !== 'string' || !token) deny('Slack must be reauthorized.');
-              const channel = await fetchChannelJson(
-                fetcher,
-                `https://slack.com/api/conversations.info?channel=${encodeURIComponent(input.channel)}`,
-                { headers: { Authorization: `Bearer ${token}` } },
+              const destination = await slackWorkflowDestination(
+                store,
+                source,
+                input.channel,
+                run.actorId,
               );
-              if (!channel.ok || !channel.channel?.is_member || channel.channel?.is_archived)
-                deny('Zuno must be a member of this Slack channel.');
+              if (/^[CG]/.test(destination)) {
+                const channel = await fetchChannelJson(
+                  fetcher,
+                  `https://slack.com/api/conversations.info?channel=${encodeURIComponent(destination)}`,
+                  { headers: { Authorization: `Bearer ${token}` } },
+                );
+                if (!channel.ok || !channel.channel?.is_member || channel.channel?.is_archived)
+                  deny('Zuno must be a member of this Slack channel.');
+              }
               await authorize(run);
               const currentSource = await store.collection('helpdeskChannels').findOne({
                 ...scope,
@@ -443,6 +454,16 @@ export function createWorkflowExecution(store, fetcher = fetch) {
                 (currentSource.expiresAt && new Date(currentSource.expiresAt) <= new Date())
               )
                 deny('Slack access changed.');
+              if (
+                (await slackWorkflowDestination(
+                  store,
+                  currentSource,
+                  input.channel,
+                  run.actorId,
+                )) !== destination
+              )
+                deny('Slack recipient changed.');
+              await requireConnectorAction(store, currentSource, 'workflowNotifications');
               await requireCurrentChannelApplication(store, currentSource);
               const claiming = await runs().updateOne(
                 { ...filter, steps: { $elemMatch: { id: stepId, status: 'started' } } },
@@ -457,7 +478,7 @@ export function createWorkflowExecution(store, fetcher = fetch) {
                   method: 'POST',
                   headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
                   body: JSON.stringify({
-                    channel: input.channel,
+                    channel: destination,
                     text: input.text
                       .replaceAll('&', '&amp;')
                       .replaceAll('<', '&lt;')

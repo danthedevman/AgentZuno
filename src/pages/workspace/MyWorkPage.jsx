@@ -14,6 +14,7 @@ const KnowledgeChart = lazy(() => import('../../components/KnowledgeChart.jsx'))
 export default function MyWorkPage() {
   const { access } = useWorkspace();
   const allowed = () => !access.error && ['admin', 'agent'].includes(access()?.role);
+  const [tab, setTab] = createSignal('assigned');
   const [query, setQuery] = createSignal('');
   const [revision, setRevision] = createSignal(0);
   const [isEmpty, setIsEmpty] = createSignal(false);
@@ -45,11 +46,14 @@ export default function MyWorkPage() {
           <Icon name="refresh" />
         </button>
       </div>
-      <Show when={access.loading || !access()}>
+      <Show when={!access.error && (access.loading || !access())}>
         <Skeleton label="Loading access" lines={3} />
       </Show>
-      <Show when={!access.loading && access() && !allowed()}>
+      <Show when={!access.loading && !access.error && access() && !allowed()}>
         <ToastMessage tone="error">My Work is available to Admins and Agents.</ToastMessage>
+      </Show>
+      <Show when={access.error}>
+        <ToastMessage tone="error">{access.error.message}</ToastMessage>
       </Show>
       <Show when={allowed()}>
         <Show when={summary.error}>
@@ -77,110 +81,140 @@ export default function MyWorkPage() {
             )}
           </For>
         </div>
-        <h2 class="my-work-section-title">Assigned Requests</h2>
-        <Show when={!isEmpty()}>
-          <label class="workspace-search">
-            <Icon name="search" />
-            <input
-              type="search"
-              maxlength="200"
-              aria-label="Search assigned requests"
-              placeholder="Search assigned requests…"
-              value={query()}
-              onInput={(event) => setQuery(event.currentTarget.value)}
-            />
-          </label>
-        </Show>
-        <RecordTable
-          source={allowed() ? '/api/helpdesk/my-work' : undefined}
-          query={query()}
-          refreshKey={revision()}
-          label="Assigned Requests"
-          onEmptyChange={setIsEmpty}
-          emptyText="No requests assigned to you"
-          emptyAction={{ label: 'Open Inbox', href: '/workspace/inbox' }}
-          defaultSort={{ key: 'Updated', direction: 'desc' }}
-          columns={[
-            {
-              label: 'Request',
-              render: (item) => (
-                <A
-                  class="article-table-title"
-                  href={
-                    item.chatId
-                      ? `/workspace/chat/${item.chatId}?request=${item.id}`
-                      : `/workspace/requests/${item.id}`
-                  }
-                >
-                  <span>
-                    <strong>{item.title}</strong>
-                    <small>{item.number}</small>
+        <div class="record-detail-tabs" role="tablist" aria-label="My Work views">
+          <For
+            each={[
+              ['assigned', 'Assigned Requests'],
+              ['waiting-for-employee', 'Awaiting Response'],
+              ['resolved', 'Resolved'],
+              ['workload', 'Workload'],
+            ]}
+          >
+            {([value, label]) => (
+              <button
+                type="button"
+                role="tab"
+                aria-selected={tab() === value}
+                onClick={() => {
+                  setTab(value);
+                  setQuery('');
+                  setIsEmpty(false);
+                }}
+              >
+                {label}
+              </button>
+            )}
+          </For>
+        </div>
+        <Show when={tab() !== 'workload'}>
+          <div class="list-toolbar" data-list-actions>
+            <Show when={!isEmpty()}>
+              <label class="workspace-search">
+                <Icon name="search" />
+                <input
+                  type="search"
+                  maxlength="200"
+                  aria-label="Search assigned requests"
+                  placeholder="Search assigned requests…"
+                  value={query()}
+                  onInput={(event) => setQuery(event.currentTarget.value)}
+                />
+              </label>
+            </Show>
+          </div>
+          <RecordTable
+            source={allowed() ? '/api/helpdesk/my-work' : undefined}
+            sourceParams={{ status: ['assigned', 'workload'].includes(tab()) ? undefined : tab() }}
+            query={query()}
+            refreshKey={revision()}
+            label="Assigned Requests"
+            onEmptyChange={setIsEmpty}
+            emptyText="No requests assigned to you"
+            emptyAction={{ label: 'Open Inbox', href: '/workspace/inbox' }}
+            defaultSort={{ key: 'Updated', direction: 'desc' }}
+            columns={[
+              {
+                label: 'Request',
+                render: (item) => (
+                  <A
+                    class="article-table-title"
+                    href={
+                      item.chatId
+                        ? `/workspace/chat/${item.chatId}?request=${item.id}`
+                        : `/workspace/requests/${item.id}`
+                    }
+                  >
+                    <span>
+                      <strong>{item.title}</strong>
+                      <small>{item.number}</small>
+                    </span>
+                  </A>
+                ),
+              },
+              {
+                label: 'Status',
+                render: (item) => (
+                  <span
+                    class="activity-status"
+                    data-tone={item.status === 'resolved' ? 'positive' : 'informational'}
+                  >
+                    <span class="activity-status-dot" />
+                    {statusLabel(item.status)}
                   </span>
-                </A>
-              ),
-            },
-            {
-              label: 'Status',
-              render: (item) => (
-                <span
-                  class="activity-status"
-                  data-tone={item.status === 'resolved' ? 'positive' : 'informational'}
-                >
-                  <span class="activity-status-dot" />
-                  {statusLabel(item.status)}
-                </span>
-              ),
-            },
-            {
-              key: 'Queue',
-              label: 'Assignment Group',
-              render: (item) => displayLabel(item.queueName),
-            },
-            {
-              label: 'Updated',
-              render: (item) => (
-                <time datetime={item.updatedAt}>{new Date(item.updatedAt).toLocaleString()}</time>
-              ),
-            },
-          ]}
-        />
-        <h2 class="my-work-section-title">My Workload</h2>
-        <ContentTransition
-          ready={!!data() || !!summary.error}
-          fallback={
-            <div class="my-work-reports">
-              <Skeleton label="Loading status report" lines={5} />
-              <Skeleton label="Loading assignment group report" lines={5} />
-            </div>
-          }
-        >
-          <Show when={data()}>
-            <div class="my-work-reports">
-              <Suspense fallback={<Skeleton label="Loading charts" lines={5} />}>
-                <KnowledgeChart
-                  kind="bar"
-                  title="Requests by Status"
-                  emptyText="No assigned requests to report"
-                  data={data().statuses.map((item) => ({
-                    ...item,
-                    name: statusLabel(item.name),
-                    label: statusLabel(item.name),
-                  }))}
-                />
-                <KnowledgeChart
-                  kind="bar"
-                  title="Requests by Assignment Group"
-                  emptyText="No assigned requests to report"
-                  data={data().groups.map((item) => ({
-                    ...item,
-                    name: displayLabel(item.name),
-                    label: displayLabel(item.name),
-                  }))}
-                />
-              </Suspense>
-            </div>
-          </Show>
-        </ContentTransition>
+                ),
+              },
+              {
+                key: 'Queue',
+                label: 'Assignment Group',
+                render: (item) => displayLabel(item.queueName),
+              },
+              {
+                label: 'Updated',
+                render: (item) => (
+                  <time datetime={item.updatedAt}>{new Date(item.updatedAt).toLocaleString()}</time>
+                ),
+              },
+            ]}
+          />
+        </Show>
+        <Show when={tab() === 'workload'}>
+          <ContentTransition
+            ready={!!data() || !!summary.error}
+            fallback={
+              <div class="my-work-reports">
+                <Skeleton label="Loading status report" lines={5} />
+                <Skeleton label="Loading assignment group report" lines={5} />
+              </div>
+            }
+          >
+            <Show when={data()}>
+              <div class="my-work-reports">
+                <Suspense fallback={<Skeleton label="Loading charts" lines={5} />}>
+                  <KnowledgeChart
+                    kind="bar"
+                    title="Requests by Status"
+                    emptyText="No assigned requests to report"
+                    data={data().statuses.map((item) => ({
+                      ...item,
+                      name: statusLabel(item.name),
+                      label: statusLabel(item.name),
+                    }))}
+                  />
+                  <KnowledgeChart
+                    kind="bar"
+                    title="Requests by Assignment Group"
+                    emptyText="No assigned requests to report"
+                    data={data().groups.map((item) => ({
+                      ...item,
+                      name: displayLabel(item.name),
+                      label: displayLabel(item.name),
+                    }))}
+                  />
+                </Suspense>
+              </div>
+            </Show>
+          </ContentTransition>
+        </Show>
       </Show>
     </section>
   );

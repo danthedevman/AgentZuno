@@ -79,6 +79,13 @@ export async function importWorkforceProfile(store, context, userId, source, dir
     { upsert: true },
   );
 }
+const coverThemes = [
+  { id: 'ocean', name: 'Ocean', colors: ['#152d47', '#255a77', '#173149'] },
+  { id: 'violet', name: 'Violet', colors: ['#242042', '#818cf8', '#40345e'] },
+  { id: 'forest', name: 'Forest', colors: ['#12362b', '#387a60', '#1c4440'] },
+  { id: 'sunset', name: 'Sunset', colors: ['#492448', '#b56472', '#b88055'] },
+  { id: 'slate', name: 'Slate', colors: ['#202a38', '#52647a', '#29374a'] },
+];
 export function installWorkforceRoutes(app, store) {
   async function target(user, id) {
     if (id !== user.id) requireRole(user, ['admin']);
@@ -125,7 +132,13 @@ export function installWorkforceRoutes(app, store) {
           userId: fields.manager,
         })
       : null;
+    const cover = await store
+      .collection('profileCoverPreferences')
+      .findOne({ ...helpdeskScope(user), userId: id });
     return {
+      coverTheme: coverThemes.some((theme) => theme.id === cover?.theme) ? cover.theme : 'ocean',
+      coverThemes,
+      canEditCover: user.role !== 'read-only' && (user.role === 'admin' || user.id === id),
       userId: id,
       name: account?.name || member.email,
       email: account?.displayEmail || member.email,
@@ -179,6 +192,25 @@ export function installWorkforceRoutes(app, store) {
     response
       .status(201)
       .json(await saveReference(store, request.helpdeskUser, input.type, input.name));
+  });
+  app.put('/api/helpdesk/workforce-profiles/:id/cover', async (request, response) => {
+    const user = request.helpdeskUser;
+    requireRole(user, ['admin', 'agent', 'user']);
+    await target(user, request.params.id);
+    if (
+      !request.body ||
+      Object.keys(request.body).some((key) => key !== 'theme') ||
+      !coverThemes.some((theme) => theme.id === request.body.theme)
+    )
+      deny('Choose a profile cover theme.', 400);
+    await store
+      .collection('profileCoverPreferences')
+      .updateOne(
+        { ...helpdeskScope(user), userId: request.params.id },
+        { $set: { theme: request.body.theme, updatedAt: new Date() } },
+        { upsert: true },
+      );
+    response.json({ theme: request.body.theme });
   });
   app.put('/api/helpdesk/workforce-profiles/:id', async (request, response) => {
     const user = request.helpdeskUser;

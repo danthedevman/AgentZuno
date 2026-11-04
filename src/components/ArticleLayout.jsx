@@ -1,3 +1,4 @@
+import Breadcrumbs from './Breadcrumbs.jsx';
 import ToastMessage from './ToastMessage.jsx';
 import { For, Show, createSignal, createUniqueId } from 'solid-js';
 import { useWorkspace } from '../context/WorkspaceContext.jsx';
@@ -15,7 +16,7 @@ const dateLabel = (value) => {
 };
 
 export default function ArticleLayout(props) {
-  const { workspace } = useWorkspace();
+  const { workspace, access } = useWorkspace();
   const panelId = createUniqueId();
   const [isCollapsed, setIsCollapsed] = createSignal(
     (() => {
@@ -66,45 +67,25 @@ export default function ArticleLayout(props) {
     <div class="article-layout" classList={{ 'article-panel-collapsed': isCollapsed() }}>
       <div class="article-main-content">
         <Show when={!props.isPublic && base()}>
-          <nav class="breadcrumbs article-breadcrumbs" aria-label="Article location">
-            <ol>
-              <li>
-                <A href="/workspace/knowledge?tab=bases">Knowledge</A>
-              </li>
-              <li>
-                <A href={`/workspace/knowledge/bases/${encodeURIComponent(base().id)}`}>
-                  {base().name}
-                </A>
-              </li>
-              <Show when={topics().length}>
-                <li class="article-breadcrumb-topics">
-                  <For each={topics()}>
-                    {(topic, index) => (
-                      <>
-                        <Show when={index() > 0}>
-                          <span aria-hidden="true">, </span>
-                        </Show>
-                        <A
-                          href={`/workspace/knowledge?tab=articles&base=${encodeURIComponent(base().id)}&topic=${encodeURIComponent(topic.id)}`}
-                        >
-                          {topic.name}
-                        </A>
-                      </>
-                    )}
-                  </For>
-                </li>
-              </Show>
-              <li>
-                <span aria-current="page">
-                  {props.onStatusChange
-                    ? article().id
-                      ? 'Edit Article'
-                      : 'New Article'
-                    : article().title}
-                </span>
-              </li>
-            </ol>
-          </nav>
+          <Breadcrumbs
+            class="article-breadcrumbs"
+            label="Article location"
+            items={[
+              { label: 'Knowledge', href: '/workspace/knowledge' },
+              {
+                label: base().name,
+                href:
+                  access()?.role === 'admin'
+                    ? `/workspace/knowledge/bases/${encodeURIComponent(base().id)}`
+                    : `/workspace/knowledge?base=${encodeURIComponent(base().id)}`,
+              },
+              topics().length === 1 && {
+                label: topics()[0].name,
+                href: `/workspace/knowledge?${access()?.role === 'admin' ? 'tab=articles&' : ''}base=${encodeURIComponent(base().id)}&topic=${encodeURIComponent(topics()[0].id)}`,
+              },
+              { label: article().title || 'New Article' },
+            ]}
+          />
         </Show>
         {props.children}
       </div>

@@ -1,7 +1,11 @@
 import ReferenceArrow from '../../components/ReferenceArrow.jsx';
 import BackLink from '../../components/BackLink.jsx';
 import { untrack } from 'solid-js';
-import { confirmRemovedFields, clearConfirmedFields } from '../../services/confirmations.js';
+import {
+  confirmAction,
+  confirmRemovedFields,
+  clearConfirmedFields,
+} from '../../services/confirmations.js';
 import DataTableBuilder from '../../components/DataTableBuilder.jsx';
 import { Show, createEffect, createResource, createSignal, onCleanup } from 'solid-js';
 import { createStore, reconcile } from 'solid-js/store';
@@ -55,9 +59,11 @@ export default function DataPage() {
   let previousProposal = '';
   createEffect(() => {
     setMessages(
-      reconcile(!conversation.error ? conversation()?.messages || [] : [], { key: 'id' }),
+      reconcile(chatId() && !conversation.error ? conversation()?.messages || [] : [], {
+        key: 'id',
+      }),
     );
-    if (!conversation.error && conversation()?.definition) {
+    if (chatId() && !conversation.error && conversation()?.definition) {
       const proposal = JSON.stringify(conversation().definition);
       if (proposal !== previousProposal) {
         previousProposal = proposal;
@@ -70,7 +76,7 @@ export default function DataPage() {
     }
   });
   const processing = () =>
-    !conversation.error && ['queued', 'responding'].includes(conversation()?.status);
+    !!chatId() && !conversation.error && ['queued', 'responding'].includes(conversation()?.status);
   createEffect(() => {
     if (processing()) {
       const timer = setInterval(() => refreshConversation().catch(() => {}), 600);
@@ -160,7 +166,42 @@ export default function DataPage() {
                 <div class="connections-heading">
                   <PageHeading title={isNew() ? 'New Table' : table()?.name || 'Table'} />
                   <Show when={!designing() && table()}>
-                    <div class="helpdesk-actions">
+                    <div class="helpdesk-actions" data-list-actions>
+                      <Show when={!table()?.system && !table()?.sourceManaged}>
+                        <button
+                          class="workspace-button secondary small"
+                          onClick={async () => {
+                            const value = table();
+                            if (
+                              !(await confirmAction(
+                                `Permanently delete ${value.name} and all of its records?`,
+                                'Delete Table',
+                                'Delete Table',
+                                { requiredText: value.name },
+                              ))
+                            )
+                              return;
+                            try {
+                              await api(`/api/helpdesk/data/tables/${params.id}`, {
+                                method: 'DELETE',
+                                confirmed: true,
+                                body: JSON.stringify({
+                                  confirmed: true,
+                                  name: value.name,
+                                  version: value.version,
+                                }),
+                              });
+                              navigate(path('/workspace/data'));
+                              await refreshTables();
+                              notify({ tone: 'success', message: 'Table deleted.' });
+                            } catch (error) {
+                              notify({ tone: 'error', message: error.message });
+                            }
+                          }}
+                        >
+                          Delete Table
+                        </button>
+                      </Show>
                       <button
                         class="workspace-button secondary small"
                         onClick={() => setQuery({ design: '1' })}
@@ -200,6 +241,10 @@ export default function DataPage() {
                           ...value().fields.map((field) => ({
                             key: field.id,
                             label: field.label,
+                            exportValue: (row) =>
+                              field.type === 'reference'
+                                ? row.labels?.[field.id] || row.values[field.id]
+                                : row.values[field.id],
                             render: (row) =>
                               field.type === 'reference' ? (
                                 <span class="record-reference-value">
@@ -250,6 +295,12 @@ export default function DataPage() {
                   prompt={prompt()}
                   onPrompt={setPrompt}
                   onSend={send}
+                  onNewConversation={() => {
+                    setQuery({ chat: undefined });
+                    setPrompt('');
+                    setMessages([]);
+                    previousProposal = '';
+                  }}
                   sending={sending()}
                   processing={processing()}
                   failed={!conversation.error && conversation()?.status === 'failed'}

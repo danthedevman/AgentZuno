@@ -1,3 +1,4 @@
+import Breadcrumbs from '../../components/Breadcrumbs.jsx';
 import KnowledgePermissions from '../../components/KnowledgePermissions.jsx';
 import ToastMessage from '../../components/ToastMessage.jsx';
 import ValidatedForm from '../../components/ValidatedForm.jsx';
@@ -49,6 +50,19 @@ export default function CreateTopicPage(props) {
   }
   return (
     <section class="reading-page">
+      <Breadcrumbs
+        label="Topic location"
+        items={[
+          { label: 'Knowledge', href: '/workspace/knowledge?tab=topics' },
+          baseId() && {
+            label:
+              workspace()?.knowledgeBases?.find((item) => item.id === baseId())?.name ||
+              'Knowledge Base',
+            href: `/workspace/knowledge/bases/${encodeURIComponent(baseId())}`,
+          },
+          { label: props.topic?.name || 'New Topic' },
+        ]}
+      />
       <Show when={props.topic?.id}>
         <KnowledgePermissions kind="topic" id={props.topic.id} />
       </Show>

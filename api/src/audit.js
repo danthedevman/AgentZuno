@@ -1,3 +1,4 @@
+import { listResponse } from './listQuery.js';
 import { auditContext } from './recordAudit.js';
 import { randomUUID } from 'node:crypto';
 import { requireRole, helpdeskScope } from './helpdeskRoles.js';
@@ -135,6 +136,85 @@ export function installAuditMiddleware(app, store, auth) {
 }
 
 export function installAuditRoutes(app, store) {
+  app.post('/api/helpdesk/exports', async (request, response) => {
+    const { format, count, source } = request.body || {};
+    if (
+      Object.keys(request.body || {}).some((key) => !['format', 'count', 'source'].includes(key)) ||
+      !['csv', 'json'].includes(format) ||
+      !Number.isInteger(count) ||
+      count < 0 ||
+      count > 10000 ||
+      typeof source !== 'string' ||
+      !/^\/api\/[a-zA-Z0-9_/-]{1,180}$/.test(source)
+    )
+      return response.status(400).json({ error: 'Invalid export record.' });
+    await store.collection('governanceAudit').insertOne({
+      _id: randomUUID(),
+      ...helpdeskScope(request.helpdeskUser),
+      actorId: request.helpdeskUser.id,
+      role: request.helpdeskUser.role,
+      actualRole: request.helpdeskUser.actualRole || request.helpdeskUser.role,
+      isImpersonating: request.helpdeskUser.isImpersonating === true,
+      method: 'EXPORT',
+      action: `export.${format}`,
+      target: source,
+      recordCount: count,
+      startedAt: new Date(),
+      completedAt: new Date(),
+      outcome: 'completed',
+    });
+    response.json({ recorded: true });
+  });
+  const auditProjection = { ownerId: 0, workspaceId: 0 };
+  async function auditRecord(user, id) {
+    requireRole(user, ['admin']);
+    if (typeof id !== 'string' || !/^[a-f0-9-]{36}$/.test(id)) return null;
+    return store
+      .collection('governanceAudit')
+      .findOne({ ...helpdeskScope(user), _id: id }, { projection: auditProjection });
+  }
+  app.get('/api/helpdesk/audit/:id', async (request, response) => {
+    const record = await auditRecord(request.helpdeskUser, request.params.id);
+    if (!record) return response.status(404).json({ error: 'Audit record not found.' });
+    response.json({ id: String(record._id), ...record });
+  });
+  app.get('/api/helpdesk/audit/:id/events', async (request, response) => {
+    const record = await auditRecord(request.helpdeskUser, request.params.id);
+    if (!record) return response.status(404).json({ error: 'Audit record not found.' });
+    const group = record.requestAuditId || record._id;
+    const filter = {
+      ...helpdeskScope(request.helpdeskUser),
+      $or: [
+        { _id: group },
+        { requestAuditId: group },
+        ...(record.resourceId ? [{ target: record.target, resourceId: record.resourceId }] : []),
+      ],
+    };
+    const records = await store
+      .collection('governanceAudit')
+      .find(filter, { projection: auditProjection })
+      .sort({ startedAt: 1, _id: 1 })
+      .limit(10001)
+      .toArray();
+    if (records.length > 10000)
+      return response.status(422).json({
+        error:
+          'This record has too many related events. Use the Audit report to narrow the date range.',
+      });
+    response.json(
+      listResponse(
+        request,
+        records.map(({ _id, ...item }) => ({ id: String(_id), ...item })),
+        {
+          Time: 'startedAt',
+          Action: 'action',
+          Outcome: 'outcome',
+          Fields: (item) => (item.changedFields || []).join(', '),
+          Version: 'versionAfter',
+        },
+      ),
+    );
+  });
   app.get('/api/helpdesk/audit', async (request, response) => {
     requireRole(request.helpdeskUser, ['admin']);
     if (request.query.list === '1') {
@@ -167,9 +247,15 @@ export function installAuditRoutes(app, store) {
         q.length > 200
       )
         return response.status(400).json({ error: 'Invalid audit query.' });
+      const until = request.query.until ? new Date(request.query.until) : null;
+      if (until && (!Number.isFinite(until.getTime()) || until > new Date()))
+        return response.status(400).json({ error: 'Invalid audit cutoff.' });
       const filter = {
         ...helpdeskScope(request.helpdeskUser),
-        startedAt: { $gte: new Date(Date.now() - days * 86400000) },
+        startedAt: {
+          $gte: new Date((until?.getTime() || Date.now()) - days * 86400000),
+          ...(until ? { $lte: until } : {}),
+        },
       };
       if (q.trim()) {
         const escaped = q.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -219,7 +305,18 @@ export async function auditOperation(store, actor, action, target, perform) {
     outcome: 'started',
   });
   try {
-    const result = await perform();
+    const currentContext = auditContext.getStore();
+    const result = await auditContext.run(
+      {
+        ...currentContext,
+        auditId: id,
+        actorType: 'worker',
+        request: currentContext?.request || {
+          helpdeskUser: { ...actor, helpdeskOwnerId: actor.ownerId || actor.id },
+        },
+      },
+      perform,
+    );
     await store.collection('governanceAudit').updateOne(
       { _id: id },
       {

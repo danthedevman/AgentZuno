@@ -1,3 +1,4 @@
+import AIProviderBanner from '../components/AIProviderBanner.jsx';
 import ProfileAvatar from '../components/ProfileAvatar.jsx';
 import ChatPrompt from '../components/ChatPrompt.jsx';
 import Skeleton from '../components/Skeleton.jsx';
@@ -6,7 +7,15 @@ import { getRolePreview, setRolePreview } from '../services/rolePreview.js';
 import { api } from '../services/api.js';
 import A from '../components/WorkspaceLink.jsx';
 import { useLocation, useNavigate, useParams } from '@solidjs/router';
-import { For, Show, createSignal, createEffect, createResource, onCleanup } from 'solid-js';
+import {
+  For,
+  Show,
+  createSignal,
+  createEffect,
+  createResource,
+  onMount,
+  onCleanup,
+} from 'solid-js';
 import { WorkspaceProvider, useWorkspace } from '../context/WorkspaceContext.jsx';
 import { useSession } from '../context/SessionContext.jsx';
 import Icon from '../components/Icon.jsx';
@@ -30,6 +39,31 @@ const navigation = [
 ];
 
 function WorkspaceShell(props) {
+  const [isNarrow, setIsNarrow] = createSignal(window.matchMedia('(max-width: 700px)').matches);
+  const [isNavigationExpanded, setIsNavigationExpanded] = createSignal(
+    (() => {
+      try {
+        const saved = localStorage.getItem('agentzuno-sidebar-expanded');
+        return saved === null ? !window.matchMedia('(max-width: 700px)').matches : saved === 'true';
+      } catch {
+        return true;
+      }
+    })(),
+  );
+  function toggleNavigation() {
+    const next = !isNavigationExpanded();
+    setIsNavigationExpanded(next);
+    try {
+      localStorage.setItem('agentzuno-sidebar-expanded', String(next));
+    } catch {}
+  }
+  onMount(() => {
+    const query = window.matchMedia('(max-width: 700px)');
+    const update = () => setIsNarrow(query.matches);
+    query.addEventListener('change', update);
+    onCleanup(() => query.removeEventListener('change', update));
+  });
+
   let createDialog;
   let searchDialog;
   const [activeDialog, setActiveDialog] = createSignal(null);
@@ -84,7 +118,10 @@ function WorkspaceShell(props) {
         path.endsWith('/connectors') ||
         path.endsWith('/data')
       )
-        return isAdmin() || (path.endsWith('/reports') && access()?.role === 'read-only');
+        return (
+          isAdmin() ||
+          (path.endsWith('/reports') && ['read-only', 'agent'].includes(access()?.role))
+        );
       return isPersonal() && (!session()?.user || session().user.isDemo || isAdmin());
     });
   const location = useLocation();
@@ -128,12 +165,29 @@ function WorkspaceShell(props) {
     }
   }
   return (
-    <div class="workspace-shell" data-theme={theme()}>
+    <div
+      class="workspace-shell"
+      classList={{ 'is-nav-expanded': isNavigationExpanded() }}
+      data-theme={theme()}
+    >
       <a class="skip-link" href="#workspace-main">
         Skip to content
       </a>
       <aside class="workspace-sidebar" aria-label="Workspace sidebar">
         <div class="rail-actions">
+          <button
+            type="button"
+            class="rail-link rail-drawer-toggle"
+            aria-label={isNavigationExpanded() ? 'Collapse navigation' : 'Expand navigation'}
+            aria-expanded={isNavigationExpanded()}
+            aria-controls="workspace-navigation"
+            onClick={toggleNavigation}
+          >
+            <Icon name={isNavigationExpanded() ? 'menu-close' : 'menu-open'} />
+            <span class="rail-tooltip" aria-hidden="true">
+              Menu
+            </span>
+          </button>
           <button
             class="rail-link rail-create"
             aria-label="Create new item"
@@ -160,7 +214,7 @@ function WorkspaceShell(props) {
           </button>
         </div>
         <div class="rail-separator" aria-hidden="true" />
-        <nav aria-label="Workspace navigation">
+        <nav id="workspace-navigation" aria-label="Workspace navigation">
           <For each={visibleNavigation()}>
             {([path, icon, label]) => (
               <A
@@ -168,7 +222,10 @@ function WorkspaceShell(props) {
                 href={path}
                 end={path === '/workspace'}
                 activeClass="is-active"
-                onClick={() => activeDialog()?.close()}
+                onClick={() => {
+                  activeDialog()?.close();
+                  if (isNarrow()) setIsNavigationExpanded(false);
+                }}
                 aria-label={label}
               >
                 <Icon name={icon} />
@@ -222,6 +279,13 @@ function WorkspaceShell(props) {
                 />
               </label>
             </Show>
+            <A
+              href="/docs"
+              onClick={() => document.getElementById('profile-popover').hidePopover()}
+            >
+              <Icon name="book" /> Docs
+            </A>
+
             <A
               href="/workspace/profile"
               onClick={() => document.getElementById('profile-popover').hidePopover()}
@@ -313,7 +377,19 @@ function WorkspaceShell(props) {
           aria-hidden="true"
         />
       </Show>
-      <div class="workspace-body" inert={!!activeDialog()}>
+      <Show when={isNarrow() && isNavigationExpanded()}>
+        <button
+          class="sidebar-mobile-backdrop"
+          tabindex="-1"
+          aria-hidden="true"
+          onClick={() => setIsNavigationExpanded(false)}
+        />
+      </Show>
+      <div
+        class="workspace-body"
+        inert={!!activeDialog() || (isNarrow() && isNavigationExpanded())}
+      >
+        <AIProviderBanner />
         <main id="workspace-main" class="workspace-main">
           <Show when={props.previewRole && props.previewRole !== 'admin'}>
             <div class="role-preview-banner" role="status">
@@ -375,7 +451,7 @@ export default function WorkspaceLayout(props) {
     window.removeEventListener('storage', refreshPreview);
     window.removeEventListener('focus', refreshPreview);
   });
-  const [access] = createResource(
+  const [access, { refetch: refreshAccess }] = createResource(
     () =>
       !session.loading && session()?.user && !session().user.isDemo
         ? `${session().user.id}:${params.workspaceId || session().user.workspaceId}:${previewRole()}`
@@ -408,7 +484,7 @@ export default function WorkspaceLayout(props) {
       location.pathname.replace(/\/$/, '') === `/workspace/${params.workspaceId}`
     )
       navigate(
-        `/workspace/${params.workspaceId}/${['admin', 'agent'].includes(access()?.role) ? 'my-work' : 'chat'}`,
+        `/workspace/${params.workspaceId}/${['admin', 'agent'].includes(access()?.role) ? 'my-work' : 'chat'}${location.search}`,
         { replace: true },
       );
     else if (session()?.user && !params.workspaceId)
@@ -456,7 +532,7 @@ export default function WorkspaceLayout(props) {
           </main>
         }
       >
-        <WorkspaceProvider access={access}>
+        <WorkspaceProvider access={access} refreshAccess={refreshAccess}>
           <WorkspaceShell previewRole={previewRole()}>{props.children}</WorkspaceShell>
         </WorkspaceProvider>
       </Show>

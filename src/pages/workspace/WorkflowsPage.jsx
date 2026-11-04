@@ -23,7 +23,7 @@ export default function WorkflowsPage() {
   });
   return (
     <section class="reading-page">
-      <div class="connections-heading">
+      <div class="connections-heading" data-list-actions>
         <PageHeading title="Workflows" />
         <Show when={isAdmin()}>
           <A class="workspace-button small" href="/workspace/workflows/new">

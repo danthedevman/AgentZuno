@@ -132,35 +132,41 @@ export default function QueuePage(props) {
             ]}
           >
             {(toggle) => (
-              <div class="preference-row">
-                <span>{toggle.label}</span>
-                <button
-                  type="button"
-                  class="toggle-switch"
-                  role="switch"
-                  aria-label={toggle.label}
-                  aria-checked={toggle.value()}
-                  disabled={!editing()}
-                  onClick={() => toggle.set(!toggle.value())}
-                >
-                  <span />
-                </button>
-              </div>
+              <>
+                <div class="preference-row">
+                  <span>{toggle.label}</span>
+                  <button
+                    type="button"
+                    class="toggle-switch"
+                    role="switch"
+                    aria-label={toggle.label}
+                    aria-checked={toggle.value()}
+                    disabled={!editing()}
+                    onClick={() => toggle.set(!toggle.value())}
+                  >
+                    <span />
+                  </button>
+                </div>
+                <Show when={toggle.label === 'Assignment Group'}>
+                  {' '}
+                  <Show when={assignmentEnabled()}>
+                    <label>
+                      Routing Instructions
+                      <textarea
+                        name="routingInstructions"
+                        maxlength="2000"
+                        rows="5"
+                        value={instructions()}
+                        readOnly={!editing()}
+                        onInput={(event) => setInstructions(event.currentTarget.value)}
+                      />
+                    </label>
+                  </Show>
+                </Show>
+              </>
             )}
           </For>
-          <Show when={assignmentEnabled()}>
-            <label>
-              Routing Instructions
-              <textarea
-                name="routingInstructions"
-                maxlength="2000"
-                rows="5"
-                value={instructions()}
-                readOnly={!editing()}
-                onInput={(event) => setInstructions(event.currentTarget.value)}
-              />
-            </label>
-          </Show>
+
           <MultiSelectLookup
             name="members"
             label="Members"

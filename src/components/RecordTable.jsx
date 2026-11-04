@@ -1,3 +1,6 @@
+import { Portal } from 'solid-js/web';
+import ActionMenu from './ActionMenu.jsx';
+import { loadExportRows, downloadRecords } from '../services/tableExport.js';
 import { useWorkspace } from '../context/WorkspaceContext.jsx';
 import { useToasts } from '../context/ToastContext.jsx';
 import { confirmAction } from '../services/confirmations.js';
@@ -54,11 +57,61 @@ function RecordRow(props) {
   );
 }
 export default function RecordTable(props) {
+  let root;
+  const [menuTarget, setMenuTarget] = createSignal(null);
+  onMount(() => {
+    let region = root?.parentElement;
+    while (region && !region.classList.contains('workspace-main')) {
+      const target = region.querySelector(
+        ':scope > [data-list-actions], :scope > .connections-heading [data-list-actions]',
+      );
+      if (target) {
+        setMenuTarget(target);
+        break;
+      }
+      region = region.parentElement;
+    }
+  });
   const { access } = useWorkspace();
   const { notify } = useToasts();
   const canDelete = () => !!props.bulkDelete && access()?.role === 'admin';
   const [selected, setSelected] = createSignal([]);
   const [deleting, setDeleting] = createSignal(false);
+  const [exporting, setExporting] = createSignal(false);
+  async function exportRecords(format) {
+    if (exporting()) return;
+    setExporting(true);
+    try {
+      const query = {
+        ...props.sourceParams,
+        q: appliedSearch(),
+        sort: sort().key || key(columns().find((column) => column.sortable !== false)),
+        direction: sort().direction,
+      };
+      if (props.source === '/api/helpdesk/audit') query.until = new Date().toISOString();
+      const records = props.source ? await loadExportRows(api, props.source, query) : [...rows()];
+      await api('/api/helpdesk/exports', {
+        method: 'POST',
+        body: JSON.stringify({
+          format,
+          count: records.length,
+          source: props.source?.split('?')[0] || '/api/reports',
+        }),
+      });
+      downloadRecords(
+        records,
+        columns().filter((column) => column.label && column.exportable !== false),
+        format,
+        props.label || 'Records',
+      );
+      notify({ tone: 'success', message: `${records.length} records exported.` });
+    } catch (error) {
+      notify({ tone: 'error', message: error.message });
+    } finally {
+      setExporting(false);
+    }
+  }
+
   const deletable = (row) => !row.sourceConnectionId && /^[a-f0-9]{24}$/.test(row.id);
   const selectedRows = () => rows().filter((row) => deletable(row) && selected().includes(row.id));
   function toggle(id, checked) {
@@ -164,7 +217,7 @@ export default function RecordTable(props) {
     setPage(1);
   });
   const [sort, setSort] = createSignal(props.defaultSort || { key: '', direction: 'asc' });
-  const key = (column) => column.key || column.label;
+  const key = (column) => column.sortKey || column.key || column.label;
   const [page, setPage] = createSignal(1);
   const [search, setSearch] = createSignal('');
   const [appliedSearch, setAppliedSearch] = createSignal('');
@@ -181,6 +234,7 @@ export default function RecordTable(props) {
     JSON.stringify(props.sourceParams);
     setPage(1);
   });
+  const viewKey = () => `${props.source || ''}:${JSON.stringify(props.sourceParams || {})}`;
   const [result, { refetch }] = createResource(
     () => {
       props.refreshKey;
@@ -197,16 +251,24 @@ export default function RecordTable(props) {
       url.searchParams.set('q', appliedSearch());
       url.searchParams.set('page', page());
       url.searchParams.set('pageSize', String(pageSize()));
-      return { url: `${url.pathname}${url.search}`, refreshKey: props.refreshKey };
+      return {
+        url: `${url.pathname}${url.search}`,
+        refreshKey: props.refreshKey,
+        viewKey: viewKey(),
+      };
     },
-    (source) => api(source.url),
+    async (source) => ({ ...(await api(source.url)), viewKey: source.viewKey }),
   );
+  const activeResult = () => (result()?.viewKey === viewKey() ? result() : null);
   const [stableRows, setStableRows] = createStore([]);
   createEffect(() =>
     setStableRows(
-      reconcile(props.source ? (result.error ? [] : result()?.rows || []) : props.rows || [], {
-        key: 'id',
-      }),
+      reconcile(
+        props.source ? (result.error ? [] : activeResult()?.rows || []) : props.rows || [],
+        {
+          key: 'id',
+        },
+      ),
     ),
   );
   const rows = () => stableRows;
@@ -220,7 +282,7 @@ export default function RecordTable(props) {
     !result.loading &&
     !props.loading &&
     !result.error &&
-    (!props.source || !!result()) &&
+    (!props.source || !!activeResult()) &&
     !rows().length;
   const unfilteredEmpty = () => isEmpty() && !appliedSearch() && !(props.query || search());
   createEffect(() => props.onEmptyChange?.(unfilteredEmpty()));
@@ -238,7 +300,35 @@ export default function RecordTable(props) {
     }));
   }
   return (
-    <div class="record-list">
+    <div class="record-list" ref={root}>
+      <Show when={!unfilteredEmpty() && rows().length}>
+        <Show
+          when={menuTarget()}
+          fallback={
+            <div class="record-export-actions">
+              <ActionMenu
+                label={`More ${props.label} actions`}
+                disabled={exporting() || result.loading}
+                items={[
+                  { label: 'Export CSV', onClick: () => exportRecords('csv') },
+                  { label: 'Export JSON', onClick: () => exportRecords('json') },
+                ]}
+              />
+            </div>
+          }
+        >
+          <Portal mount={menuTarget()}>
+            <ActionMenu
+              label={`More ${props.label} actions`}
+              disabled={exporting() || result.loading}
+              items={[
+                { label: 'Export CSV', onClick: () => exportRecords('csv') },
+                { label: 'Export JSON', onClick: () => exportRecords('json') },
+              ]}
+            />
+          </Portal>
+        </Show>
+      </Show>
       <Show when={canDelete() && selectedRows().length}>
         <div class="record-bulk-actions" role="region" aria-label="Selected records">
           <span aria-live="polite">{selectedRows().length} Selected</span>
@@ -275,7 +365,11 @@ export default function RecordTable(props) {
         <ToastMessage tone="error">{result.error.message}</ToastMessage>
       </Show>
       <Show when={!isEmpty()}>
-        <div class="record-table-scroll" aria-busy={result.loading}>
+        <div
+          class="record-table-scroll"
+          classList={{ 'is-ready': !!activeResult() || !props.source }}
+          aria-busy={result.loading}
+        >
           <table class="record-table">
             <caption class="sr-only">{props.label}</caption>
             <thead>
@@ -387,11 +481,11 @@ export default function RecordTable(props) {
       <Show when={paginationError()}>
         <ToastMessage tone="error">{paginationError()}</ToastMessage>
       </Show>
-      <Show when={props.source && result()?.total > 0}>
+      <Show when={props.source && !result.error && activeResult()?.total > 0}>
         <ListPagination
-          total={result().total}
-          page={result().page}
-          pageSize={result().pageSize}
+          total={activeResult().total}
+          page={activeResult().page}
+          pageSize={activeResult().pageSize}
           loading={result.loading}
           onPage={setPage}
           onPageSize={async (size) => {

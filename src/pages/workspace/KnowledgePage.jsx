@@ -74,7 +74,7 @@ export default function KnowledgePage() {
           id={`knowledge-panel-${tab()}`}
           aria-labelledby={`knowledge-tab-${tab()}`}
         >
-          <div class="list-toolbar">
+          <div class="list-toolbar" data-list-actions>
             <label class="workspace-search" hidden={isListEmpty()}>
               <Icon name="search" />
               <input

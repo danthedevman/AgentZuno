@@ -1,3 +1,4 @@
+import { createAuthoredSemantic } from './authoredSemantic.js';
 import { createInvitationDelivery } from './invitations.js';
 import { createWorkflowExecution } from './workflowExecution.js';
 import { createHelpdeskSlack } from './helpdeskSlack.js';
@@ -138,9 +139,11 @@ const emailWorker = new Worker(
   { connection, concurrency: 1 },
 );
 const semantic = createSemanticService(store);
+const authoredSemantic = createAuthoredSemantic(store);
 const vectorWorker = new Worker(
   queueNames.vector,
   async (job) => {
+    if (job.data.sourceKind === 'authored') return authoredSemantic.process(job.data);
     const filter = {
       _id: new ObjectId(job.data.id),
       ownerId: job.data.ownerId,
@@ -232,6 +235,7 @@ const schedulerWorker = new Worker(
     for (const source of due) await queues.sync(source);
     if (semantic.enabled) {
       await semantic.cleanup().catch(() => {});
+      for (const article of await authoredSemantic.pending()) await queues.vector(article);
       const documents = await store
         .collection('knowledgeDocuments')
         .find({

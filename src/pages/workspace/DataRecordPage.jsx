@@ -71,7 +71,9 @@ export default function DataRecordPage() {
           </Show>
         }
       >
-        <BackLink href={`/workspace/data/${params.id}`}>Table</BackLink>
+        <BackLink href={`/workspace/data/${params.id}`}>
+          {(!table.error && table()?.name) || 'Data Table'}
+        </BackLink>
         <div class="connections-heading">
           <PageHeading title={isNew() ? 'Add Record' : 'Edit Record'} />
         </div>

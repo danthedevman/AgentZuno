@@ -1,3 +1,6 @@
+import { installRequestAttachmentRoutes } from './requestAttachments.js';
+import { installDemoRoutes } from './demoMode.js';
+import { validateRequestAction, ownChatRequest } from './requestChatActions.js';
 import { installMyWorkRoutes } from './myWork.js';
 import { matchesWorkflowDepartment } from './workflowDepartments.js';
 import { installBulkDeletionRoutes } from './bulkDeletion.js';
@@ -97,6 +100,7 @@ export function createHelpdeskService(store, chats) {
           ownerId: user.id,
           workspaceId: user.workspaceId,
           requestId: reviewRequestId(user.workspaceId, user.id, record._id.toHexString()),
+          ...(context.demoTag || {}),
           providerOwnerId: user.helpdeskOwnerId || user.id,
           assistantType: 'support',
           helpdeskPurpose: 'support',
@@ -305,6 +309,7 @@ export function createHelpdeskService(store, chats) {
       createdAt: now,
       updatedAt: now,
       ...(workflow || {}),
+      ...(context.demoTag || {}),
       ...(context.formSubmission ? { formSubmission: context.formSubmission } : {}),
     };
     try {
@@ -763,6 +768,72 @@ export function createHelpdeskService(store, chats) {
         : { text: text(input.text, 'Message', 7000), attachmentIds: input.attachmentIds },
     );
   }
+  async function applyChatAction(user, id, input) {
+    fields(input, ['messageId']);
+    if (typeof input.messageId !== 'string' || input.messageId.length > 100)
+      fail('Invalid action.');
+    const chat = await chats.get(user, id);
+    if (chat.helpdeskPurpose !== 'support' || !['complete', 'failed'].includes(chat.status))
+      fail('Wait for the response to complete.', 409);
+    const message = chat.messages.find(
+      (item) => item.id === input.messageId && item.role === 'assistant',
+    );
+    const proposal = message?.requestAction;
+    if (!proposal || proposal.state !== 'pending') fail('This action is no longer pending.', 409);
+    const request = await ownChatRequest(store, user, {
+      ...chat,
+      helpdeskRequestId: proposal.requestId,
+    });
+    if (!request) fail('Request not found.', 404);
+    const { requestId, number, version, state, ...action } = proposal;
+    const value = validateRequestAction(user, request, action);
+    const claimed = await store.collection('chats').updateOne(
+      {
+        _id: chat._id,
+        ownerId: user.id,
+        workspaceId: user.workspaceId,
+        messages: { $elemMatch: { id: input.messageId, 'requestAction.state': 'pending' } },
+      },
+      { $set: { 'messages.$.requestAction.state': 'applying' } },
+    );
+    if (!claimed.modifiedCount) fail('This action is already being processed.', 409);
+    try {
+      const { action: kind, ...changes } = value;
+      const result = await update(
+        user,
+        requestId,
+        { version, ...changes },
+        kind === 'comment' ? 'requester-message' : kind === 'update' ? 'update' : kind,
+      );
+      await store.collection('chats').updateOne(
+        {
+          _id: chat._id,
+          ownerId: user.id,
+          workspaceId: user.workspaceId,
+          'messages.id': input.messageId,
+        },
+        {
+          $set: {
+            'messages.$.requestAction.state': 'applied',
+            'messages.$.requestAction.appliedAt': new Date(),
+            updatedAt: new Date(),
+          },
+        },
+      );
+      return { saved: true, request: result };
+    } catch (error) {
+      await store.collection('chats').updateOne(
+        {
+          _id: chat._id,
+          ownerId: user.id,
+          workspaceId: user.workspaceId,
+          'messages.id': input.messageId,
+        },
+        { $set: { 'messages.$.requestAction.state': 'failed' } },
+      );
+      throw error;
+    }
+  }
   async function acknowledgeSubmission(user, chat, ticket) {
     const receipt = requestReceipt(ticket, user.workspaceId);
     await store.collection('chats').updateOne(
@@ -895,6 +966,13 @@ export function createHelpdeskService(store, chats) {
         workflowRouting: {
           workflowId: form.workflowId,
           workflowName: published.name,
+          ...(currentWorkflow.demoDatasetId
+            ? {
+                demo: true,
+                demoDatasetId: currentWorkflow.demoDatasetId,
+                demoIndustry: currentWorkflow.demoIndustry,
+              }
+            : {}),
           workflowVersion: form.workflowVersion,
           department: (currentWorkflow.publishedConfig || currentWorkflow).department,
           queueName: routing.queueName,
@@ -986,6 +1064,7 @@ export function createHelpdeskService(store, chats) {
     createSupport,
     getSupport,
     sendSupport,
+    applyChatAction,
     safeSupport,
   };
 }
@@ -999,7 +1078,25 @@ export function installHelpdeskRoutes(app, store, service) {
     await store.ready();
     next();
   });
+  app.get('/api/helpdesk/ai-status', async (request, response) => {
+    const scope = {
+      ownerId: request.helpdeskUser.helpdeskOwnerId || request.helpdeskUser.id,
+      workspaceId: request.helpdeskUser.workspaceId,
+    };
+    const preference = await store.collection('aiPreferences').findOne(scope);
+    const provider =
+      preference &&
+      (await store
+        .collection('aiProviders')
+        .findOne(
+          { ...scope, provider: preference.provider, enabled: true },
+          { projection: { _id: 1 } },
+        ));
+    response.json({ enabled: !!provider });
+  });
   installMyWorkRoutes(app, store);
+  installRequestAttachmentRoutes(app, store, service);
+  installDemoRoutes(app, store, service);
   installBulkDeletionRoutes(app, store);
   installChatAttachmentRoutes(app, store);
   installRecentViewRoutes(app, store, service);
@@ -1114,6 +1211,11 @@ export function installHelpdeskRoutes(app, store, service) {
     response
       .status(202)
       .json(await service.sendSupport(request.helpdeskUser, request.params.id, request.body)),
+  );
+  app.post('/api/helpdesk/support/conversations/:id/actions', async (request, response) =>
+    response.json(
+      await service.applyChatAction(request.helpdeskUser, request.params.id, request.body),
+    ),
   );
   app.get('/api/helpdesk/chat-settings', async (request, response) => {
     const saved = await store.collection('helpdeskSettings').findOne(scope(request.helpdeskUser));

@@ -271,6 +271,16 @@ export function createApi(options = {}) {
     const personalViewWrite =
       request.method === 'POST' && request.path === '/api/helpdesk/recent-views';
     const helpdeskWrite =
+      (request.method === 'PUT' &&
+        /^\/api\/helpdesk\/workflows\/[a-f0-9]{24}\/view$/.test(request.path)) ||
+      (request.method === 'DELETE' &&
+        /^\/api\/helpdesk\/(?:members\/[a-f0-9]{24}|data\/tables\/(?:ref-[a-z-]+|[a-f0-9]{24}))$/.test(
+          request.path,
+        )) ||
+      (request.method === 'POST' &&
+        /^\/api\/helpdesk\/request-attachments\/[a-f0-9]{24}$/.test(request.path)) ||
+      (request.method === 'PUT' && request.path === '/api/helpdesk/demo/settings') ||
+      (request.method === 'POST' && request.path === '/api/helpdesk/exports') ||
       personalViewWrite ||
       (request.method === 'POST' &&
         /^\/api\/helpdesk\/(?:requests|articles)\/bulk-delete$/.test(request.path)) ||
@@ -289,7 +299,7 @@ export function createApi(options = {}) {
           request.path,
         )) ||
       (request.method === 'PUT' &&
-        /^\/api\/helpdesk\/workforce-profiles\/[a-f0-9]{24}$/.test(request.path)) ||
+        /^\/api\/helpdesk\/workforce-profiles\/[a-f0-9]{24}(?:\/cover)?$/.test(request.path)) ||
       (request.method === 'POST' && request.path === '/api/helpdesk/reference-records') ||
       (['PUT', 'DELETE'].includes(request.method) && request.path === '/api/helpdesk/domain') ||
       (request.method === 'POST' && request.path === '/api/helpdesk/domain/verify') ||
@@ -299,14 +309,14 @@ export function createApi(options = {}) {
       (request.method === 'PUT' && request.path === '/api/helpdesk/profile-picture') ||
       (request.method === 'PUT' && request.path === '/api/helpdesk/chat-settings') ||
       (request.method === 'PUT' &&
-        /^\/api\/helpdesk\/channels\/(slack|teams|gmail|outlook)\/application$/.test(
+        /^\/api\/helpdesk\/channels\/(slack|teams|gmail|outlook)\/(application|actions)$/.test(
           request.path,
         )) ||
       (request.method === 'PUT' &&
         /^\/api\/helpdesk\/channels\/(gmail|outlook)\/inbox$/.test(request.path)) ||
       (request.method === 'POST' && request.path === '/api/helpdesk/support/conversations') ||
       (request.method === 'POST' &&
-        /^\/api\/helpdesk\/support\/conversations\/[a-f0-9]{24}\/(messages|ticket|form)$/.test(
+        /^\/api\/helpdesk\/support\/conversations\/[a-f0-9]{24}\/(messages|ticket|form|actions)$/.test(
           request.path,
         )) ||
       (request.method === 'POST' &&
@@ -448,7 +458,10 @@ export function createApi(options = {}) {
       );
       if (
         request.helpdeskUser.role === 'read-only' &&
-        !(request.method === 'POST' && request.path === '/api/helpdesk/recent-views')
+        !(
+          request.method === 'POST' &&
+          ['/api/helpdesk/recent-views', '/api/helpdesk/exports'].includes(request.path)
+        )
       ) {
         if (!['GET', 'HEAD'].includes(request.method))
           return response.status(403).json({ error: 'Read Only access does not allow changes.' });
@@ -502,6 +515,10 @@ export function createApi(options = {}) {
   );
   app.use(
     '/api/helpdesk/article-attachments',
+    express.raw({ type: 'application/octet-stream', limit: '10mb' }),
+  );
+  app.use(
+    '/api/helpdesk/request-attachments',
     express.raw({ type: 'application/octet-stream', limit: '10mb' }),
   );
   app.use('/api/uploads/files', express.raw({ type: 'application/octet-stream', limit: '5mb' }));

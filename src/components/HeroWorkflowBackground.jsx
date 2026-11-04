@@ -1,16 +1,29 @@
-import { For, Show, createSignal, onMount, onCleanup } from 'solid-js';
+import { For, Show, createSignal, createEffect, onMount, onCleanup } from 'solid-js';
 import Icon from './Icon.jsx';
 export default function HeroWorkflowBackground() {
   let element;
+  let transcript;
+  let reducedMotion = false;
   const [stage, setStage] = createSignal(0);
   const timers = [];
+  createEffect(() => {
+    const current = stage();
+    if (!current) return;
+    requestAnimationFrame(() =>
+      transcript?.scrollTo({
+        top: transcript.scrollHeight,
+        behavior: reducedMotion ? 'instant' : 'smooth',
+      }),
+    );
+  });
   onMount(() => {
     const start = () => {
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        setStage(9);
+        reducedMotion = true;
+        setStage(11);
         return;
       }
-      [100, 450, 850, 1250, 1650, 2050, 3250, 3950, 4700].forEach((delay, index) =>
+      [100, 450, 850, 1250, 1650, 2050, 2600, 3150, 3700, 4700, 5500].forEach((delay, index) =>
         timers.push(setTimeout(() => setStage(index + 1), delay)),
       );
     };
@@ -32,7 +45,12 @@ export default function HeroWorkflowBackground() {
   });
   onCleanup(() => timers.forEach(clearTimeout));
   return (
-    <div ref={element} class="hero-conversation-visual" aria-hidden="true">
+    <div
+      ref={element}
+      class="hero-conversation-visual"
+      classList={{ 'is-published': stage() >= 11 }}
+      aria-hidden="true"
+    >
       <div class="hero-ambient-glow" />
       <header>
         <span class="hero-agent-identity">
@@ -41,12 +59,20 @@ export default function HeroWorkflowBackground() {
         </span>
         <span class="hero-status-indicator" />
       </header>
-      <div class="hero-conversation-content">
-        <div class="hero-employee-message" classList={{ 'is-visible': stage() >= 1 }}>
+      <div ref={transcript} class="hero-conversation-content">
+        <div
+          class="hero-employee-message"
+          hidden={stage() < 1}
+          classList={{ 'is-visible': stage() >= 1 }}
+        >
           Build a MacBook request workflow for the catalog. Ask for manager approval, open a Jira
           issue for Desktop Support, and message the user in Slack when the request is complete.
         </div>
-        <div class="hero-agent-activity" classList={{ 'is-visible': stage() >= 2 }}>
+        <div
+          class="hero-agent-activity"
+          hidden={stage() < 2}
+          classList={{ 'is-visible': stage() >= 2 }}
+        >
           <strong>
             {stage() >= 6 ? 'Your workflow is ready to review' : 'Building your workflow'}
           </strong>
@@ -77,7 +103,11 @@ export default function HeroWorkflowBackground() {
             </For>
           </ol>
         </div>
-        <div class="hero-generated-form" classList={{ 'is-visible': stage() >= 6 }}>
+        <div
+          class="hero-generated-form"
+          hidden={stage() < 6}
+          classList={{ 'is-visible': stage() >= 6 }}
+        >
           <div class="hero-form-title">
             <Icon name="request" />
             <strong>MacBook Request</strong>
@@ -101,7 +131,11 @@ export default function HeroWorkflowBackground() {
             <Icon name={stage() >= 7 ? 'check' : 'arrow'} />
           </div>
         </div>
-        <div class="hero-completion-flow" classList={{ 'is-visible': stage() >= 7 }}>
+        <div
+          class="hero-completion-flow"
+          hidden={stage() < 7}
+          classList={{ 'is-visible': stage() >= 7 }}
+        >
           <For
             each={[
               { title: 'Manager Approval', detail: 'Requester’s Manager', icon: 'user', stage: 7 },
@@ -119,7 +153,11 @@ export default function HeroWorkflowBackground() {
                     <i />
                   </div>
                 </Show>
-                <div class="hero-endpoint" classList={{ 'is-complete': stage() >= step.stage }}>
+                <div
+                  class="hero-endpoint"
+                  style={{ '--publish-delay': `${index() * 140}ms` }}
+                  classList={{ 'is-complete': stage() >= step.stage }}
+                >
                   <Icon name={step.icon} />
                   <span>
                     {step.title}
@@ -132,6 +170,27 @@ export default function HeroWorkflowBackground() {
               </>
             )}
           </For>
+        </div>
+        <div class="hero-publish-action" hidden={stage() < 9}>
+          <button
+            type="button"
+            tabindex="-1"
+            disabled
+            class="hero-publish-button"
+            classList={{ 'is-publishing': stage() === 10, 'is-published': stage() >= 11 }}
+          >
+            <Icon name={stage() >= 11 ? 'check' : stage() === 10 ? 'loading' : 'workflow'} />
+            <span>
+              {stage() >= 11
+                ? 'Workflow Published'
+                : stage() === 10
+                  ? 'Publishing Workflow…'
+                  : 'Publish Workflow'}
+            </span>
+          </button>
+          <Show when={stage() >= 11}>
+            <span class="hero-published-note">Ready in the Catalog</span>
+          </Show>
         </div>
       </div>
     </div>

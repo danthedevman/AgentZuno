@@ -1,3 +1,6 @@
+import RequestAttachments from './RequestAttachments.jsx';
+import { Portal } from 'solid-js/web';
+import Breadcrumbs from './Breadcrumbs.jsx';
 import ReferenceArrow from './ReferenceArrow.jsx';
 import ProfileAvatar from './ProfileAvatar.jsx';
 import { useSession } from '../context/SessionContext.jsx';
@@ -11,7 +14,6 @@ import { useParams } from '@solidjs/router';
 import { useWorkspace } from '../context/WorkspaceContext.jsx';
 import { api } from '../services/api.js';
 import Dropdown from './Dropdown.jsx';
-import PageHeading from './PageHeading.jsx';
 import ValidatedForm from './ValidatedForm.jsx';
 
 const dateLabel = (value) => (value ? new Date(value).toLocaleString() : '—');
@@ -32,8 +34,8 @@ export default function RequestPanel(props) {
   );
   const [approvalComments, setApprovalComments] = createSignal({});
   const [ticket, { refetch }] = createResource(
-    () => requestId(),
-    (id) => api(`/api/helpdesk/requests/${id}`),
+    () => `${requestId()}:${props.refreshKey || 0}`,
+    () => api(`/api/helpdesk/requests/${requestId()}`),
   );
   const current = () => (ticket.error ? null : ticket());
   const [workflowRuns, { refetch: refreshRuns }] = createResource(
@@ -59,6 +61,7 @@ export default function RequestPanel(props) {
   const [workNote, setWorkNote] = createSignal('');
   const [error, setError] = createSignal('');
   const [saving, setSaving] = createSignal(false);
+  const [detailTab, setDetailTab] = createSignal('details');
   const [isEditing, setIsEditing] = createSignal(false);
   const [editVersion, setEditVersion] = createSignal(null);
   function beginEdit() {
@@ -98,9 +101,84 @@ export default function RequestPanel(props) {
   }
   const entries = () =>
     mode() === 'work-note' ? current()?.workNotes || [] : current()?.messages || [];
+  const RequestActions = () => (
+    <div class="request-header-actions">
+      <Show
+        when={
+          canWork() &&
+          access()?.queues?.includes(current().queueName) &&
+          !current().assignedToId &&
+          current().status !== 'resolved'
+        }
+      >
+        <button
+          type="button"
+          class="workspace-button secondary small"
+          disabled={saving()}
+          onClick={() => save('/assign-self', 'POST', {})}
+        >
+          Assign to Me
+        </button>
+      </Show>
+      <Show when={canWork() && !isEditing()}>
+        <button type="button" class="workspace-button small" onClick={beginEdit}>
+          <Icon name="edit" />
+          Edit Request
+        </button>
+      </Show>
+      <Show when={canWork() && isEditing()}>
+        <button
+          class="workspace-button small"
+          type="submit"
+          form="ticket-details-form"
+          disabled={saving() || current().status === 'waiting-for-approval'}
+        >
+          <Icon name="check" />
+          {saving() ? 'Saving…' : 'Save Changes'}
+        </button>
+        <button
+          class="workspace-button secondary small"
+          type="button"
+          disabled={saving()}
+          onClick={() => setIsEditing(false)}
+        >
+          Cancel
+        </button>
+      </Show>
+    </div>
+  );
   return (
     <section ref={panel} class="request-workspace-panel">
-      <PageHeading title={current()?.number || 'Request'} />
+      <Show
+        when={props.headerLocationTarget}
+        fallback={
+          <Breadcrumbs
+            label="Request location"
+            items={[
+              { label: 'My Requests', href: '/workspace/requests' },
+              { label: current()?.number || 'Request' },
+            ]}
+          />
+        }
+      >
+        <Portal mount={props.headerLocationTarget}>
+          {' '}
+          <Breadcrumbs
+            label="Request location"
+            items={[
+              { label: 'My Requests', href: '/workspace/requests' },
+              { label: current()?.number || 'Request' },
+            ]}
+          />
+        </Portal>
+      </Show>
+      <Show when={current()}>
+        <Show when={props.headerActionsTarget} fallback={<RequestActions />}>
+          <Portal mount={props.headerActionsTarget}>
+            <RequestActions />
+          </Portal>
+        </Show>
+      </Show>
       <Show when={ticket.error}>
         <ToastMessage tone="error">{ticket.error.message}</ToastMessage>
       </Show>
@@ -134,7 +212,38 @@ export default function RequestPanel(props) {
                 {labels(item().status)}
               </span>
             </div>
-            <div class="ticket-detail-layout">
+            <div class="record-detail-tabs" role="tablist" aria-label="Request sections">
+              <button
+                role="tab"
+                aria-selected={detailTab() === 'details'}
+                onClick={() => setDetailTab('details')}
+              >
+                Details
+              </button>
+              <button
+                role="tab"
+                aria-selected={detailTab() === 'attachments'}
+                onClick={() => setDetailTab('attachments')}
+              >
+                Attachments
+              </button>
+            </div>
+            <Show when={detailTab() === 'attachments'}>
+              <RequestAttachments
+                requestId={requestId()}
+                canUpload={
+                  !isEditing() &&
+                  access()?.role !== 'read-only' &&
+                  (current()?.requesterId === session()?.user?.id || canWork()) &&
+                  current()?.status !== 'resolved'
+                }
+                onChanged={async () => {
+                  await refetch();
+                  await props.onChanged?.();
+                }}
+              />
+            </Show>
+            <div class="ticket-detail-layout" hidden={detailTab() !== 'details'}>
               <div class="ticket-detail-content">
                 <section class="ticket-description">
                   <h3>Details</h3>
@@ -162,51 +271,6 @@ export default function RequestPanel(props) {
                   </section>
                 </Show>
                 <aside class="ticket-detail-panel" aria-label="Request information">
-                  <section class="record-panel-actions">
-                    <h3>Actions</h3>
-                    <Show
-                      when={
-                        canWork() &&
-                        access()?.queues?.includes(item().queueName) &&
-                        !item().assignedToId &&
-                        item().status !== 'resolved'
-                      }
-                    >
-                      <button
-                        type="button"
-                        class="workspace-button secondary"
-                        disabled={saving()}
-                        onClick={() => save('/assign-self', 'POST', {})}
-                      >
-                        Assign to Me
-                      </button>
-                    </Show>
-                    <Show when={canWork() && !isEditing()}>
-                      <button type="button" class="workspace-button" onClick={beginEdit}>
-                        <Icon name="edit" />
-                        Edit Request
-                      </button>
-                    </Show>
-                    <Show when={canWork() && isEditing()}>
-                      <button
-                        class="workspace-button"
-                        type="submit"
-                        form="ticket-details-form"
-                        disabled={saving() || item().status === 'waiting-for-approval'}
-                      >
-                        <Icon name="check" />
-                        {saving() ? 'Saving…' : 'Save Changes'}
-                      </button>
-                      <button
-                        class="workspace-button secondary"
-                        type="button"
-                        disabled={saving()}
-                        onClick={() => setIsEditing(false)}
-                      >
-                        Cancel
-                      </button>
-                    </Show>
-                  </section>
                   <h3>Tracking & Assignment</h3>
                   <Show
                     when={canWork() && isEditing()}

@@ -1,3 +1,5 @@
+import SplitResizeHandle from '../../components/SplitResizeHandle.jsx';
+import Breadcrumbs from '../../components/Breadcrumbs.jsx';
 import ChatSendButton from '../../components/ChatSendButton.jsx';
 import WorkflowFormNode from '../../components/WorkflowFormNode.jsx';
 import WorkflowApprovalEditor from '../../components/WorkflowApprovalEditor.jsx';
@@ -58,6 +60,33 @@ export default function WorkflowBuilderPage() {
   const [visualZoom, setVisualZoom] = createSignal(100);
 
   const [chatId, setChatId] = createSignal('');
+  const [startingNewConversation, setStartingNewConversation] = createSignal(false);
+  const [savedView] = createResource(
+    () => isAdmin() && params.id,
+    (id) => api(`/api/helpdesk/workflows/${id}/view`),
+  );
+  createEffect(() => {
+    if (
+      loadedId() !== params.id ||
+      savedView.loading ||
+      savedView.error ||
+      savedView()?.workflowId !== params.id ||
+      startingNewConversation() ||
+      chatId() ||
+      query.chat
+    )
+      return;
+    if (savedView()?.chatId) setChatId(savedView().chatId);
+  });
+  createEffect(() => {
+    const id = selected(),
+      chat = chatId();
+    if (id && chat)
+      api(`/api/helpdesk/workflows/${id}/view`, {
+        method: 'PUT',
+        body: JSON.stringify({ chatId: chat }),
+      }).catch((error) => setError(error.message));
+  });
   const [conversation, { refetch }] = createResource(
     () => chatId() || false,
     (id) => api(`/api/helpdesk/workflow-conversations/${id}`),
@@ -73,10 +102,8 @@ export default function WorkflowBuilderPage() {
   });
   const [selected, setSelected] = createSignal('');
   const [viewingHistory, setViewingHistory] = createSignal(false);
-  const [history, { refetch: refreshHistory }] = createResource(
-    () => isAdmin() && tab() === 'history' && (selected() || 'all'),
-    (id) => api(`/api/helpdesk/workflow-conversations${id === 'all' ? '' : `?workflowId=${id}`}`),
-  );
+  const [historyRevision, setHistoryRevision] = createSignal(0);
+  const refreshHistory = () => setHistoryRevision((value) => value + 1);
   const [baseDefinition, setBaseDefinition] = createSignal(null);
   const [text, setText] = createSignal('');
   const [pendingUserText, setPendingUserText] = createSignal('');
@@ -180,6 +207,7 @@ export default function WorkflowBuilderPage() {
     if (!saved.loading && !saved.error && saved()) {
       const id = params.id || (/^[a-f0-9]{24}$/.test(query.draft || '') ? query.draft : '');
       if (loadedId() !== id) {
+        setStartingNewConversation(false);
         if (id || loadedId() !== null) choose(id);
         if (/^[a-f0-9]{24}$/.test(query.chat || '')) setChatId(query.chat);
         setLoadedId(id);
@@ -429,39 +457,33 @@ export default function WorkflowBuilderPage() {
   return (
     <section class="workflow-page is-builder">
       <header class="workflow-builder-heading">
-        <nav class="breadcrumbs workflow-breadcrumbs" aria-label="Workflow location">
-          <ol>
-            <li>
-              <A href="/workspace/workflows">Workflows</A>
-            </li>
-            <li>
-              <h1 aria-current="page">
-                <Show
-                  when={definition()}
-                  fallback={params.id ? current()?.name || 'Edit Workflow' : 'New Workflow'}
-                >
-                  <input
-                    class="workflow-name-input"
-                    aria-label="Workflow Name"
-                    maxlength="80"
-                    value={definition()?.name || ''}
-                    disabled={sending() || processing()}
-                    onInput={(event) => {
-                      setViewingHistory(false);
-                      setHasEdits(true);
-                      setManualName(event.currentTarget.value);
-                    }}
-                  />
-                </Show>
-              </h1>
-            </li>
-          </ol>
-        </nav>
+        <Breadcrumbs
+          class="workflow-breadcrumbs"
+          label="Workflow location"
+          items={[{ label: 'Workflows', href: '/workspace/workflows' }]}
+        >
+          <h1>
+            <Show
+              when={definition()}
+              fallback={params.id ? current()?.name || 'Edit Workflow' : 'New Workflow'}
+            >
+              <input
+                class="workflow-name-input"
+                aria-label="Workflow Name"
+                maxlength="80"
+                value={definition()?.name || ''}
+                disabled={sending() || processing()}
+                onInput={(event) => {
+                  setViewingHistory(false);
+                  setHasEdits(true);
+                  setManualName(event.currentTarget.value);
+                }}
+              />
+            </Show>
+          </h1>
+        </Breadcrumbs>
         <Show when={isAdmin()}>
           <div class="workflow-header-actions">
-            <A class="workspace-button secondary small" href="/docs/workflows">
-              Docs
-            </A>
             <span class="workflow-save-status" role="status">
               <Show when={saving()}>
                 <Icon name="loading" class="saving-spinner" />
@@ -524,7 +546,8 @@ export default function WorkflowBuilderPage() {
         <Show when={message()}>
           <ToastMessage tone="success" message={message()} />
         </Show>
-        <div class="workflow-builder">
+        <div class="workflow-builder resizable-split">
+          <SplitResizeHandle storageKey="builder" />
           <section class="workflow-chat" aria-label="Workflow conversation">
             <div
               class="workflow-chat-history"
@@ -635,6 +658,33 @@ export default function WorkflowBuilderPage() {
                 />
               </div>
             </ValidatedForm>
+            <div class="workflow-chat-footer">
+              {' '}
+              <button
+                class="workspace-button secondary small"
+                onClick={() => {
+                  const value = current()?.definition || definition();
+                  setBaseDefinition(value);
+                  setViewingHistory(false);
+                  setHasEdits(true);
+                  setStartingNewConversation(true);
+                  if (selected())
+                    api(`/api/helpdesk/workflows/${selected()}/view`, {
+                      method: 'PUT',
+                      body: JSON.stringify({ chatId: null }),
+                    }).catch((error) => setError(error.message));
+                  setChatId('');
+                  setManualForm(undefined);
+                  setManualRouting(undefined);
+                  setManualName(undefined);
+                  setManualPermissions(undefined);
+                  setText('');
+                  setQuery({ chat: undefined }, { replace: true });
+                }}
+              >
+                New Conversation
+              </button>
+            </div>
           </section>
           <section class="workflow-design" aria-label="Workflow design">
             <div
@@ -864,7 +914,6 @@ export default function WorkflowBuilderPage() {
                       setHasEdits(true);
                     }}
                   />
-                  <h2>Visibility</h2>
                   <WorkflowPermissionsEditor
                     value={definition()?.permissions}
                     disabled={sending() || processing()}
@@ -890,7 +939,7 @@ export default function WorkflowBuilderPage() {
                             fallback={
                               <A
                                 class="workspace-button secondary"
-                                href="/workspace/users?tab=queues"
+                                href="/workspace/users?tab=groups"
                               >
                                 Create an Assignment Group
                               </A>
@@ -1060,42 +1109,11 @@ export default function WorkflowBuilderPage() {
                 </Show>
               </Show>
               <Show when={tab() === 'history'}>
-                <button
-                  class="workspace-button secondary small"
-                  onClick={() => {
-                    const value = current()?.definition || definition();
-                    setBaseDefinition(value);
-                    setViewingHistory(false);
-                    setHasEdits(true);
-                    setChatId('');
-                    setManualForm(undefined);
-                    setManualRouting(undefined);
-                    setManualName(undefined);
-                    setManualPermissions(undefined);
-                    setText('');
-                    setQuery({ chat: undefined }, { replace: true });
-                  }}
-                >
-                  New Conversation
-                </button>
-                <Show when={history.error}>
-                  <ToastMessage tone="error">{history.error.message}</ToastMessage>
-                </Show>
                 <RecordTable
                   label="Workflow Conversations"
-                  emptyAction={{
-                    label: 'New Conversation',
-                    onClick: () => {
-                      setChatId('');
-                      setQuery({ chat: undefined });
-                      setText('');
-                      setTab('visual');
-                    },
-                  }}
                   source="/api/helpdesk/workflow-conversations"
                   sourceParams={{ workflowId: selected() || undefined }}
-                  refreshKey={JSON.stringify(history())}
-                  rows={!history.error ? history() || [] : []}
+                  refreshKey={historyRevision()}
                   defaultSort={{ key: 'Updated', direction: 'desc' }}
                   onRowClick={(item) => {
                     setViewingHistory(true);
@@ -1135,9 +1153,7 @@ export default function WorkflowBuilderPage() {
                       render: (item) => new Date(item.updatedAt).toLocaleString(),
                     },
                   ]}
-                  emptyText={
-                    history.loading ? 'Loading conversations…' : 'No conversations saved yet.'
-                  }
+                  emptyText="No conversations saved yet"
                 />
               </Show>
             </div>

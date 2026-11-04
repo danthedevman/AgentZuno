@@ -1,3 +1,5 @@
+import SetupPage from './pages/workspace/SetupPage.jsx';
+import AuditRecordPage from './pages/workspace/AuditRecordPage.jsx';
 import MyWorkPage from './pages/workspace/MyWorkPage.jsx';
 import WorkspaceHomePage from './pages/workspace/WorkspaceHomePage.jsx';
 import LegacyQueuePage from './pages/workspace/LegacyQueuePage.jsx';
@@ -57,6 +59,7 @@ export default function App() {
       <Route path="/register" component={RegisterPage} />
       <Route path={['/workspace', '/workspace/:workspaceId']} component={WorkspaceLayout}>
         <Route path="/" component={WorkspaceHomePage} />
+        <Route path="/setup" component={SetupPage} />
         <Route path="/my-work" component={MyWorkPage} />
         <Route path="/inbox" component={DashboardPage} />
         <Route path="/requests" component={RequestsPage} />
@@ -84,6 +87,7 @@ export default function App() {
         <Route path="/chat/:id" component={ChatPage} />
         <Route path="/approvals" component={ApprovalsPage} />
         <Route path="/reports" component={ReportsPage} />
+        <Route path="/reports/audit/:id" component={AuditRecordPage} />
         <Route path="/knowledge" component={KnowledgePage} />
         <Route path="/knowledge/bases/:id" component={KnowledgeBasePage} />
         <Route path="/knowledge/topics/new" component={CreateTopicPage} />

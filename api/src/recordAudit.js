@@ -39,10 +39,7 @@ export function auditDatabase(database) {
               const record = Array.isArray(args[0]) ? args[0][0] : args[0] || {};
               const update = args[1] || {};
               const previous =
-                !actor &&
-                !record.ownerId &&
-                record._id &&
-                !['insertOne', 'insertMany'].includes(method)
+                record._id && !['insertOne', 'insertMany'].includes(method)
                   ? await source.findOne(args[0], {
                       projection: { ownerId: 1, workspaceId: 1, version: 1 },
                     })
@@ -69,7 +66,7 @@ export function auditDatabase(database) {
                 ownerId,
                 workspaceId,
                 actorId: actor?.id || null,
-                actorType: actor ? 'account' : 'system',
+                actorType: auditContext.getStore()?.actorType || (actor ? 'account' : 'system'),
                 role: actor?.role,
                 actualRole: actor?.actualRole || actor?.role,
                 isImpersonating: actor?.isImpersonating === true,
@@ -82,6 +79,9 @@ export function auditDatabase(database) {
                     ...keyNames(update.$set),
                     ...keyNames(update.$unset),
                     ...keyNames(update.$inc),
+                    ...keyNames(update.$push),
+                    ...keyNames(update.$addToSet),
+                    ...keyNames(update.$pull),
                     ...(method === 'insertOne' || method === 'replaceOne' ? keyNames(record) : []),
                   ]),
                 ].slice(0, 50),
@@ -113,7 +113,11 @@ export function auditDatabase(database) {
                         ? result.version
                         : Number.isInteger(update.$set?.version)
                           ? update.$set.version
-                          : null,
+                          : Number.isInteger(update.$inc?.version) &&
+                              Number.isInteger(previous?.version) &&
+                              result?.matchedCount > 0
+                            ? previous.version + update.$inc.version
+                            : null,
                     },
                   },
                 );

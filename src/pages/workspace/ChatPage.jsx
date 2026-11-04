@@ -1,3 +1,6 @@
+import SplitResizeHandle from '../../components/SplitResizeHandle.jsx';
+import ArticleReader from '../../components/ArticleReader.jsx';
+import RequestChatAction from '../../components/RequestChatAction.jsx';
 import ContentTransition from '../../components/ContentTransition.jsx';
 import ArticleAttachments from '../../components/ArticleAttachments.jsx';
 import { useWorkspace } from '../../context/WorkspaceContext.jsx';
@@ -36,6 +39,8 @@ export default function ChatPage() {
   const [readingArticle] = createResource(articleId, (id) =>
     api(`/api/helpdesk/knowledge-center?article=${encodeURIComponent(id)}`),
   );
+  const [requestActionsTarget, setRequestActionsTarget] = createSignal();
+  const [requestLocationTarget, setRequestLocationTarget] = createSignal();
   const hasSidePanel = () => !!activeRequest() || !!articleId();
   createEffect(() => {
     params.id;
@@ -110,6 +115,10 @@ export default function ChatPage() {
       return result.items;
     },
   );
+  const [recentChats, setRecentChats] = createStore([]);
+  createEffect(() => {
+    if (!chats.error) setRecentChats(reconcile(chats() || [], { key: 'id' }));
+  });
   async function loadMoreChats() {
     if (!nextCursor() || loadingMore()) return;
     const cursor = nextCursor();
@@ -157,6 +166,15 @@ export default function ChatPage() {
   let timer;
   let messageList;
   let resumed = false;
+  let openedRequestChat = '';
+  createEffect(() => {
+    const key = params.id && activeRequest() ? `${params.id}:${activeRequest().id}` : '';
+    if (!key || key === openedRequestChat || chat.loading || !current()?.messages?.length) return;
+    openedRequestChat = key;
+    requestAnimationFrame(() => {
+      if (messageList) messageList.scrollTop = messageList.scrollHeight;
+    });
+  });
   onCleanup(() => clearTimeout(timer));
   createEffect(() => {
     chat();
@@ -332,7 +350,7 @@ export default function ChatPage() {
                   />
                 }
               >
-                <For each={chats()}>
+                <For each={recentChats}>
                   {(item) => <A href={`/workspace/chat/${item.id}`}>{item.title}</A>}
                 </For>
                 <Show when={nextCursor()}>
@@ -352,7 +370,7 @@ export default function ChatPage() {
           </div>
         }
       >
-        <div class="chat-conversation-layout">
+        <div class="chat-conversation-layout resizable-split">
           <section class="chat-conversation-left">
             <div class="chat-thread-heading">
               <h1>{current()?.title || 'Chat'}</h1>
@@ -419,6 +437,15 @@ export default function ChatPage() {
                           <ChatMarkdown text={message.text} />
                         </div>
                       </Show>
+                    </Show>
+                    <Show when={message.requestAction}>
+                      <RequestChatAction
+                        action={message.requestAction}
+                        chatId={params.id}
+                        messageId={message.id}
+                        disabled={isReadOnly() || busy()}
+                        onApplied={refreshChat}
+                      />
                     </Show>
                     <Show when={message.formReceipt}>
                       {(receipt) => (
@@ -560,6 +587,7 @@ export default function ChatPage() {
             </div>
           </section>
           <Show when={hasSidePanel()}>
+            <SplitResizeHandle storageKey="support-chat" />
             <aside
               class="chat-request-workspace"
               aria-label={articleId() ? 'Article reader' : 'Request workspace'}
@@ -568,9 +596,9 @@ export default function ChatPage() {
                 when={articleId()}
                 fallback={
                   <>
-                    <header class="chat-request-heading">
-                      <h2>Request</h2>
-                      <Show when={current()?.requests?.length > 1}>
+                    <Show when={current()?.requests?.length > 1}>
+                      <div class="chat-request-switcher">
+                        <label>Requests</label>
                         <Dropdown
                           ariaLabel="Request"
                           value={activeRequest()?.id}
@@ -583,10 +611,23 @@ export default function ChatPage() {
                             setQuery({ request: value });
                           }}
                         />
-                      </Show>
+                      </div>
+                    </Show>
+                    <header class="chat-request-heading">
+                      <div ref={setRequestLocationTarget} class="chat-request-location" />
+
+                      <div ref={setRequestActionsTarget} class="chat-request-header-actions" />
                     </header>
                     <Show when={activeRequest()}>
-                      {(item) => <RequestPanel requestId={item().id} onChanged={refreshChat} />}
+                      {(item) => (
+                        <RequestPanel
+                          headerLocationTarget={requestLocationTarget()}
+                          headerActionsTarget={requestActionsTarget()}
+                          requestId={item().id}
+                          refreshKey={item().version}
+                          onChanged={refreshChat}
+                        />
+                      )}
                     </Show>
                   </>
                 }
@@ -608,8 +649,7 @@ export default function ChatPage() {
                     {(item) => (
                       <article>
                         <h1>{item().title}</h1>
-                        <ArticleEditor readOnly content={item().body || ''} />
-                        <ArticleAttachments articleId={articleId()} />
+                        <ArticleReader articleId={articleId()} body={item().body} />
                         <For each={item().sections || []}>
                           {(section) => (
                             <section>

@@ -1,3 +1,4 @@
+import DataExportButtons from '../../components/DataExportButtons.jsx';
 import Skeleton from '../../components/Skeleton.jsx';
 import { displayLabel } from '../../services/displayLabels.js';
 import Icon from '../../components/Icon.jsx';
@@ -131,6 +132,17 @@ export default function KnowledgeOverviewPage(props) {
         <Show when={data()?.connections.length}>
           <section class="knowledge-health-table">
             <h2>Source health</h2>
+            <DataExportButtons
+              label="Source Health"
+              rows={data()?.connections || []}
+              columns={[
+                { label: 'Source', key: 'label' },
+                { label: 'Status', key: 'status' },
+                { label: 'Import', key: 'syncStatus' },
+                { label: 'Documents', key: 'documentCount' },
+                { label: 'Last Complete Sync', key: 'lastAt' },
+              ]}
+            />
             <div class="table-scroll">
               <table>
                 <thead>

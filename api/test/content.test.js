@@ -55,6 +55,19 @@ test(
       await start();
       let alex = await login('alex');
       const jordan = await login('jordan');
+      const topicResponse = await post('/api/topics', alex, {
+        name: 'General Support',
+        description: '',
+        articleIds: [],
+      });
+      const topic = await topicResponse.json();
+      const jordanTopic = await (
+        await post('/api/topics', jordan, {
+          name: 'Other Support',
+          description: '',
+          articleIds: [],
+        })
+      ).json();
       const registration = await post('/api/auth/register', '', {
         email: 'new-user@example.test',
         password: 'A-strong-test-password',
@@ -138,6 +151,7 @@ test(
       assert.ok((await imageResponse.arrayBuffer()).byteLength > 0);
       const body = `<h2>Rich body</h2><p><strong>Bold</strong> text</p><img src="${image.src}" alt="Test"><script>alert(1)</script><img src="https://example.com/foreign.png">`;
       const response = await post('/api/articles', alex, {
+        topicIds: [topic.id],
         title: 'Saved article',
         body,
         ownerId: 'jordan',
@@ -167,7 +181,13 @@ test(
       assert.ok(!article.body.includes('<script'));
       assert.ok(!article.body.includes('foreign.png'));
       assert.equal(
-        (await post('/api/articles', jordan, { title: 'Foreign image', body })).status,
+        (
+          await post('/api/articles', jordan, {
+            title: 'Foreign image',
+            body,
+            topicIds: [jordanTopic.id],
+          })
+        ).status,
         400,
       );
       assert.equal(

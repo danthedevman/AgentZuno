@@ -15,7 +15,12 @@ export default function DataRecordField(props) {
           required={props.field.required}
           value={props.value || ''}
           onChange={props.onChange}
-          options={options() || []}
+          options={(options() || []).map((option) => ({
+            ...option,
+            href:
+              option.href ||
+              `/workspace/data/${props.field.referenceTable}/records/${encodeURIComponent(option.value)}`,
+          }))}
           disabled={options.loading || !!options.error}
           readOnly={props.readOnly}
         />

@@ -1,3 +1,11 @@
+import {
+  allowedRequestActions,
+  requestActionInstructions,
+  validateRequestAction,
+  ownChatRequest,
+  stripRequestAction,
+} from './requestChatActions.js';
+import { requireConnectorAction } from './connectorActions.js';
 import { chatUserContext } from './chatUserContext.js';
 import { articleDesignerInstructions } from './articleDesigner.js';
 import { userReferenceOptions } from './userReferences.js';
@@ -109,6 +117,7 @@ export function createChatService(store, enqueue, fetcher = fetch) {
       requestId: input.requestId,
       providerOwnerId: context.providerOwnerId || user.id,
       assistantType: context.assistantType === 'admin' ? 'admin' : 'support',
+      actionRole: user.role || 'user',
       ...(context.slackSourceId
         ? {
             slackSourceId: context.slackSourceId,
@@ -234,6 +243,7 @@ export function createChatService(store, enqueue, fetcher = fetch) {
       role: 'assistant',
       text: '',
       status: 'queued',
+      actionRole: user.role || 'user',
       phase: 'queued',
       progress: [{ phase: 'queued', at: now }],
       createdAt: now,
@@ -255,6 +265,7 @@ export function createChatService(store, enqueue, fetcher = fetch) {
           messageCount: messages.length,
           responseId,
           status: 'queued',
+          actionRole: user.role || 'user',
           phase: 'queued',
           progressEvents: [{ phase: 'queued', at: now }],
           updatedAt: now,
@@ -296,6 +307,7 @@ export function createChatService(store, enqueue, fetcher = fetch) {
           'email.enabled': true,
         }));
       if (!source?.credential) throw failure('Support mailbox access changed.', 403);
+      await requireConnectorAction(store, source, 'receiveMessages');
       await resolveHelpdeskUser(
         store,
         { id: chat.providerOwnerId, workspaceId: chat.workspaceId },
@@ -390,7 +402,7 @@ export function createChatService(store, enqueue, fetcher = fetch) {
           phase: nextPhase,
           updatedAt: at,
           'messages.$[reply].phase': nextPhase,
-          ...(text !== undefined ? { 'messages.$[reply].text': text } : {}),
+          ...(text !== undefined ? { 'messages.$[reply].text': stripRequestAction(text) } : {}),
         },
       };
       if (changed)
@@ -578,6 +590,23 @@ export function createChatService(store, enqueue, fetcher = fetch) {
       if (chat.messages.some((message) => message.attachments?.length))
         await report('reading-attachments');
       settings.instructions += await attachmentContext(store, chat);
+      let requestActionContext = null;
+      if (chat.helpdeskPurpose === 'support' && chat.helpdeskRequestId) {
+        const person = await resolveHelpdeskUser(
+          store,
+          { id: chat.ownerId, workspaceId: chat.workspaceId },
+          chat.workspaceId,
+        );
+        if (chat.actionRole && chat.actionRole !== person.role) {
+          person.role = chat.actionRole;
+          person.queues = [];
+        }
+        const request = await ownChatRequest(store, person, chat);
+        if (request) {
+          requestActionContext = { person, request };
+          settings.instructions += `\n${requestActionInstructions}\nAllowed request actions: ${JSON.stringify(allowedRequestActions(person, request))}. Open request: ${request.number}.`;
+        }
+      }
       await report('generating');
       result = {
         ...(await generateReply(settings, visibleChatMessages(chat), fetcher, (update) =>
@@ -585,6 +614,26 @@ export function createChatService(store, enqueue, fetcher = fetch) {
         )),
         status: 'complete',
       };
+      const actionBlock = result.text.match(/```request-action\s*([\s\S]*?)```/i);
+      if (actionBlock && requestActionContext) {
+        try {
+          const value = validateRequestAction(
+            requestActionContext.person,
+            requestActionContext.request,
+            JSON.parse(actionBlock[1]),
+          );
+          result.requestAction = {
+            ...value,
+            requestId: String(requestActionContext.request._id),
+            number: requestActionContext.request.number,
+            version: requestActionContext.request.version,
+            state: 'pending',
+          };
+        } catch {
+          result.text = 'Please clarify the change you want to make to this request.';
+        }
+      }
+      result.text = stripRequestAction(result.text);
       if (chat.helpdeskPurpose === 'workflow') {
         await report('validating');
         const definitionText = result.text.match(/```(?:json)?\s*([\s\S]*?)(?:```|$)/i)?.[1];
@@ -615,6 +664,7 @@ export function createChatService(store, enqueue, fetcher = fetch) {
           provider: settings?.provider || null,
           model: settings?.model || null,
           updatedAt: new Date(),
+          'messages.$[reply].requestAction': result.requestAction || null,
           'messages.$[reply].status': result.status,
           'messages.$[reply].phase': result.status,
           'messages.$[reply].text': result.text,

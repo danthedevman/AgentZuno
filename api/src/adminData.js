@@ -808,9 +808,51 @@ export function installAdminDataRoutes(app, store, chats) {
     },
   );
   app.delete('/api/helpdesk/data/tables/:id', async (request, response) => {
-    const table = await service.table(request.helpdeskUser, request.params.id);
+    const raw =
+      /^[a-f0-9]{24}$/.test(request.params.id) &&
+      (await store.collection('adminDataTables').findOne({
+        ...helpdeskScope(request.helpdeskUser),
+        _id: new ObjectId(request.params.id),
+        deleting: true,
+      }));
+    const table = raw
+      ? { ...raw, id: request.params.id }
+      : await service.table(request.helpdeskUser, request.params.id);
     if (table.system) deny('Built-in data tables cannot be deleted.', 409);
-    deny('Table deletion is not supported.', 405);
+    const user = request.helpdeskUser;
+    requireRole(user, ['admin']);
+    if (table.sourceManaged) deny('Managed data tables cannot be deleted.', 409);
+    if (
+      request.body?.confirmed !== true ||
+      request.body?.name !== table.name ||
+      request.body?.version !== table.version
+    )
+      deny('Type the current table name and confirm deletion.', 400);
+    const scope = helpdeskScope(user);
+    if (
+      await store.collection('adminDataTables').findOne({
+        ...scope,
+        _id: { $ne: new ObjectId(request.params.id) },
+        archived: { $ne: true },
+        'fields.referenceTable': request.params.id,
+      })
+    )
+      deny('Remove references from other tables before deleting this table.', 409);
+    const claim = await store
+      .collection('adminDataTables')
+      .updateOne(
+        { ...scope, _id: new ObjectId(request.params.id), version: table.version },
+        { $set: { archived: true, deleting: true, updatedAt: new Date() } },
+      );
+    if (!claim.matchedCount) deny('Table changed. Reload before deleting.', 409);
+    await store.collection('adminDataRecords').deleteMany({ ...scope, tableId: request.params.id });
+    await store
+      .collection('adminDataConversations')
+      .deleteMany({ ...scope, tableId: request.params.id });
+    await store
+      .collection('adminDataTables')
+      .deleteOne({ ...scope, _id: new ObjectId(request.params.id), deleting: true });
+    response.json({ deleted: true });
   });
   app.post('/api/helpdesk/data/tables/:id/records', async (request, response) =>
     response

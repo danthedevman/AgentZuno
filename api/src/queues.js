@@ -76,9 +76,10 @@ export function createQueues() {
           ownerId: item.ownerId,
           workspaceId: item.workspaceId,
           runId: item.runId,
+          ...(item.sourceKind ? { sourceKind: item.sourceKind } : {}),
         },
         {
-          jobId: `vector-${item._id}-${item.runId}-${Math.floor(Date.now() / 300000)}`,
+          jobId: `vector-${item.sourceKind || 'imported'}-${item._id}-${item.runId}-${Math.floor(Date.now() / 300000)}`,
           attempts: 3,
           backoff: { type: 'exponential', delay: 30000 },
         },

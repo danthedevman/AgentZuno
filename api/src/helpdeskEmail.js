@@ -1,3 +1,4 @@
+import { requireConnectorAction } from './connectorActions.js';
 import { channelApplication, requireCurrentChannelApplication } from './channelApplications.js';
 import { createHash, randomUUID } from 'node:crypto';
 import { ObjectId } from 'mongodb';
@@ -145,6 +146,7 @@ export function createHelpdeskEmail(store, chats, fetcher = fetch) {
       emailGeneration: source.emailGeneration,
     });
     if (!current?.credential) deny('Support mailbox is disabled.', 403);
+    await requireConnectorAction(store, current, 'receiveMessages');
     const owner = await resolveHelpdeskUser(
       store,
       { id: source.ownerId, workspaceId: source.workspaceId },
@@ -458,7 +460,14 @@ export function createHelpdeskEmail(store, chats, fetcher = fetch) {
         continue;
       }
       const current = await authorized(source);
-      if (!current.email.autoReply) {
+      let canReply = true;
+      try {
+        await requireConnectorAction(store, current, 'respondToUsers');
+      } catch (error) {
+        if (error.status !== 403) throw error;
+        canReply = false;
+      }
+      if (!current.email.autoReply || !canReply) {
         await store
           .collection('helpdeskEmailMessages')
           .updateOne({ _id: item._id }, { $set: { status: 'draft', draftText: reply.text } });
@@ -479,7 +488,9 @@ export function createHelpdeskEmail(store, chats, fetcher = fetch) {
           'email-reply',
           `/email/${item._id}`,
           async () => {
-            await authorized(source);
+            const latest = await authorized(source);
+            if (!latest.email.autoReply) deny('Automatic replies are disabled.', 403);
+            await requireConnectorAction(store, latest, 'respondToUsers');
             const headers = {
               Authorization: `Bearer ${accessToken}`,
               'Content-Type': 'application/json',

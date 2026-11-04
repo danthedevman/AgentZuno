@@ -52,6 +52,12 @@ export default function LoginPage(props) {
       if (params.next === 'invite') {
         const invite = sessionStorage.getItem('agentzuno-invitation');
         if (invite && /^[a-f0-9]{64}$/.test(invite)) {
+          if (isRegister()) {
+            const next = `/workspace/${targetWorkspace()}${params.next === 'chat' ? `/chat${/^[a-f0-9]{24}$/.test(params.chat || '') ? `/${params.chat}` : ''}${/^[a-f0-9-]{36}$/.test(params.draft || '') ? `?draft=${params.draft}` : ''}` : ''}`;
+            sessionStorage.setItem(`agentzuno-setup-next:${targetWorkspace()}`, next);
+            navigate(`/workspace/${targetWorkspace()}/setup`, { replace: true });
+            return;
+          }
           navigate(`/invite#${invite}`, { replace: true });
           return;
         }

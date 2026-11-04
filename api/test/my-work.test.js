@@ -42,59 +42,59 @@ test(
       });
       const scope = { ownerId: admin.body.user.id, workspaceId: admin.body.user.workspaceId };
       const actor = agent.body.user.id;
-      await db
-        .collection('helpdeskMembers')
-        .insertOne({
-          ...scope,
-          userId: actor,
-          active: true,
-          role: 'agent',
-          queues: ['Desktop'],
-          canApprove: false,
-          version: 1,
-        });
-      await db.collection('helpdeskRequests').insertMany([
-        {
-          _id: new ObjectId(),
-          ...scope,
-          requesterId: scope.ownerId,
-          assignedToId: scope.ownerId,
-          title: 'Owner assignment',
-          status: 'open',
-          queueName: 'Desktop',
-          updatedAt: new Date(),
-        },
-        {
-          _id: new ObjectId(),
-          ...scope,
-          requesterId: scope.ownerId,
-          assignedToId: actor,
-          title: 'Agent assignment',
-          status: 'waiting-for-employee',
-          queueName: 'Desktop',
-          description: 'Private details excluded',
-          updatedAt: new Date(),
-        },
-        {
-          _id: new ObjectId(),
-          ...scope,
-          requesterId: scope.ownerId,
-          assignedToId: actor,
-          title: 'Outside agent group',
-          status: 'open',
-          queueName: 'Finance',
-          updatedAt: new Date(),
-        },
-        {
-          _id: new ObjectId(),
-          ownerId: actor,
-          workspaceId: agent.body.user.workspaceId,
-          assignedToId: scope.ownerId,
-          title: 'Foreign workspace',
-          status: 'open',
-          updatedAt: new Date(),
-        },
-      ]);
+      await db.collection('helpdeskMembers').insertOne({
+        ...scope,
+        userId: actor,
+        active: true,
+        role: 'agent',
+        queues: ['Desktop'],
+        canApprove: false,
+        version: 1,
+      });
+      await db.collection('helpdeskRequests').insertMany(
+        [
+          {
+            _id: new ObjectId(),
+            ...scope,
+            requesterId: scope.ownerId,
+            assignedToId: scope.ownerId,
+            title: 'Owner assignment',
+            status: 'open',
+            queueName: 'Desktop',
+            updatedAt: new Date(),
+          },
+          {
+            _id: new ObjectId(),
+            ...scope,
+            requesterId: scope.ownerId,
+            assignedToId: actor,
+            title: 'Agent assignment',
+            status: 'waiting-for-employee',
+            queueName: 'Desktop',
+            description: 'Private details excluded',
+            updatedAt: new Date(),
+          },
+          {
+            _id: new ObjectId(),
+            ...scope,
+            requesterId: scope.ownerId,
+            assignedToId: actor,
+            title: 'Outside agent group',
+            status: 'open',
+            queueName: 'Finance',
+            updatedAt: new Date(),
+          },
+          {
+            _id: new ObjectId(),
+            ownerId: actor,
+            workspaceId: agent.body.user.workspaceId,
+            assignedToId: scope.ownerId,
+            title: 'Foreign workspace',
+            status: 'open',
+            updatedAt: new Date(),
+          },
+        ].map((record) => ({ ...record, requestId: randomUUID() })),
+      );
       assert.equal((await call(null, '/helpdesk/my-work')).status, 401);
       const report = await call(
         admin.cookie,

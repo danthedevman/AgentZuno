@@ -1,32 +1,37 @@
-import { createSignal, onMount, onCleanup } from 'solid-js';
+import { onMount, onCleanup } from 'solid-js';
+
 export default function MarketingSection(props) {
   let element;
-  const [visible, setVisible] = createSignal(false);
   onMount(() => {
+    const targets = [
+      ...element.querySelectorAll(
+        '.landing-hero-copy, .marketing-section-intro, .marketing-copy, .marketing-workflow-preview, .marketing-knowledge-preview, .marketing-platform-preview, .marketing-feature-grid article',
+      ),
+    ];
     if (
       window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
       !window.IntersectionObserver
     ) {
-      setVisible(true);
+      targets.forEach((target) => target.classList.add('is-visible'));
       return;
     }
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) {
-          setVisible(true);
-          observer.disconnect();
-        }
+        for (const entry of entries)
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible');
+            observer.unobserve(entry.target);
+          }
       },
-      { threshold: 0.1 },
+      { threshold: 0.08, rootMargin: '0px 0px -24px 0px' },
     );
-    observer.observe(element);
+    targets.forEach((target) => observer.observe(target));
     onCleanup(() => observer.disconnect());
   });
   return (
     <section
       ref={element}
       class={`${props.class || ''} marketing-scroll-section`}
-      classList={{ 'is-visible': visible() }}
       aria-labelledby={props['aria-labelledby']}
     >
       {props.children}

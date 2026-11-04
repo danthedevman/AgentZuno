@@ -1,4 +1,5 @@
 import { Show } from 'solid-js';
+import Icon from './Icon.jsx';
 import { useWorkspacePath } from '../services/workspaceRoutes.js';
 export default function ReferenceArrow(props) {
   const path = useWorkspacePath();
@@ -15,7 +16,7 @@ export default function ReferenceArrow(props) {
         title="Open referenced record in a new tab"
         onClick={(event) => event.stopPropagation()}
       >
-        ↗
+        <Icon name="info" />
       </a>
     </Show>
   );

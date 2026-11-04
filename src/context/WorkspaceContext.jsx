@@ -100,6 +100,7 @@ export function WorkspaceProvider(props) {
       value={{
         workspace: currentWorkspace,
         access: props.access,
+        refreshAccess: props.refreshAccess,
         refresh: refetch,
         updateArticle: (article) => {
           mutate((current) =>

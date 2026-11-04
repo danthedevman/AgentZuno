@@ -81,7 +81,7 @@ export default function KnowledgeBasePage() {
                 <PageHeading title={item().name} />
                 <span class="knowledge-base-context">Knowledge Base</span>
               </div>
-              <div class="helpdesk-actions">
+              <div class="helpdesk-actions" data-list-actions>
                 <A
                   class="workspace-button secondary small"
                   href={`/workspace/knowledge/topics/new?base=${encodeURIComponent(params.id)}`}
@@ -191,7 +191,7 @@ export default function KnowledgeBasePage() {
                               <KnowledgePermissions kind="topic" id={topic.id} />
                             </Show>
                           </details>
-                          <div class="helpdesk-actions">
+                          <div class="helpdesk-actions" data-list-actions>
                             <A
                               class="workspace-button secondary small"
                               href={`/workspace/create/article?base=${encodeURIComponent(params.id)}&topic=${encodeURIComponent(topic.id)}`}

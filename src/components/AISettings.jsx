@@ -92,6 +92,7 @@ export default function AISettings() {
             : current?.defaultProvider || null,
       }));
       await refetch();
+      window.dispatchEvent(new Event('ai-settings-changed'));
       setMessage('AI provider and response settings saved.');
     } catch (error) {
       setError(error.message);

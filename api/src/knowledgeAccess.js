@@ -16,7 +16,11 @@ export async function knowledgeAllowed(store, user, kind, id) {
   );
 }
 export async function canReadAuthoredArticle(store, user, article) {
-  if (article.ownerId !== (user.helpdeskOwnerId || user.id)) return false;
+  if (
+    article.ownerId !== (user.helpdeskOwnerId || user.id) ||
+    (article.workspaceId && article.workspaceId !== user.workspaceId)
+  )
+    return false;
   if (user.role !== 'admin' && article.status !== 'Published') return false;
   if (!(await knowledgeAllowed(store, user, 'base', article.base))) return false;
   if (!(await knowledgeAllowed(store, user, 'article', article._id.toHexString()))) return false;
@@ -140,7 +144,23 @@ export function installKnowledgeAccessRoutes(app, store) {
         .findOne({ _id: article._id, ownerId, status: 'Published' });
       if (!current || !(await canReadAuthoredArticle(store, user, current)))
         deny('Article not found.', 404);
+      const locationRecord = async (id, type) => {
+        if (!ObjectId.isValid(id)) return null;
+        const record = await store
+          .collection('records')
+          .findOne({ _id: new ObjectId(id), ownerId, type }, { projection: { name: 1 } });
+        return record ? { id, name: record.name } : null;
+      };
+      const topicId = (current.topicIds || []).includes(request.query.topic)
+        ? request.query.topic
+        : (current.topicIds || []).length === 1
+          ? current.topicIds[0]
+          : null;
       return response.json({
+        location: {
+          base: await locationRecord(current.base, 'knowledge-base'),
+          topic: await locationRecord(topicId, 'topic'),
+        },
         id: current._id.toHexString(),
         title: current.title,
         body: current.body,

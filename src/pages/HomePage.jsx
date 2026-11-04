@@ -16,8 +16,8 @@ export default function HomePage() {
   const [name, setName] = createSignal('AgentZuno');
   const [tagline, setTagline] = createSignal([
     'AgentZuno is an open source conversational AI help desk',
-    'Answer and automate employee requests in Slack, Microsoft Teams, and email across your entire org',
-    'Deployed in a day',
+    'Answer and automate user requests in Slack, Microsoft Teams, and email across your entire org',
+    'Deploy in a day',
   ]);
 
   onMount(async () => {
@@ -56,7 +56,15 @@ export default function HomePage() {
     <main class="landing-main">
       <nav class="landing-top-navigation" aria-label="Public navigation">
         <A class="marketing-brand-mark" href="/" aria-label="AgentZuno home">
-          <img src="/agentzuno-wordmark.svg" width="128" height="32" alt="" />
+          <img
+            src="/agentzuno-wordmark.svg"
+            loading="eager"
+            fetchpriority="high"
+            decoding="sync"
+            width="128"
+            height="32"
+            alt=""
+          />
         </A>
         <A href="/docs">Docs</A>
         <Show when={user()} fallback={<A href="/login">Sign in</A>}>
@@ -70,7 +78,7 @@ export default function HomePage() {
           </A>
         </Show>
       </nav>
-      <section class="homepage" aria-labelledby="app-name">
+      <MarketingSection class="homepage" aria-labelledby="app-name">
         <div class="landing-hero-copy">
           <h1 id="app-name" aria-label={name()}>
             <Show when={name().endsWith('o')} fallback={name()}>
@@ -92,7 +100,7 @@ export default function HomePage() {
           </div>
         </div>
         <HeroWorkflowBackground />
-      </section>
+      </MarketingSection>
       <MarketingSection
         class="marketing-section marketing-centered"
         aria-labelledby="workflow-examples-title"
@@ -194,29 +202,30 @@ export default function HomePage() {
         <div class="marketing-section-intro">
           <h2 id="governance-feature-title">Keep people in control</h2>
           <p>
-            Give each team the access it needs and keep a record of what happened. From a workflow
-            approval to a record update, the audit report brings activity into a searchable view.
+            Set clear boundaries for access, keep people involved in important decisions, and give
+            teams a shared record of activity.
           </p>
         </div>
         <div class="marketing-feature-grid">
           <article>
             <span>01</span>
-            <h3>Roles &amp; Permissions</h3>
-            <p>Admin, Agent, User, and Read Only roles support everyday work and audit review.</p>
+            <h3>Controlled Access</h3>
+            <p>Give teams confidence that the right people can access the right information.</p>
           </article>
           <article>
             <span>02</span>
-            <h3>Explicit Approvals</h3>
+            <h3>Human Oversight</h3>
             <p>
-              Assign approvals to a user, group, or manager. Require a comment when a request is
-              rejected.
+              Keep people involved in decisions that need judgment, with clear ownership and
+              accountability.
             </p>
           </article>
           <article>
             <span>03</span>
-            <h3>Traceable Changes</h3>
+            <h3>Operational Visibility</h3>
             <p>
-              Review workflow runs, decisions, versions, and record mutations in the Audit report.
+              Understand what happened across your organization and give teams the context they need
+              for review.
             </p>
           </article>
         </div>

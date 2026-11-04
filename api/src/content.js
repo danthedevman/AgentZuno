@@ -136,6 +136,8 @@ export function installContentRoutes(app, auth, store, designer = {}) {
         ? request.body.knowledgeBaseId
         : (existing?.base ?? defaults.knowledgeBases[0]?.id);
     const topicIds = request.body?.topicIds ?? existing?.topicIds ?? [];
+    if (!request.articlePreviewOnly && Array.isArray(topicIds) && !topicIds.length)
+      return response.status(400).json({ error: 'Select at least one topic.' });
     if (
       typeof base !== 'string' ||
       !allowedBases.has(base) ||
@@ -219,6 +221,7 @@ export function installContentRoutes(app, auth, store, designer = {}) {
           .status(400)
           .json({ error: 'An attachment is not available in your workspace.' });
     const values = {
+      workspaceId: request.user.workspaceId,
       attachmentIds: [...new Set(attachmentIds)],
       title: title.trim(),
       status,
@@ -261,6 +264,19 @@ export function installContentRoutes(app, auth, store, designer = {}) {
     const { status } = request.body || {};
     if (!['Draft', 'Review', 'Published'].includes(status))
       return response.status(400).json({ error: 'Choose Draft, Review, or Published.' });
+    const existing = await store.article(request.user.id, request.params.id);
+    if (!existing)
+      return response.status(404).json({ error: 'Article not found in your workspace.' });
+    const defaults = await readWorkspace(request.user);
+    const records = await store.records(request.user.id);
+    const topics = new Set([
+      ...(defaults.topics || []).map((item) => item.id),
+      ...records.filter((item) => item.type === 'topic').map((item) => item.id),
+    ]);
+    if (!existing.topicIds?.length || existing.topicIds.some((id) => !topics.has(id)))
+      return response
+        .status(400)
+        .json({ error: 'Select at least one topic before saving or publishing.' });
     const article = await store.updateArticle(request.user.id, request.params.id, {
       status,
       updatedAt: new Date().toISOString(),

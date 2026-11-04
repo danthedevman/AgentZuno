@@ -1,3 +1,4 @@
+import { createStore, reconcile } from 'solid-js/store';
 import CatalogItemImage from '../../components/CatalogItemImage.jsx';
 import { createSignal, createResource, createEffect, onCleanup, For, Show } from 'solid-js';
 import { useNavigate } from '@solidjs/router';
@@ -22,8 +23,10 @@ export default function CatalogPage() {
   const [catalogMeta, setCatalogMeta] = createSignal(null);
   const [loadSentinel, setLoadSentinel] = createSignal();
   const [expanded, setExpanded] = createSignal(new Set());
-  const topicGroups = () =>
-    [
+  const [groups, setGroups] = createStore([]);
+  const topicGroups = () => groups;
+  createEffect(() => {
+    const nextGroups = [
       ...new Map(
         loadedItems().map((item) => [
           item.categoryId || 'general',
@@ -34,6 +37,8 @@ export default function CatalogPage() {
       ...group,
       items: loadedItems().filter((item) => (item.categoryId || 'general') === group.id),
     }));
+    setGroups(reconcile(nextGroups, { key: 'id' }));
+  });
   createEffect(() => {
     const value = query().trim();
     const timer = setTimeout(() => {

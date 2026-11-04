@@ -15,6 +15,14 @@ export function createIntegrationStore() {
     collection,
     async ready() {
       indexes ||= Promise.all([
+        collection('articles').createIndex({ semanticStatus: 1, semanticRetryAt: 1, _id: 1 }),
+        collection('authoredSemanticRetirements').createIndex({ status: 1 }),
+        collection('authoredKnowledgeChunks').createIndex({
+          ownerId: 1,
+          workspaceId: 1,
+          documentId: 1,
+          runId: 1,
+        }),
         collection('helpdeskChannelApplications').createIndex(
           { ownerId: 1, workspaceId: 1, provider: 1 },
           { unique: true },
@@ -82,6 +90,10 @@ export function createIntegrationStore() {
           { unique: true },
         ),
         collection('helpdeskMembers').createIndex({ workspaceId: 1, userId: 1 }, { unique: true }),
+        collection('workflowConversationViews').createIndex(
+          { ownerId: 1, workspaceId: 1, actorId: 1, workflowId: 1 },
+          { unique: true },
+        ),
         collection('helpdeskMembers').createIndex({ userId: 1, active: 1 }),
         collection('helpdeskMembershipHistory').createIndex({ workspaceId: 1, at: -1 }),
         collection('governanceAudit').createIndex({ ownerId: 1, workspaceId: 1, startedAt: -1 }),
@@ -100,6 +112,12 @@ export function createIntegrationStore() {
           { unique: true },
         ),
         collection('helpdeskRequests').createIndex({ ownerId: 1, workspaceId: 1, updatedAt: -1 }),
+        collection('helpdeskRequests').createIndex({
+          ownerId: 1,
+          workspaceId: 1,
+          assignedToId: 1,
+          updatedAt: -1,
+        }),
         collection('helpdeskRequests').createIndex({
           ownerId: 1,
           workspaceId: 1,

@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { auditDatabase } from './recordAudit.js';
 import { MongoClient, ObjectId, Binary } from 'mongodb';
 
@@ -19,6 +20,7 @@ export function createContentStore(uri = process.env.MONGODB_URI) {
       return records.map(({ _id, ownerId, ...article }) => ({ ...article, id: _id.toHexString() }));
     },
     async saveArticle(ownerId, article, id) {
+      article = { ...article, semanticGeneration: randomUUID(), semanticStatus: 'Pending' };
       const result = await database()
         .collection('articles')
         .insertOne({ ...article, ownerId, ...(id ? { _id: new ObjectId(id) } : {}) });
@@ -31,6 +33,7 @@ export function createContentStore(uri = process.env.MONGODB_URI) {
         .findOne({ _id: new ObjectId(id), ownerId });
     },
     async updateArticle(ownerId, id, article, expectedUpdatedAt) {
+      article = { ...article, semanticGeneration: randomUUID(), semanticStatus: 'Pending' };
       if (!ObjectId.isValid(id)) return null;
       const result = await database()
         .collection('articles')

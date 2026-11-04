@@ -1,3 +1,4 @@
+import DemoSettings from '../../components/DemoSettings.jsx';
 import SmtpSettings from '../../components/SmtpSettings.jsx';
 import WorkforceProfile from '../../components/WorkforceProfile.jsx';
 import CustomDomainSettings from '../../components/CustomDomainSettings.jsx';
@@ -41,9 +42,15 @@ export default function AccountPage() {
         }
       >
         <ChatSettings />
+        <DemoSettings />
         <SmtpSettings />
         <CustomDomainSettings />
-        <details class="settings-section" name="workspace-settings">
+        <details
+          class="settings-section"
+          id="ai-providers"
+          name="workspace-settings"
+          open={new URLSearchParams(location.search).get('section') === 'ai'}
+        >
           <summary>AI providers</summary>
           <AISettings />
         </details>

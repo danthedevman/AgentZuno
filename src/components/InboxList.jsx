@@ -1,9 +1,7 @@
 import ProfileAvatar from './ProfileAvatar.jsx';
-import { api } from '../services/api.js';
-import { useToasts } from '../context/ToastContext.jsx';
 import RecordTable from './RecordTable.jsx';
 import { displayLabel, statusLabel } from '../services/displayLabels.js';
-import { Show, createEffect, createSignal } from 'solid-js';
+import { Show, createEffect } from 'solid-js';
 import A from './WorkspaceLink.jsx';
 import Icon from './Icon.jsx';
 
@@ -25,25 +23,6 @@ function SelectionCheckbox(props) {
   );
 }
 export default function InboxList(props) {
-  const [assignmentRevision, setAssignmentRevision] = createSignal(0);
-  const [assigning, setAssigning] = createSignal('');
-  const { notify } = useToasts();
-  async function assign(item) {
-    setAssigning(item.id);
-    try {
-      await api(`/api/helpdesk/requests/${item.id}/assign-self`, {
-        method: 'POST',
-        body: JSON.stringify({ version: item.version }),
-      });
-      setAssignmentRevision((value) => value + 1);
-      notify({ tone: 'success', message: 'Assigned to you.' });
-    } catch (error) {
-      notify({ tone: 'error', message: error.message });
-    } finally {
-      setAssigning('');
-    }
-  }
-
   return (
     <section
       id="inbox-folder-panel"
@@ -75,7 +54,7 @@ export default function InboxList(props) {
         query={props.query}
         source="/api/helpdesk/inbox"
         sourceParams={{ tab: props.archived ? 'archive' : 'primary' }}
-        refreshKey={`${props.refreshKey}:${assignmentRevision()}`}
+        refreshKey={props.refreshKey}
         onRowsChange={props.onRowsChange}
         rows={props.items}
         defaultSort={{ key: 'Updated', direction: 'desc' }}
@@ -147,16 +126,6 @@ export default function InboxList(props) {
                     </span>
                   </span>
                 </A>
-                <Show when={!item.assignedToId && item.status !== 'resolved'}>
-                  <button
-                    type="button"
-                    class="workspace-button secondary small inbox-assign-button"
-                    disabled={!!assigning()}
-                    onClick={() => assign(item)}
-                  >
-                    {assigning() === item.id ? 'Assigning…' : 'Assign to Me'}
-                  </button>
-                </Show>
               </div>
             ),
           },

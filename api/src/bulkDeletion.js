@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { ObjectId } from 'mongodb';
 import { deny, helpdeskScope, requireRole } from './helpdeskRoles.js';
 
@@ -38,8 +39,19 @@ export async function bulkDeleteRecords(store, user, kind, input) {
     );
   // Keep governance and run history. Removing the authoritative record denies future reads/actions.
   for (const record of records) {
+    if (kind === 'articles')
+      await store.collection('authoredSemanticRetirements').updateOne(
+        { _id: String(record._id), ...scope },
+        {
+          $set: { ...scope, status: 'Pending', generation: randomUUID(), updatedAt: new Date() },
+        },
+        { upsert: true },
+      );
     await collection.deleteOne({ ...filter, _id: record._id });
     if (kind === 'requests') {
+      await store
+        .collection('requestAttachments')
+        .deleteMany({ ...scope, requestId: String(record._id) });
       await store.collection('workflowRuns').updateMany(
         {
           ...scope,

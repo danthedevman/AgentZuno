@@ -127,6 +127,7 @@ export default function MultiSelectLookup(props) {
           {(option) => (
             <span class="selection-pill">
               <span>{option.label}</span>
+              <ReferenceArrow href={option.href} label={option.label} />
               <Show when={!readOnly()}>
                 <button
                   type="button"
@@ -186,11 +187,6 @@ export default function MultiSelectLookup(props) {
           }}
           onKeyDown={handleKeyDown}
         />
-        <span class="reference-open-actions">
-          <For each={selected()}>
-            {(option) => <ReferenceArrow href={option.href} label={option.label} />}
-          </For>
-        </span>
       </div>
       <span class="sr-only" role="status">
         {values().length} selected

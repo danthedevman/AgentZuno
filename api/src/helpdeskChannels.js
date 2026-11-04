@@ -1,3 +1,4 @@
+import { getConnectorActions, saveConnectorActions } from './connectorActions.js';
 import {
   channelApplication,
   applicationMetadata,
@@ -101,6 +102,14 @@ export function createHelpdeskChannels(store, fetcher = fetch) {
       .collection('helpdeskChannelApplications')
       .find(helpdeskScope(user))
       .toArray();
+    const policies = Object.fromEntries(
+      await Promise.all(
+        Object.keys(channelProviders).map(async (id) => [
+          id,
+          await getConnectorActions(store, user, id),
+        ]),
+      ),
+    );
     return Object.entries(channelProviders)
       .map(([id, item]) => {
         const connection = saved.find((value) => value.provider === id);
@@ -108,12 +117,15 @@ export function createHelpdeskChannels(store, fetcher = fetch) {
           id,
           applications.find((value) => value.provider === id),
         );
+        const enabled = (action) =>
+          policies[id].items.some((item) => item.id === action && item.enabled);
         const expired =
           (connection?.expiresAt && new Date(connection.expiresAt) <= new Date()) ||
           (connection?.applicationVersion || 0) !== application.version;
         return {
           id,
           name: item.name,
+          actions: policies[id],
           application,
           configured: !!(
             application.clientId &&
@@ -165,10 +177,14 @@ export function createHelpdeskChannels(store, fetcher = fetch) {
               }
             : null,
           canReceive:
-            (connection?.email?.enabled === true || connection?.bot?.enabled === true) && !expired,
+            (connection?.email?.enabled === true || connection?.bot?.enabled === true) &&
+            enabled('receiveMessages') &&
+            !expired,
           canSend:
             ((connection?.email?.enabled === true && connection.email.autoReply === true) ||
               connection?.bot?.enabled === true) &&
+            enabled('receiveMessages') &&
+            enabled('respondToUsers') &&
             !expired,
           deliveryStatus: !connection?.credential
             ? 'Not Configured'
@@ -390,6 +406,16 @@ export function createHelpdeskChannels(store, fetcher = fetch) {
 }
 export function installHelpdeskChannelRoutes(app, store) {
   const service = createHelpdeskChannels(store);
+  app.put('/api/helpdesk/channels/:provider/actions', async (request, response) =>
+    response.json(
+      await saveConnectorActions(
+        store,
+        request.helpdeskUser,
+        request.params.provider,
+        request.body,
+      ),
+    ),
+  );
   app.put('/api/helpdesk/channels/:provider/application', async (request, response) =>
     response.json(
       await saveChannelApplication(

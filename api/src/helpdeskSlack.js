@@ -1,3 +1,4 @@
+import { requireConnectorAction } from './connectorActions.js';
 import { requireCurrentChannelApplication } from './channelApplications.js';
 import { createHash, createHmac, timingSafeEqual, randomUUID } from 'node:crypto';
 import { ObjectId } from 'mongodb';
@@ -35,6 +36,7 @@ export async function authorizeSlackChat(store, chat) {
     }));
   if (!source?.credential || (source.expiresAt && new Date(source.expiresAt) <= new Date()))
     deny('Slack connection access changed.', 403);
+  await requireConnectorAction(store, source, 'receiveMessages');
   await requireCurrentChannelApplication(store, source);
   const owner = await resolveHelpdeskUser(
     store,
@@ -130,6 +132,12 @@ export function createHelpdeskSlack(store, chats, enqueue = async () => {}, fetc
       'bot.enabled': true,
     });
     if (!source?.credential || !slackId(body.team_id, 'T')) return { ok: true };
+    try {
+      await requireConnectorAction(store, source, 'receiveMessages');
+    } catch (error) {
+      if (error.status === 403) return { ok: true };
+      throw error;
+    }
     const event = body.event;
     if (
       !event ||
@@ -236,6 +244,7 @@ export function createHelpdeskSlack(store, chats, enqueue = async () => {}, fetc
             .limit(25)
             .toArray();
           for (const item of messages) {
+            await requireConnectorAction(store, current, 'receiveMessages');
             const binding =
               current.bot.identityBindings?.find((value) => value.slackUserId === item.event.user)
                 ?.userId || null;
@@ -353,6 +362,12 @@ export function createHelpdeskSlack(store, chats, enqueue = async () => {}, fetc
                 message.status === 'complete',
             );
             if (!reply?.text) continue;
+            try {
+              await requireConnectorAction(store, source, 'respondToUsers');
+            } catch (error) {
+              if (error.status === 403) continue;
+              throw error;
+            }
             const claimed = await store
               .collection('helpdeskSlackMessages')
               .updateOne(
@@ -369,6 +384,7 @@ export function createHelpdeskSlack(store, chats, enqueue = async () => {}, fetc
                 async () => {
                   const authorized = await authorizeSlackChat(store, chat);
                   await member(authorized, item.event);
+                  await requireConnectorAction(store, authorized, 'respondToUsers');
                   await call(
                     authorized,
                     item.event.isDirect ? 'chat.postMessage' : 'chat.postEphemeral',

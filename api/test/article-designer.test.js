@@ -75,12 +75,20 @@ test(
       });
       assert.equal(upload.status, 201);
       const file = await upload.json();
+      const topicId = new ObjectId();
+      await db.collection('records').insertOne({
+        _id: topicId,
+        ownerId: admin.id,
+        workspaceId: admin.workspaceId,
+        type: 'topic',
+        name: 'Device Support',
+      });
       const draft = {
         title: 'Device Setup',
         body: '<h2>Start</h2><script>bad()</script><p>Contact support.</p>',
         status: 'Published',
         knowledgeBaseId: admin.workspaceId,
-        topicIds: [],
+        topicIds: [String(topicId)],
         attachmentIds: [file.id],
       };
       const draftChat = await call(admin, '/helpdesk/article-conversations', 'POST', {

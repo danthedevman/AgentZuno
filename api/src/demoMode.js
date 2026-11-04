@@ -1,0 +1,475 @@
+import {
+  seedDemoConversation,
+  prepareDemoMembership,
+  seedDemoApproval,
+} from './demoConversations.js';
+import { createHash, randomUUID } from 'node:crypto';
+import { ObjectId } from 'mongodb';
+import { readData } from './data.js';
+import { defineWorkflow, toTypeScript } from '../sdk/workflows/index.js';
+import { inspectWorkflowSource } from './workflowRuntime.js';
+import { helpdeskScope, requireRole, deny } from './helpdeskRoles.js';
+
+const collections = [
+  'records',
+  'articles',
+  'knowledgePermissions',
+  'workforceReferences',
+  'approvalGroups',
+  'helpdeskWorkflows',
+  'workflowRevisions',
+  'helpdeskWorkflowRevisions',
+  'helpdeskRequests',
+  'chats',
+  'users',
+  'helpdeskMembers',
+  'helpdeskWorkflowConversations',
+  'demoMembershipAdjustments',
+];
+const demoFilter = (scope, name) => ({
+  ...(name === 'users'
+    ? { ownerId: scope.ownerId, demoWorkspaceId: scope.workspaceId }
+    : name === 'chats'
+      ? { workspaceId: scope.workspaceId, providerOwnerId: scope.ownerId }
+      : scope),
+  demoDatasetId: { $exists: true },
+});
+const recordId = (scope, industry, key) =>
+  createHash('sha256')
+    .update(JSON.stringify([scope, industry, key]))
+    .digest('hex')
+    .slice(0, 24);
+export function installDemoRoutes(app, store, service) {
+  const scopeId = (user) => `${helpdeskScope(user).ownerId}:${user.workspaceId}`;
+  async function settings(user) {
+    const scope = helpdeskScope(user);
+    const saved = await store
+      .collection('helpdeskDemoSettings')
+      .findOne({ _id: scopeId(user), ...scope });
+    const counts = {};
+    for (const name of collections)
+      counts[name] = await store.collection(name).countDocuments(demoFilter(scope, name));
+    return {
+      loaded: Object.values(counts).some(Boolean),
+      industry: saved?.industry || 'tech',
+      state: saved?.state || 'ready',
+      counts,
+      industries: Object.entries((await readData('demo-industries.json')).industries).map(
+        ([value, item]) => ({ value, label: item.name }),
+      ),
+    };
+  }
+  app.get('/api/helpdesk/demo/settings', async (request, response) => {
+    requireRole(request.helpdeskUser, ['admin']);
+    response.json(await settings(request.helpdeskUser));
+  });
+  app.put('/api/helpdesk/demo/settings', async (request, response) => {
+    const user = request.helpdeskUser;
+    requireRole(user, ['admin']);
+    const input = request.body;
+    if (
+      !input ||
+      Object.keys(input).some(
+        (key) => !['action', 'industry', 'confirmed', 'enableApprovals'].includes(key),
+      ) ||
+      !['load', 'remove'].includes(input.action) ||
+      (input.enableApprovals !== undefined && typeof input.enableApprovals !== 'boolean')
+    )
+      deny('Choose Load Demo Data or Remove Demo Data.', 400);
+    const config = await readData('demo-industries.json');
+    if (!Object.hasOwn(config.industries, input.industry)) deny('Choose a demo industry.', 400);
+    if (input.action === 'remove' && input.confirmed !== true)
+      deny('Confirm removal of demo records.', 400);
+    const scope = helpdeskScope(user),
+      id = scopeId(user),
+      token = randomUUID();
+    await store
+      .collection('helpdeskDemoSettings')
+      .updateOne(
+        { _id: id, ...scope },
+        { $setOnInsert: { ...scope, state: 'ready' } },
+        { upsert: true },
+      );
+    const claim = await store.collection('helpdeskDemoSettings').findOneAndUpdate(
+      {
+        _id: id,
+        ...scope,
+        $or: [{ leaseUntil: { $exists: false } }, { leaseUntil: { $lt: new Date() } }],
+      },
+      {
+        $set: {
+          leaseToken: token,
+          leaseUntil: new Date(Date.now() + 300000),
+          state: input.action === 'load' ? 'loading' : 'removing',
+        },
+      },
+      { returnDocument: 'after' },
+    );
+    if (!claim) deny('A demo operation is already in progress.', 409);
+    const dataset = `demo-v${config.version}-${input.industry}`;
+    const tag = { demo: true, demoDatasetId: dataset, demoIndustry: input.industry };
+    async function put(name, key, values, stringId = false) {
+      const hex = recordId(scope, input.industry, key);
+      const _id = stringId ? hex : new ObjectId(hex);
+      const existing = await store.collection(name).findOne({ _id });
+      if (
+        existing &&
+        (existing.ownerId !== scope.ownerId ||
+          existing.workspaceId !== scope.workspaceId ||
+          existing.demoDatasetId !== dataset)
+      )
+        deny('Demo record identity conflict.', 409);
+      await store
+        .collection(name)
+        .updateOne(
+          { _id, ...scope },
+          { $setOnInsert: { ...scope, ...tag, ...values, _id } },
+          { upsert: true },
+        );
+      return hex;
+    }
+    try {
+      const previous = await settings(user);
+      if (input.action === 'load') {
+        if (previous.loaded && claim.industry && claim.industry !== input.industry)
+          deny('Remove the current demo dataset before loading another industry.', 409);
+        const examples = config.industries[input.industry],
+          now = new Date();
+        const groupName = `Demo ${examples.name} Support`;
+        await prepareDemoMembership(store, scope, user, tag, groupName, input.enableApprovals);
+        await put('approvalGroups', 'group', {
+          name: groupName,
+          description: 'Demo assignment group',
+          active: true,
+          assignmentEnabled: true,
+          approvalEnabled: false,
+          unifiedVersion: 1,
+          userIds: [user.id],
+          version: 1,
+          createdAt: now,
+          updatedAt: now,
+        });
+        const category = await put(
+          'workforceReferences',
+          'category',
+          {
+            type: 'catalog-category',
+            name: `Demo ${examples.name}`,
+            description: 'Demo catalog items',
+            version: 1,
+            createdAt: now,
+            updatedAt: now,
+          },
+          true,
+        );
+        const base = await put('records', 'base', {
+          type: 'knowledge-base',
+          name: `Demo ${examples.name} Knowledge`,
+          description: 'Fictional guidance for exploring AgentZuno',
+          icon: 'layers',
+          updatedAt: now.toISOString(),
+        });
+        const topic = await put('records', 'topic', {
+          type: 'topic',
+          name: `Demo ${examples.name} Getting Started`,
+          description: 'Fictional employee guidance',
+          base,
+          articleIds: [],
+          updatedAt: now.toISOString(),
+        });
+        await put('knowledgePermissions', 'base-policy', {
+          kind: 'base',
+          resourceId: base,
+          mode: 'workspace',
+          userIds: [],
+          roles: [],
+          version: 1,
+          updatedAt: now,
+        });
+        for (const [index, item] of examples.knowledge.entries())
+          await put('articles', `article-${index}`, {
+            title: `Demo: ${item.name}`,
+            body: `<h2>${item.name}</h2><p>This is fictional demo guidance for the ${examples.name} workspace.</p>${(item.guidance || []).map((step) => `<p>${step}</p>`).join('')}`,
+            summary: `Demo guidance: ${item.name}`,
+            status: 'Published',
+            base,
+            topicIds: [topic],
+            attachmentIds: [],
+            sections: [],
+            semanticGeneration: randomUUID(),
+            semanticStatus: 'Pending',
+            createdAt: now.toISOString(),
+            updatedAt: now.toISOString(),
+          });
+        for (const [index, item] of examples.assets.entries())
+          await put(
+            'workforceReferences',
+            `asset-${index}`,
+            {
+              type: 'asset',
+              name: `Demo: ${item.name}`,
+              description: item.details,
+              customValues: { status: item.status, 'asset-tag': `DEMO-${index + 1}` },
+              version: 1,
+              createdAt: now,
+              updatedAt: now,
+            },
+            true,
+          );
+        for (const [index, item] of examples.workflows.entries()) {
+          const definition = defineWorkflow({
+            version: 1,
+            name: `Demo: ${item.name}`,
+            trigger: {
+              department: 'general',
+              phrases: [item.name.toLowerCase(), `demo ${item.name.toLowerCase()}`],
+            },
+            displayInCatalog: true,
+            settings: {
+              category,
+              description: `${item.details}. Demo data`,
+              catalogIcon: 'catalog',
+            },
+            form: item.form || {
+              title: item.name,
+              fields: [
+                { id: 'details', label: 'Details', type: 'textarea', required: true },
+                {
+                  id: 'additional-details',
+                  label: 'Additional Details',
+                  type: 'text',
+                  required: false,
+                },
+              ],
+            },
+            steps: [{ id: 'route-request', action: 'route', params: { queueName: groupName } }],
+          });
+          const source = toTypeScript(definition);
+          await inspectWorkflowSource(source);
+          const value = {
+            definition,
+            source,
+            name: definition.name,
+            department: 'general',
+            keywords: definition.trigger.phrases,
+            action: 'route',
+            queueName: groupName,
+            enabled: true,
+          };
+          const workflow = await put('helpdeskWorkflows', `workflow-${index}`, {
+            ...value,
+            version: 1,
+            publishedConfig: value,
+            publishedRevision: 1,
+            createdAt: now,
+            updatedAt: now,
+          });
+          await put('workflowRevisions', `revision-${index}`, {
+            workflowId: workflow,
+            revision: 1,
+            config: value,
+            createdAt: now,
+          });
+          const savedWorkflow = await store
+            .collection('helpdeskWorkflows')
+            .findOne({ ...scope, _id: new ObjectId(workflow) });
+          await seedDemoConversation(
+            store,
+            scope,
+            user,
+            tag,
+            workflow,
+            savedWorkflow.publishedConfig || value,
+            `Build a ${item.name} workflow with a request form and optional additional details. Route submitted requests to ${groupName} and display the item in the catalog.`,
+          );
+        }
+        for (const [index, item] of examples.requests.entries()) {
+          const requestId = recordId(scope, input.industry, `request-${index}`);
+          let record = await store
+            .collection('helpdeskRequests')
+            .findOne({ ...scope, demoDatasetId: dataset, demoSeedKey: requestId });
+          if (!record) {
+            // The request and its originating chat receive their tag before persistence.
+            const result = await service.create(
+              user,
+              {
+                requestId: `${requestId.slice(0, 8)}-${requestId.slice(8, 12)}-4000-8000-${requestId.slice(12)}`,
+                title: `Demo: ${item.name}`,
+                text: item.details,
+              },
+              {
+                workflowRouting: { queueName: groupName },
+                demoTag: { ...tag, demoSeedKey: requestId },
+              },
+            );
+            record = await store
+              .collection('helpdeskRequests')
+              .findOne({ ...scope, _id: new ObjectId(result.id) });
+            await store.collection('helpdeskRequests').updateOne(
+              { ...scope, _id: record._id },
+              {
+                $set: {
+                  assignedToId: user.id,
+                  assignedToName: user.name || user.email,
+                  status:
+                    item.status === 'Resolved'
+                      ? 'resolved'
+                      : item.status === 'Awaiting Response'
+                        ? 'waiting-for-employee'
+                        : 'open',
+                },
+              },
+            );
+          }
+        }
+        await seedDemoApproval(store, service, scope, user, tag, groupName, category, put);
+      } else {
+        const demoGroups = await store
+          .collection('approvalGroups')
+          .find({ ...scope, demoDatasetId: { $exists: true } }, { projection: { name: 1 } })
+          .toArray();
+        const demoCategories = await store
+          .collection('workforceReferences')
+          .find(
+            { ...scope, type: 'catalog-category', demoDatasetId: { $exists: true } },
+            { projection: { _id: 1 } },
+          )
+          .toArray();
+        const demoKnowledge = await store
+          .collection('records')
+          .find({ ...scope, demoDatasetId: { $exists: true } }, { projection: { _id: 1 } })
+          .toArray();
+        if (
+          await store.collection('helpdeskWorkflows').findOne({
+            ...scope,
+            demoDatasetId: { $exists: false },
+            $or: [
+              { queueName: { $in: demoGroups.map((item) => item.name) } },
+              {
+                'definition.settings.category': {
+                  $in: demoCategories.map((item) => String(item._id)),
+                },
+              },
+              {
+                'publishedConfig.definition.settings.category': {
+                  $in: demoCategories.map((item) => String(item._id)),
+                },
+              },
+            ],
+          })
+        )
+          deny(
+            'A real workflow references demo groups or categories. Update those references before removing demo data.',
+            409,
+          );
+        if (
+          await store.collection('articles').findOne({
+            ...scope,
+            demoDatasetId: { $exists: false },
+            $or: [
+              { base: { $in: demoKnowledge.map((item) => String(item._id)) } },
+              { topicIds: { $in: demoKnowledge.map((item) => String(item._id)) } },
+            ],
+          })
+        )
+          deny(
+            'A real article references demo knowledge. Move it to a different base and topic before removing demo data.',
+            409,
+          );
+        const demoRequests = await store
+          .collection('helpdeskRequests')
+          .find({ ...scope, demoDatasetId: { $exists: true } }, { projection: { _id: 1 } })
+          .toArray();
+        const ids = demoRequests.map((row) => String(row._id));
+        if (
+          await store.collection('workflowRuns').findOne({
+            ...scope,
+            requestId: { $in: ids },
+            status: { $in: ['running', 'delivery-unknown'] },
+          })
+        )
+          deny(
+            'Wait for active demo runs to finish or review uncertain delivery before removal.',
+            409,
+          );
+        // Preserve run and governance history; authoritative records are removed.
+        await store.collection('workflowRuns').updateMany(
+          { ...scope, requestId: { $in: ids }, status: { $nin: ['complete', 'failed'] } },
+          {
+            $set: {
+              status: 'failed',
+              error: 'Demo data removed by an administrator.',
+              updatedAt: new Date(),
+            },
+          },
+        );
+        for (const article of await store
+          .collection('articles')
+          .find({ ...scope, demoDatasetId: { $exists: true } }, { projection: { _id: 1 } })
+          .toArray())
+          await store.collection('authoredSemanticRetirements').updateOne(
+            { _id: String(article._id), ...scope },
+            {
+              $set: {
+                ...scope,
+                status: 'Pending',
+                generation: randomUUID(),
+                updatedAt: new Date(),
+              },
+            },
+            { upsert: true },
+          );
+        await store
+          .collection('requestAttachments')
+          .deleteMany({ ...scope, requestId: { $in: ids } });
+        for (const adjustment of await store
+          .collection('demoMembershipAdjustments')
+          .find({ ...scope, demoDatasetId: { $exists: true } })
+          .toArray()) {
+          if (adjustment.enabledApproval)
+            await store.collection('helpdeskMembers').updateOne(
+              {
+                ...scope,
+                userId: adjustment.userId,
+                version: adjustment.grantVersion,
+                canApprove: true,
+              },
+              { $set: { canApprove: false, updatedAt: new Date() }, $inc: { version: 1 } },
+            );
+        }
+        await store.collection('helpdeskMembers').updateMany(
+          { ...scope, queues: { $in: demoGroups.map((group) => group.name) } },
+          {
+            $pull: { queues: { $in: demoGroups.map((group) => group.name) } },
+            $inc: { version: 1 },
+            $set: { updatedAt: new Date() },
+          },
+        );
+        for (const name of collections)
+          await store.collection(name).deleteMany(demoFilter(scope, name));
+      }
+      await store.collection('helpdeskDemoSettings').updateOne(
+        { _id: id, ...scope, leaseToken: token },
+        {
+          $set: {
+            industry: input.industry,
+            enabled: false,
+            state: 'ready',
+            updatedAt: new Date(),
+          },
+          $unset: { leaseToken: '', leaseUntil: '' },
+        },
+      );
+      response.json(await settings(user));
+    } catch (error) {
+      await store.collection('helpdeskDemoSettings').updateOne(
+        { _id: id, ...scope, leaseToken: token },
+        {
+          $set: { state: 'incomplete', industry: input.industry },
+          $unset: { leaseToken: '', leaseUntil: '' },
+        },
+      );
+      throw error;
+    }
+  });
+}

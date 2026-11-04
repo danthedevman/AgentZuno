@@ -1,0 +1,335 @@
+{
+  "version": 1,
+  "industries": {
+    "tech": {
+      "name": "Tech",
+      "requests": [
+        {
+          "name": "MacBook for New Engineer",
+          "status": "Open",
+          "details": "Fictional employee support request"
+        },
+        {
+          "name": "Repository Access",
+          "status": "Awaiting Response",
+          "details": "Fictional employee support request"
+        },
+        {
+          "name": "VPN Connection Help",
+          "status": "Resolved",
+          "details": "Fictional employee support request"
+        }
+      ],
+      "workflows": [
+        {
+          "name": "Laptop Provisioning",
+          "status": "Published",
+          "details": "Illustrative workflow with review and approval",
+          "form": {
+            "title": "Laptop Provisioning",
+            "fields": [
+              {
+                "id": "device",
+                "label": "Device",
+                "type": "select",
+                "required": true,
+                "options": ["Mac", "Windows"]
+              },
+              {
+                "id": "details",
+                "label": "Details",
+                "type": "textarea",
+                "required": true
+              },
+              {
+                "id": "accessories",
+                "label": "Include Accessories",
+                "type": "boolean",
+                "required": false
+              }
+            ]
+          }
+        },
+        {
+          "name": "Software Access Approval",
+          "status": "Published",
+          "details": "Illustrative workflow with review and approval"
+        },
+        {
+          "name": "Engineering Onboarding",
+          "status": "Published",
+          "details": "Illustrative workflow with review and approval"
+        }
+      ],
+      "knowledge": [
+        {
+          "name": "Connect to VPN",
+          "status": "Published",
+          "details": "Sample employee guidance",
+          "guidance": [
+            "For this demo, describe what you need for connect to vpn in Chat.",
+            "Choose the matching Demo catalog item when you need a request, complete its details, and submit the form.",
+            "Follow progress and add comments in My Requests. Do not include passwords or sensitive information."
+          ]
+        },
+        {
+          "name": "Request Development Tools",
+          "status": "Published",
+          "details": "Sample employee guidance",
+          "guidance": [
+            "For this demo, describe what you need for request development tools in Chat.",
+            "Choose the matching Demo catalog item when you need a request, complete its details, and submit the form.",
+            "Follow progress and add comments in My Requests. Do not include passwords or sensitive information."
+          ]
+        },
+        {
+          "name": "Secure Your Laptop",
+          "status": "Published",
+          "details": "Sample employee guidance",
+          "guidance": [
+            "For this demo, describe what you need for secure your laptop in Chat.",
+            "Choose the matching Demo catalog item when you need a request, complete its details, and submit the form.",
+            "Follow progress and add comments in My Requests. Do not include passwords or sensitive information."
+          ]
+        }
+      ],
+      "assets": [
+        {
+          "name": "Engineering MacBook",
+          "status": "In Use",
+          "details": "Fictional organization asset"
+        },
+        {
+          "name": "Build Server",
+          "status": "In Use",
+          "details": "Fictional organization asset"
+        },
+        {
+          "name": "Security Key",
+          "status": "In Use",
+          "details": "Fictional organization asset"
+        }
+      ]
+    },
+    "media": {
+      "name": "Media",
+      "requests": [
+        {
+          "name": "Editing Suite Access",
+          "status": "Open",
+          "details": "Fictional employee support request"
+        },
+        {
+          "name": "Studio Workstation Setup",
+          "status": "Awaiting Response",
+          "details": "Fictional employee support request"
+        },
+        {
+          "name": "Shared Storage Help",
+          "status": "Resolved",
+          "details": "Fictional employee support request"
+        }
+      ],
+      "workflows": [
+        {
+          "name": "Creative Software Approval",
+          "status": "Published",
+          "details": "Illustrative workflow with review and approval",
+          "form": {
+            "title": "Creative Software Approval",
+            "fields": [
+              {
+                "id": "device",
+                "label": "Device",
+                "type": "select",
+                "required": true,
+                "options": ["Editing Workstation", "Field Equipment"]
+              },
+              {
+                "id": "details",
+                "label": "Details",
+                "type": "textarea",
+                "required": true
+              },
+              {
+                "id": "accessories",
+                "label": "Include Accessories",
+                "type": "boolean",
+                "required": false
+              }
+            ]
+          }
+        },
+        {
+          "name": "Studio Equipment Request",
+          "status": "Published",
+          "details": "Illustrative workflow with review and approval"
+        },
+        {
+          "name": "Production Onboarding",
+          "status": "Published",
+          "details": "Illustrative workflow with review and approval"
+        }
+      ],
+      "knowledge": [
+        {
+          "name": "Access Shared Footage",
+          "status": "Published",
+          "details": "Sample employee guidance",
+          "guidance": [
+            "For this demo, describe what you need for access shared footage in Chat.",
+            "Choose the matching Demo catalog item when you need a request, complete its details, and submit the form.",
+            "Follow progress and add comments in My Requests. Do not include passwords or sensitive information."
+          ]
+        },
+        {
+          "name": "Reserve Studio Equipment",
+          "status": "Published",
+          "details": "Sample employee guidance",
+          "guidance": [
+            "For this demo, describe what you need for reserve studio equipment in Chat.",
+            "Choose the matching Demo catalog item when you need a request, complete its details, and submit the form.",
+            "Follow progress and add comments in My Requests. Do not include passwords or sensitive information."
+          ]
+        },
+        {
+          "name": "Editing Suite Setup",
+          "status": "Published",
+          "details": "Sample employee guidance",
+          "guidance": [
+            "For this demo, describe what you need for editing suite setup in Chat.",
+            "Choose the matching Demo catalog item when you need a request, complete its details, and submit the form.",
+            "Follow progress and add comments in My Requests. Do not include passwords or sensitive information."
+          ]
+        }
+      ],
+      "assets": [
+        {
+          "name": "Editing Workstation",
+          "status": "In Use",
+          "details": "Fictional organization asset"
+        },
+        {
+          "name": "Studio Camera",
+          "status": "In Use",
+          "details": "Fictional organization asset"
+        },
+        {
+          "name": "Audio Interface",
+          "status": "In Use",
+          "details": "Fictional organization asset"
+        }
+      ]
+    },
+    "retail": {
+      "name": "Retail",
+      "requests": [
+        {
+          "name": "POS Terminal Offline",
+          "status": "Open",
+          "details": "Fictional employee support request"
+        },
+        {
+          "name": "New Store Employee Access",
+          "status": "Awaiting Response",
+          "details": "Fictional employee support request"
+        },
+        {
+          "name": "Barcode Scanner Replacement",
+          "status": "Resolved",
+          "details": "Fictional employee support request"
+        }
+      ],
+      "workflows": [
+        {
+          "name": "Store Equipment Replacement",
+          "status": "Published",
+          "details": "Illustrative workflow with review and approval",
+          "form": {
+            "title": "Store Equipment Replacement",
+            "fields": [
+              {
+                "id": "device",
+                "label": "Device",
+                "type": "select",
+                "required": true,
+                "options": ["Store Laptop", "POS Device"]
+              },
+              {
+                "id": "details",
+                "label": "Details",
+                "type": "textarea",
+                "required": true
+              },
+              {
+                "id": "accessories",
+                "label": "Include Accessories",
+                "type": "boolean",
+                "required": false
+              }
+            ]
+          }
+        },
+        {
+          "name": "Store Access Approval",
+          "status": "Published",
+          "details": "Illustrative workflow with review and approval"
+        },
+        {
+          "name": "New Store Onboarding",
+          "status": "Published",
+          "details": "Illustrative workflow with review and approval"
+        }
+      ],
+      "knowledge": [
+        {
+          "name": "Restart a POS Terminal",
+          "status": "Published",
+          "details": "Sample employee guidance",
+          "guidance": [
+            "For this demo, describe what you need for restart a pos terminal in Chat.",
+            "Choose the matching Demo catalog item when you need a request, complete its details, and submit the form.",
+            "Follow progress and add comments in My Requests. Do not include passwords or sensitive information."
+          ]
+        },
+        {
+          "name": "Request Store Access",
+          "status": "Published",
+          "details": "Sample employee guidance",
+          "guidance": [
+            "For this demo, describe what you need for request store access in Chat.",
+            "Choose the matching Demo catalog item when you need a request, complete its details, and submit the form.",
+            "Follow progress and add comments in My Requests. Do not include passwords or sensitive information."
+          ]
+        },
+        {
+          "name": "Scanner Troubleshooting",
+          "status": "Published",
+          "details": "Sample employee guidance",
+          "guidance": [
+            "For this demo, describe what you need for scanner troubleshooting in Chat.",
+            "Choose the matching Demo catalog item when you need a request, complete its details, and submit the form.",
+            "Follow progress and add comments in My Requests. Do not include passwords or sensitive information."
+          ]
+        }
+      ],
+      "assets": [
+        {
+          "name": "POS Terminal",
+          "status": "In Use",
+          "details": "Fictional organization asset"
+        },
+        {
+          "name": "Barcode Scanner",
+          "status": "In Use",
+          "details": "Fictional organization asset"
+        },
+        {
+          "name": "Store Tablet",
+          "status": "In Use",
+          "details": "Fictional organization asset"
+        }
+      ]
+    }
+  }
+}

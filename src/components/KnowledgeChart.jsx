@@ -1,3 +1,4 @@
+import DataExportButtons from './DataExportButtons.jsx';
 import {
   For,
   Show,
@@ -206,6 +207,22 @@ export default function KnowledgeChart(props) {
       </Show>
       <details class="chart-data">
         <summary>View data table</summary>
+        <DataExportButtons
+          label={props.title || 'Chart Data'}
+          rows={values()}
+          columns={
+            props.kind === 'line'
+              ? [
+                  { label: 'Date (UTC)', key: 'label' },
+                  { label: 'Views', key: 'views' },
+                  { label: 'Agent Queries', key: 'queries' },
+                ]
+              : [
+                  { label: 'Name', key: 'label' },
+                  { label: 'Count', key: 'value' },
+                ]
+          }
+        />
         <table>
           <thead>
             <tr>

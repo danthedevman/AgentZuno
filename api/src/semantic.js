@@ -14,7 +14,9 @@ export function pointId(documentId, runId, index) {
     .slice(0, 32);
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
-export function createSemanticService(store, fetcher = fetch) {
+export function createSemanticService(store, fetcher = fetch, options = {}) {
+  const collectionName = options.collectionName || 'agentzuno_knowledge_v1';
+  const chunkCollection = options.chunkCollection || 'knowledgeChunks';
   const enabled = !!process.env.OLLAMA_URL && !!process.env.QDRANT_URL;
   const model = 'nomic-embed-text';
   async function request(base, path, body, method = 'POST') {
@@ -99,12 +101,13 @@ export function createSemanticService(store, fetcher = fetch) {
     });
     return ready;
   }
-  async function index(document) {
+  async function index(document, renewLease = async () => {}) {
     if (!enabled) throw new Error('Semantic services are not configured.');
     await initialize();
     const documentId = document._id.toHexString();
     const texts = chunkText(`${document.title}\n${document.text}`);
     for (let offset = 0; offset < texts.length; offset += 8) {
+      await renewLease();
       const batch = texts.slice(offset, offset + 8);
       const vectors = await embed(batch);
       const points = [];
@@ -118,7 +121,7 @@ export function createSemanticService(store, fetcher = fetch) {
           knowledgeBaseId: document.knowledgeBaseId,
           runId: document.runId,
         };
-        await store.collection('knowledgeChunks').updateOne(
+        await store.collection(chunkCollection).updateOne(
           { _id: id },
           {
             $set: {
@@ -183,6 +186,68 @@ export function createSemanticService(store, fetcher = fetch) {
       ),
     ];
   }
+  async function candidates(user, query, scope = {}) {
+    if (!enabled || !scope.baseIds?.length || !scope.generations?.length) return [];
+    await initialize();
+    const [vector] = await embed([query.slice(0, 2000)], true);
+    const data = await request(
+      process.env.QDRANT_URL,
+      `/collections/${collectionName}/points/query`,
+      {
+        query: vector,
+        filter: {
+          must: [
+            { key: 'ownerId', match: { value: user.helpdeskOwnerId || user.id } },
+            { key: 'workspaceId', match: { value: user.workspaceId } },
+            { key: 'knowledgeBaseId', match: { any: scope.baseIds } },
+            { key: 'runId', match: { any: scope.generations } },
+          ],
+        },
+        limit: 60,
+        score_threshold: 0.35,
+        with_payload: true,
+        with_vector: false,
+      },
+    );
+    return (data.result?.points || [])
+      .filter(
+        (point) =>
+          /^[a-f0-9]{24}$/.test(point.payload?.documentId || '') &&
+          typeof point.payload?.runId === 'string',
+      )
+      .map((point) => ({
+        id: point.payload.documentId,
+        generation: point.payload.runId,
+        score: point.score || 0,
+      }));
+  }
+  async function retire(ownerId, workspaceId, documentId, keepGeneration) {
+    if (!enabled) return;
+    await initialize();
+    const must = [
+      { key: 'ownerId', match: { value: ownerId } },
+      { key: 'workspaceId', match: { value: workspaceId } },
+      { key: 'documentId', match: { value: documentId } },
+    ];
+    await request(
+      process.env.QDRANT_URL,
+      `/collections/${collectionName}/points/delete?wait=true`,
+      {
+        filter: {
+          must,
+          ...(keepGeneration
+            ? { must_not: [{ key: 'runId', match: { value: keepGeneration } }] }
+            : {}),
+        },
+      },
+    );
+    await store.collection(chunkCollection).deleteMany({
+      ownerId,
+      workspaceId,
+      documentId,
+      ...(keepGeneration ? { runId: { $ne: keepGeneration } } : {}),
+    });
+  }
   async function cleanup() {
     if (!enabled) return;
     const retired = await store
@@ -198,7 +263,7 @@ export function createSemanticService(store, fetcher = fetch) {
       `/collections/${collectionName}/points/delete?wait=true`,
       { filter: { must: [{ key: 'documentId', match: { any: ids } }] } },
     );
-    await store.collection('knowledgeChunks').deleteMany({ documentId: { $in: ids } });
+    await store.collection(chunkCollection).deleteMany({ documentId: { $in: ids } });
     await store
       .collection('knowledgeDocuments')
       .updateMany(
@@ -206,5 +271,5 @@ export function createSemanticService(store, fetcher = fetch) {
         { $set: { semanticStatus: 'Retired' } },
       );
   }
-  return { enabled, index, search, cleanup };
+  return { enabled, index, search, cleanup, candidates, retire };
 }

@@ -1,7 +1,12 @@
-import { Show } from 'solid-js';
+import { Show, createSignal, createEffect } from 'solid-js';
 import WorkspaceModal from './WorkspaceModal.jsx';
 import { pendingConfirmation, finishConfirmation } from '../services/confirmations.js';
 export default function ConfirmationDialog() {
+  const [typed, setTyped] = createSignal('');
+  createEffect(() => {
+    pendingConfirmation();
+    setTyped('');
+  });
   return (
     <Show when={pendingConfirmation()}>
       {(item) => (
@@ -12,6 +17,17 @@ export default function ConfirmationDialog() {
           }}
         >
           <p>{item().message}</p>
+          <Show when={item().requiredText}>
+            <label>
+              Type {item().requiredText} to confirm
+              <input
+                aria-label="Confirmation name"
+                value={typed()}
+                onInput={(event) => setTyped(event.currentTarget.value)}
+                autocomplete="off"
+              />
+            </label>
+          </Show>
           <div class="helpdesk-actions">
             <button
               type="button"
@@ -21,7 +37,12 @@ export default function ConfirmationDialog() {
             >
               Cancel
             </button>
-            <button type="button" class="workspace-button" onClick={() => finishConfirmation(true)}>
+            <button
+              type="button"
+              class="workspace-button"
+              disabled={!!item().requiredText && typed() !== item().requiredText}
+              onClick={() => finishConfirmation(true)}
+            >
               {item().confirmLabel}
             </button>
           </div>

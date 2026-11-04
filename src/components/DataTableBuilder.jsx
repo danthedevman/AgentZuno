@@ -1,3 +1,5 @@
+import SplitResizeHandle from './SplitResizeHandle.jsx';
+import Breadcrumbs from './Breadcrumbs.jsx';
 import ChatSendButton from './ChatSendButton.jsx';
 import { workflowChatText } from '../services/workflowChatText.js';
 import CodeBlock from './CodeBlock.jsx';
@@ -18,7 +20,7 @@ export default function DataTableBuilder(props) {
       if (messageList) messageList.scrollTop = messageList.scrollHeight;
     });
   });
-  const tabs = ['fields', 'preview', 'definition'];
+  const tabs = ['fields', 'settings', 'preview', 'definition'];
   function tabKey(event) {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
     event.preventDefault();
@@ -35,16 +37,18 @@ export default function DataTableBuilder(props) {
   return (
     <>
       <header class="workflow-builder-heading">
-        <nav class="breadcrumbs workflow-breadcrumbs" aria-label="Data table location">
-          <ol>
-            <li>
-              <A href="/workspace/data">Data</A>
-            </li>
-            <li>
-              <h1 aria-current="page">{props.value.name || 'New Table'}</h1>
-            </li>
-          </ol>
-        </nav>
+        <Breadcrumbs
+          class="workflow-breadcrumbs"
+          label="Data table location"
+          items={[
+            { label: 'Data', href: '/workspace/data' },
+            !props.isNew && {
+              label: props.value.name || 'Table',
+              href: `/workspace/data/${props.tableId}`,
+            },
+            { content: <h1>{props.isNew ? props.value.name || 'New Table' : 'Edit Fields'}</h1> },
+          ]}
+        />
         <div class="workflow-header-actions">
           <A
             class="workspace-button secondary small"
@@ -63,7 +67,8 @@ export default function DataTableBuilder(props) {
           </button>
         </div>
       </header>
-      <div class="workflow-builder">
+      <div class="workflow-builder resizable-split">
+        <SplitResizeHandle storageKey="builder" />
         <section class="workflow-chat" aria-label="Table design conversation">
           <div
             class="workflow-chat-history"
@@ -71,9 +76,6 @@ export default function DataTableBuilder(props) {
             aria-live="polite"
             aria-relevant="additions text"
           >
-            <Show when={!props.messages.length}>
-              <h2>What should your table capture?</h2>
-            </Show>
             <Show when={props.error}>
               <ToastMessage tone="error">{props.error}</ToastMessage>
             </Show>
@@ -113,6 +115,16 @@ export default function DataTableBuilder(props) {
               />
             </div>
           </form>
+          <div class="workflow-chat-footer">
+            <button
+              type="button"
+              class="workspace-button secondary small"
+              disabled={props.sending || props.processing}
+              onClick={props.onNewConversation}
+            >
+              New Conversation
+            </button>
+          </div>
         </section>
         <section class="workflow-design" aria-label="Table design">
           <div class="workflow-tabs" role="tablist" aria-label="Table view" onKeyDown={tabKey}>
@@ -141,11 +153,17 @@ export default function DataTableBuilder(props) {
             <div hidden={tab() !== 'fields'}>
               <ValidatedForm id="data-table-definition" class="create-form" onSubmit={props.onSave}>
                 <DataDefinitionEditor
+                  fieldsOnly
                   value={props.value}
                   onChange={props.onChange}
                   tables={props.tables}
                   protectedFields={props.protectedFields}
                 />
+              </ValidatedForm>
+            </div>
+            <div hidden={tab() !== 'settings'}>
+              <ValidatedForm class="create-form" onSubmit={props.onSave}>
+                <DataDefinitionEditor settingsOnly value={props.value} onChange={props.onChange} />
               </ValidatedForm>
             </div>
             <Show when={tab() === 'preview'}>

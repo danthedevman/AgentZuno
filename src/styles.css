@@ -1479,21 +1479,21 @@ h1 {
 .marketing-scroll-section :is(.marketing-section-intro, .marketing-copy) > * {
   opacity: 0;
 }
-.marketing-scroll-section.is-visible :is(.marketing-section-intro, .marketing-copy) > * {
+.marketing-scroll-section :is(.marketing-section-intro, .marketing-copy).is-visible > * {
   animation: hero-copy-fade-up 0.6s ease-out both;
 }
-.marketing-scroll-section.is-visible
-  :is(.marketing-section-intro, .marketing-copy)
+.marketing-scroll-section
+  :is(.marketing-section-intro, .marketing-copy).is-visible
   > :nth-child(2) {
   animation-delay: 0.15s;
 }
-.marketing-scroll-section.is-visible
-  :is(.marketing-section-intro, .marketing-copy)
+.marketing-scroll-section
+  :is(.marketing-section-intro, .marketing-copy).is-visible
   > :nth-child(3) {
   animation-delay: 0.3s;
 }
-.marketing-scroll-section.is-visible
-  :is(.marketing-section-intro, .marketing-copy)
+.marketing-scroll-section
+  :is(.marketing-section-intro, .marketing-copy).is-visible
   > :nth-child(4) {
   animation-delay: 0.45s;
 }
@@ -1516,43 +1516,43 @@ h1 {
   > * {
   opacity: 0;
 }
-.marketing-scroll-section.is-visible
+.marketing-scroll-section
   :is(
     .marketing-workflow-preview,
     .marketing-knowledge-preview,
     .marketing-platform-preview,
     .marketing-feature-grid article
-  )
+  ).is-visible
   > * {
   animation: marketing-reveal-card 0.5s ease-out 0.8s both;
 }
-.marketing-scroll-section.is-visible
+.marketing-scroll-section
   :is(
     .marketing-workflow-preview,
     .marketing-knowledge-preview,
     .marketing-platform-preview,
     .marketing-feature-grid article
-  )
+  ).is-visible
   > :nth-child(2) {
   animation-delay: 1s;
 }
-.marketing-scroll-section.is-visible
+.marketing-scroll-section
   :is(
     .marketing-workflow-preview,
     .marketing-knowledge-preview,
     .marketing-platform-preview,
     .marketing-feature-grid article
-  )
+  ).is-visible
   > :nth-child(3) {
   animation-delay: 1.25s;
 }
-.marketing-scroll-section.is-visible
+.marketing-scroll-section
   :is(
     .marketing-workflow-preview,
     .marketing-knowledge-preview,
     .marketing-platform-preview,
     .marketing-feature-grid article
-  )
+  ).is-visible
   > :nth-child(n + 4) {
   animation-delay: 1.5s;
 }
@@ -1573,13 +1573,13 @@ h1 {
     linear-gradient(100deg, transparent 20%, #b7d2f522 50%, transparent 80%) 0 0 / 200% 100%,
     repeating-linear-gradient(to bottom, #91aed41a 0 12px, transparent 12px 35px);
 }
-.marketing-scroll-section.is-visible
+.marketing-scroll-section
   :is(
     .marketing-workflow-preview,
     .marketing-knowledge-preview,
     .marketing-platform-preview,
     .marketing-feature-grid article
-  )::after {
+  ).is-visible::after {
   animation: marketing-loading-content 0.85s ease-out both;
 }
 @keyframes marketing-loading-content {
@@ -1723,10 +1723,10 @@ h1 {
   color: #8cabcf;
   font-size: 10px;
 }
-.landing-hero-copy > h1 {
+.landing-hero-copy.is-visible > h1 {
   animation: hero-copy-fade-up 0.6s ease-out both;
 }
-.landing-hero-copy .tagline span {
+.landing-hero-copy.is-visible .tagline span {
   animation: hero-copy-fade-up 0.6s ease-out both;
 }
 .landing-hero-copy .tagline span:nth-child(1) {
@@ -1738,7 +1738,7 @@ h1 {
 .landing-hero-copy .tagline span:nth-child(3) {
   animation-delay: 0.44s;
 }
-.landing-hero-copy .landing-actions {
+.landing-hero-copy.is-visible .landing-actions {
   animation: hero-copy-fade-up 0.6s ease-out 0.58s both;
 }
 @keyframes hero-copy-fade-up {
@@ -2086,8 +2086,8 @@ h1 {
   content: none;
   animation: none;
 }
-.marketing-governance.marketing-scroll-section.is-visible
-  :is(.marketing-section-intro, .marketing-feature-grid article)
+.marketing-governance.marketing-scroll-section
+  :is(.marketing-section-intro, .marketing-feature-grid article).is-visible
   > * {
   animation: governance-fade-in 500ms ease-out both;
   animation-delay: 0ms;
@@ -2101,8 +2101,8 @@ h1 {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .marketing-governance.marketing-scroll-section.is-visible
-    :is(.marketing-section-intro, .marketing-feature-grid article)
+  .marketing-governance.marketing-scroll-section
+    :is(.marketing-section-intro, .marketing-feature-grid article).is-visible
     > * {
     animation: none;
     opacity: 1;
@@ -2120,4 +2120,166 @@ h1 {
 }
 .landing-main .start-button:focus-visible {
   outline-color: #818cf8;
+}
+
+.landing-hero-copy:not(.is-visible) > h1,
+.landing-hero-copy:not(.is-visible) .tagline span,
+.landing-hero-copy:not(.is-visible) .landing-actions {
+  opacity: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .landing-hero-copy:not(.is-visible) > h1,
+  .landing-hero-copy:not(.is-visible) .tagline span,
+  .landing-hero-copy:not(.is-visible) .landing-actions {
+    opacity: 1;
+  }
+}
+
+.marketing-scroll-section .marketing-platform-preview.marketing-agents-preview::after,
+.marketing-scroll-section .marketing-platform-preview.marketing-agents-preview.is-visible::after {
+  content: none;
+  animation: none;
+}
+.marketing-scroll-section .marketing-platform-preview.marketing-agents-preview.is-visible > * {
+  animation: hero-copy-fade-up 600ms ease-out both;
+}
+.marketing-scroll-section
+  .marketing-platform-preview.marketing-agents-preview.is-visible
+  > :nth-child(2) {
+  animation-delay: 120ms;
+}
+.marketing-scroll-section
+  .marketing-platform-preview.marketing-agents-preview.is-visible
+  > :nth-child(3) {
+  animation-delay: 240ms;
+}
+.marketing-scroll-section
+  .marketing-platform-preview.marketing-agents-preview.is-visible
+  > :nth-child(4) {
+  animation-delay: 360ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  .marketing-scroll-section .marketing-platform-preview.marketing-agents-preview.is-visible > * {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+}
+
+.hero-conversation-content {
+  height: 480px;
+  min-height: 0;
+  max-height: min(65vh, 480px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #818cf88c transparent;
+  scrollbar-gutter: stable;
+}
+.hero-conversation-content::-webkit-scrollbar {
+  width: 6px;
+}
+.hero-conversation-content::-webkit-scrollbar-thumb {
+  background: #818cf88c;
+  border-radius: 8px;
+}
+.hero-conversation-content > [hidden] {
+  display: none;
+}
+.hero-completion-flow {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+}
+.hero-completion-flow .hero-endpoint {
+  flex: none;
+  padding: 12px;
+}
+.hero-endpoint > .icon:last-child {
+  margin-left: auto;
+}
+.hero-completion-flow .hero-endpoint-connector {
+  width: 1px;
+  height: 18px;
+  margin-left: 20px;
+}
+.hero-completion-flow .hero-endpoint-connector i {
+  left: -2px;
+  top: 0;
+}
+.hero-completion-flow .hero-endpoint-connector.is-complete i {
+  animation: hero-vertical-transfer 550ms ease-out forwards;
+}
+.hero-publish-action {
+  display: grid;
+  justify-items: stretch;
+  gap: 8px;
+  margin-top: 18px;
+}
+.hero-publish-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid #a4adff;
+  border-radius: 8px;
+  background: #818cf8;
+  color: #111329;
+  font: inherit;
+  font-size: 12px;
+  opacity: 1;
+  transition:
+    background 200ms ease,
+    box-shadow 200ms ease;
+}
+.hero-publish-button .icon {
+  width: 16px;
+  height: 16px;
+  font-size: 16px;
+}
+.hero-publish-button.is-publishing .icon {
+  animation: hero-spinner 800ms linear infinite;
+}
+.hero-publish-button.is-published {
+  background: #244f46;
+  border-color: #527e72;
+  color: #b7e7d4;
+}
+.hero-published-note {
+  text-align: center;
+  color: #b7e7d4;
+  font-size: 10px;
+}
+.hero-conversation-visual.is-published .hero-endpoint {
+  animation: hero-publish-confirm 650ms ease-out var(--publish-delay) both;
+}
+@keyframes hero-vertical-transfer {
+  from {
+    top: 0;
+  }
+  to {
+    top: 14px;
+  }
+}
+@keyframes hero-publish-confirm {
+  50% {
+    border-color: #818cf8;
+    box-shadow: 0 0 20px #818cf855;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-publish-button.is-publishing .icon,
+  .hero-conversation-visual.is-published .hero-endpoint,
+  .hero-completion-flow .hero-endpoint-connector i {
+    animation: none;
+  }
+  .hero-publish-button {
+    transition: none;
+  }
+}
+.hero-publish-button:disabled {
+  opacity: 1;
+  cursor: default;
 }

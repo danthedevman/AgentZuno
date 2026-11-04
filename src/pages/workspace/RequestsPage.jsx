@@ -149,7 +149,7 @@ export default function RequestsPage(props) {
           </p>
         }
       >
-        <div class="inbox-toolbar" classList={{ 'requests-list-toolbar': true }}>
+        <div data-list-actions class="inbox-toolbar" classList={{ 'requests-list-toolbar': true }}>
           <label class="workspace-search" hidden={isListEmpty()}>
             <Icon name="search" />
             <input

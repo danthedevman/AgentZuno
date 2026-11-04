@@ -40,6 +40,7 @@ export default function WorkforceProfile(props) {
   const { session } = useSession();
   const [pictureVersion, setPictureVersion] = createSignal(0);
   let pictureInput;
+  let palette;
   async function uploadPicture(file) {
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
@@ -128,7 +129,65 @@ export default function WorkforceProfile(props) {
   return (
     <section class="workforce-profile">
       <Show when={props.showTitle}>
-        <div class="profile-cover" aria-hidden="true" />
+        <div
+          class="profile-cover"
+          style={{
+            background: `linear-gradient(115deg, ${(profile()?.coverThemes?.find((theme) => theme.id === profile()?.coverTheme)?.colors || ['#152d47', '#255a77', '#173149']).join(', ')})`,
+          }}
+        >
+          <Show when={profile()?.canEditCover}>
+            <button
+              type="button"
+              class="workspace-button secondary small profile-cover-edit"
+              aria-label="Change profile cover theme"
+              popovertarget={`profile-cover-${props.userId}`}
+            >
+              <Icon name="edit" /> Cover Theme
+            </button>
+            <div
+              ref={palette}
+              id={`profile-cover-${props.userId}`}
+              popover="auto"
+              class="profile-cover-palette"
+            >
+              <h3>Cover Theme</h3>
+              <For each={profile()?.coverThemes || []}>
+                {(theme) => (
+                  <button
+                    type="button"
+                    class="profile-theme-option"
+                    aria-pressed={profile()?.coverTheme === theme.id}
+                    disabled={busy()}
+                    onClick={async () => {
+                      setBusy(true);
+                      try {
+                        await api(`/api/helpdesk/workforce-profiles/${props.userId}/cover`, {
+                          method: 'PUT',
+                          body: JSON.stringify({ theme: theme.id }),
+                        });
+                        mutate((current) => ({ ...current, coverTheme: theme.id }));
+                        palette.hidePopover();
+                        notify({ tone: 'success', message: 'Cover theme saved.' });
+                      } catch (error) {
+                        notify({ tone: 'error', message: error.message });
+                      } finally {
+                        setBusy(false);
+                      }
+                    }}
+                  >
+                    <span
+                      style={{ background: `linear-gradient(115deg, ${theme.colors.join(', ')})` }}
+                    />
+                    {theme.name}
+                    <Show when={profile()?.coverTheme === theme.id}>
+                      <Icon name="check" />
+                    </Show>
+                  </button>
+                )}
+              </For>
+            </div>
+          </Show>
+        </div>
         <div class="profile-identity-header">
           <ProfileAvatar
             large

@@ -1,3 +1,5 @@
+import ArticleReader from '../../components/ArticleReader.jsx';
+import Breadcrumbs from '../../components/Breadcrumbs.jsx';
 import ListPagination from '../../components/ListPagination.jsx';
 import { useSession } from '../../context/SessionContext.jsx';
 import ArticleAttachments from '../../components/ArticleAttachments.jsx';
@@ -40,23 +42,27 @@ export default function KnowledgeCenterPage() {
       <header class="knowledge-center-heading">
         <h1>Knowledge Center</h1>
       </header>
-      <nav aria-label="Knowledge location" class="knowledge-center-path">
-        <button
-          class="card-link"
-          onClick={() => setQuery({ base: undefined, topic: undefined, article: undefined })}
-        >
-          Knowledge Bases
-        </button>
-        <Show when={query.base}>
-          <span>/</span>
-          <button
-            class="card-link"
-            onClick={() => setQuery({ topic: undefined, article: undefined })}
-          >
-            {data()?.bases?.find((item) => item.id === query.base)?.name || 'Knowledge Base'}
-          </button>
-        </Show>
-      </nav>
+      <Breadcrumbs
+        label="Knowledge location"
+        items={[
+          { label: 'Knowledge Bases', href: '/workspace/knowledge' },
+          (query.base || data()?.base) && {
+            label:
+              data()?.location?.base?.name ||
+              data()?.bases?.find((item) => item.id === query.base)?.name ||
+              'Knowledge Base',
+            href: `/workspace/knowledge?base=${encodeURIComponent(query.base || data()?.base)}`,
+          },
+          (query.topic || data()?.location?.topic?.id) && {
+            label:
+              data()?.location?.topic?.name ||
+              data()?.topics?.find((item) => item.id === query.topic)?.name ||
+              'Topic',
+            href: `/workspace/knowledge?base=${encodeURIComponent(query.base || data()?.base || '')}&topic=${encodeURIComponent(query.topic || data()?.location?.topic?.id)}`,
+          },
+          query.article && { label: data()?.title || 'Article' },
+        ]}
+      />
       <Show when={content.error}>
         <ToastMessage tone="error">{content.error.message}</ToastMessage>
       </Show>
@@ -70,8 +76,7 @@ export default function KnowledgeCenterPage() {
             {
               <article class="knowledge-center-article">
                 <h2>{data()?.title}</h2>
-                <ArticleEditor readOnly content={data()?.body || ''} />
-                <ArticleAttachments articleId={query.article} />
+                <ArticleReader articleId={query.article} body={data()?.body} />
               </article>
             }
           </Show>

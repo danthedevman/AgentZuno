@@ -1,3 +1,7 @@
+import SplitResizeHandle from '../../components/SplitResizeHandle.jsx';
+import AttachmentPanel from '../../components/AttachmentPanel.jsx';
+import Skeleton from '../../components/Skeleton.jsx';
+import Breadcrumbs from '../../components/Breadcrumbs.jsx';
 import { confirmAction } from '../../services/confirmations.js';
 import KnowledgePermissions from '../../components/KnowledgePermissions.jsx';
 import RecordTable from '../../components/RecordTable.jsx';
@@ -43,6 +47,9 @@ export default function CreateArticlePage(props) {
   const [proposal, setProposal] = createSignal(null);
   const [busy, setBusy] = createSignal(false);
   const [uploading, setUploading] = createSignal(false);
+  const [chatStarting, setChatStarting] = createSignal(false);
+  const isGeneratingArticle = () =>
+    chatStarting() || ['queued', 'responding'].includes(currentConversation()?.status);
   const [error, setError] = createSignal('');
   const hasUnpublishedChanges = () =>
     !props.article ||
@@ -70,7 +77,7 @@ export default function CreateArticlePage(props) {
     onCleanup(() => clearTimeout(timer));
   });
   const [storedAttachments] = createResource(
-    () => articleId() || false,
+    () => (['attachments', 'preview'].includes(tab()) && articleId()) || false,
     (id) => api(`/api/helpdesk/article-attachment-list/${id}`),
   );
   const attachments = () =>
@@ -122,6 +129,8 @@ export default function CreateArticlePage(props) {
     event.preventDefault();
     if (busy() || !prompt().trim()) return;
     setBusy(true);
+    setChatStarting(true);
+    setTab('preview');
     setError('');
     try {
       const result = await api(
@@ -150,9 +159,10 @@ export default function CreateArticlePage(props) {
       setError(error.message);
     } finally {
       setBusy(false);
+      setChatStarting(false);
     }
   }
-  async function review(state = status(), candidate, standalone = false) {
+  async function review(state = status(), candidate, standalone = false, publishNow = false) {
     setBusy(true);
     setError('');
     try {
@@ -165,6 +175,10 @@ export default function CreateArticlePage(props) {
           draft: draft(state, candidate),
         }),
       });
+      if (publishNow) {
+        await approve(result);
+        return;
+      }
       setProposal(result);
       setTab('preview');
       if (standalone)
@@ -190,12 +204,13 @@ export default function CreateArticlePage(props) {
     previewedResponse = key;
     review(status(), candidate);
   });
-  async function approve() {
+  async function approve(candidate) {
+    const approvedProposal = candidate?.id ? candidate : proposal();
     setBusy(true);
     setError('');
     try {
       const isNew = !articleId();
-      const saved = await api(`/api/helpdesk/article-proposals/${proposal().id}/approve`, {
+      const saved = await api(`/api/helpdesk/article-proposals/${approvedProposal.id}/approve`, {
         method: 'POST',
         body: JSON.stringify({ approved: true }),
       });
@@ -230,14 +245,23 @@ export default function CreateArticlePage(props) {
   return (
     <section class="workflow-page is-builder article-builder">
       <header class="workflow-builder-heading">
-        <nav class="breadcrumbs" aria-label="Article location">
-          <ol>
-            <li>
-              <A href="/workspace/knowledge?tab=articles">Knowledge</A>
-            </li>
-            <li aria-current="page">{title() || 'New Article'}</li>
-          </ol>
-        </nav>
+        <Breadcrumbs
+          label="Article location"
+          items={[
+            { label: 'Knowledge', href: '/workspace/knowledge?tab=articles' },
+            base() && {
+              label:
+                workspace()?.knowledgeBases?.find((item) => item.id === base())?.name ||
+                'Knowledge Base',
+              href: `/workspace/knowledge/bases/${encodeURIComponent(base())}`,
+            },
+            topics().length === 1 && {
+              label: workspace()?.topics?.find((item) => item.id === topics()[0])?.name || 'Topic',
+              href: `/workspace/knowledge?tab=articles&base=${encodeURIComponent(base())}&topic=${encodeURIComponent(topics()[0])}`,
+            },
+            { label: title() || 'New Article' },
+          ]}
+        />
         <div class="helpdesk-actions">
           <button
             type="button"
@@ -250,7 +274,7 @@ export default function CreateArticlePage(props) {
           <button
             type="button"
             class="workspace-button secondary small"
-            disabled={!canEdit() || busy() || uploading()}
+            disabled={!canEdit() || busy() || uploading() || isGeneratingArticle()}
             onClick={() => review()}
           >
             Review Changes
@@ -259,8 +283,8 @@ export default function CreateArticlePage(props) {
             <button
               type="button"
               class="workspace-button small"
-              disabled={!canEdit() || busy() || uploading()}
-              onClick={() => review('Published')}
+              disabled={!canEdit() || busy() || uploading() || isGeneratingArticle()}
+              onClick={() => review('Published', proposal()?.draft, false, true)}
             >
               {props.article?.status === 'Published' ? 'Publish Changes' : 'Publish'}
             </button>
@@ -270,7 +294,8 @@ export default function CreateArticlePage(props) {
       <Show when={error() || conversation.error}>
         <ToastMessage tone="error">{error() || conversation.error?.message}</ToastMessage>
       </Show>
-      <div class="workflow-builder">
+      <div class="workflow-builder resizable-split">
+        <SplitResizeHandle storageKey="builder" />
         <section class="workflow-chat" aria-label="Article conversation">
           <div ref={history} class="workflow-chat-history">
             <For each={currentConversation()?.messages || []}>
@@ -318,10 +343,23 @@ export default function CreateArticlePage(props) {
               onSubmit={chat}
             />
           </div>
+          <div class="workflow-chat-footer">
+            <button
+              type="button"
+              class="workspace-button secondary small"
+              onClick={() => {
+                setChatId('');
+                setQuery({ chat: undefined });
+                setTab('editor');
+              }}
+            >
+              New Conversation
+            </button>
+          </div>
         </section>
         <section class="workflow-design" aria-label="Article draft">
           <div class="workflow-tabs" role="tablist" aria-label="Article views">
-            <For each={['editor', 'preview', 'history', 'permissions']}>
+            <For each={['editor', 'preview', 'attachments', 'history', 'permissions']}>
               {(value) => (
                 <button
                   type="button"
@@ -335,29 +373,47 @@ export default function CreateArticlePage(props) {
                       ? 'Preview'
                       : value === 'history'
                         ? 'History'
-                        : 'Permissions'}
+                        : value === 'attachments'
+                          ? 'Attachments'
+                          : 'Permissions'}
                 </button>
               )}
             </For>
           </div>
           <div class="article-builder-content">
+            <Show when={tab() === 'attachments'}>
+              <AttachmentPanel
+                files={attachments().map((file) => ({
+                  ...file,
+                  href: `/api/helpdesk/article-attachments/${file.id}?workspace=${session()?.user?.workspaceId}${articleId() && !newAttachments().some((item) => item.id === file.id) ? `&article=${articleId()}` : ''}`,
+                }))}
+                busy={uploading() || busy()}
+                loading={storedAttachments.loading}
+                onFiles={canEdit() ? addAttachments : undefined}
+                onRemove={
+                  canEdit()
+                    ? async (file) => {
+                        if (
+                          await confirmAction(
+                            `Remove “${file.name}” from this article?`,
+                            'Remove Attachment',
+                            'Remove',
+                          )
+                        ) {
+                          setAttachmentIds((ids) => ids.filter((id) => id !== file.id));
+                          changed();
+                        }
+                      }
+                    : undefined
+                }
+              />
+            </Show>
             <Show when={tab() === 'permissions'}>
               <Show when={articleId()} fallback={<p>Save the article to configure permissions.</p>}>
                 <KnowledgePermissions kind="article" id={articleId()} />
               </Show>
             </Show>
             <Show when={tab() === 'history'}>
-              <button
-                type="button"
-                class="workspace-button secondary small"
-                onClick={() => {
-                  setChatId('');
-                  setQuery({ chat: undefined });
-                  setTab('editor');
-                }}
-              >
-                New Conversation
-              </button>
               <Show
                 when={articleId()}
                 fallback={
@@ -425,6 +481,7 @@ export default function CreateArticlePage(props) {
                 />
                 <MultiSelectLookup
                   label="Topics"
+                  required
                   name="topicIds"
                   value={topics()}
                   options={(workspace()?.topics || []).map((item) => ({
@@ -437,48 +494,7 @@ export default function CreateArticlePage(props) {
                     changed();
                   }}
                 />
-                <section class="article-attachments-field">
-                  <label>
-                    Attachments
-                    <input
-                      type="file"
-                      multiple
-                      disabled={uploading() || busy()}
-                      onChange={(event) => {
-                        addAttachments(Array.from(event.currentTarget.files || []));
-                        event.currentTarget.value = '';
-                      }}
-                    />
-                  </label>
-                  <Show when={uploading()}>
-                    <p role="status">Uploading attachments…</p>
-                  </Show>
-                  <For each={attachments()}>
-                    {(file) => (
-                      <div class="chat-file-chip">
-                        <span>{file.name}</span>
-                        <button
-                          type="button"
-                          aria-label={`Remove ${file.name}`}
-                          onClick={async () => {
-                            if (
-                              await confirmAction(
-                                `Remove “${file.name}” from this article?`,
-                                'Remove Attachment',
-                                'Remove',
-                              )
-                            ) {
-                              setAttachmentIds((ids) => ids.filter((id) => id !== file.id));
-                              changed();
-                            }
-                          }}
-                        >
-                          ×
-                        </button>
-                      </div>
-                    )}
-                  </For>
-                </section>
+
                 <label>Body</label>
                 <ArticleEditor
                   content={body()}
@@ -492,58 +508,67 @@ export default function CreateArticlePage(props) {
               </ValidatedForm>
             </Show>
             <Show when={tab() === 'preview'}>
-              <Show
-                when={proposal()}
-                fallback={<p>Review your changes to prepare an article preview.</p>}
-              >
-                {(item) => (
-                  <>
-                    <p class="article-approval-notice">
-                      Review this {item().draft.status.toLowerCase()} article before approving. Your
-                      saved article has not changed.
-                    </p>
-                    <h1>{item().draft.title}</h1>
-                    <ArticleEditor readOnly content={item().draft.body} />
-                    <Show when={item().draft.attachmentIds?.length}>
-                      <h2>Attachments</h2>
-                      <For
-                        each={attachments().filter((file) =>
-                          item().draft.attachmentIds.includes(file.id),
-                        )}
-                      >
-                        {(file) => <p>{file.name}</p>}
-                      </For>
-                    </Show>
-                    <div class="article-approval-actions">
-                      <button
-                        type="button"
-                        class="workspace-button"
-                        disabled={busy() || item().status !== 'pending'}
-                        onClick={approve}
-                      >
-                        Approve &amp; {item().draft.status === 'Published' ? 'Publish' : 'Save'}
-                      </button>
-                      <button
-                        type="button"
-                        class="workspace-button secondary"
-                        disabled={busy()}
-                        onClick={() => {
-                          setProposal(null);
-                          setTab('editor');
-                        }}
-                      >
-                        Reject Changes
-                      </button>
-                      <a
-                        href={`/preview/${session()?.user?.workspaceId}/proposals/${item().id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        Open Standalone Preview
-                      </a>
-                    </div>
-                  </>
-                )}
+              <Show when={isGeneratingArticle() || (busy() && !proposal())}>
+                <div class="article-generation-placeholder" role="status">
+                  <span>Generating article…</span>
+                  <Skeleton label="Generating article title" lines={1} />
+                  <Skeleton label="Generating article body" lines={8} />
+                </div>
+              </Show>
+              <Show when={!isGeneratingArticle() && !(busy() && !proposal())}>
+                <Show
+                  when={proposal()}
+                  fallback={<p>Review your changes to prepare an article preview.</p>}
+                >
+                  {(item) => (
+                    <>
+                      <p class="article-approval-notice">
+                        Review this {item().draft.status.toLowerCase()} article before approving.
+                        Your saved article has not changed.
+                      </p>
+                      <h1>{item().draft.title}</h1>
+                      <ArticleEditor readOnly content={item().draft.body} />
+                      <Show when={item().draft.attachmentIds?.length}>
+                        <h2>Attachments</h2>
+                        <For
+                          each={attachments().filter((file) =>
+                            item().draft.attachmentIds.includes(file.id),
+                          )}
+                        >
+                          {(file) => <p>{file.name}</p>}
+                        </For>
+                      </Show>
+                      <div class="article-approval-actions">
+                        <button
+                          type="button"
+                          class="workspace-button"
+                          disabled={busy() || item().status !== 'pending'}
+                          onClick={approve}
+                        >
+                          Approve &amp; {item().draft.status === 'Published' ? 'Publish' : 'Save'}
+                        </button>
+                        <button
+                          type="button"
+                          class="workspace-button secondary"
+                          disabled={busy()}
+                          onClick={() => {
+                            setProposal(null);
+                            setTab('editor');
+                          }}
+                        >
+                          Reject Changes
+                        </button>
+                        <a
+                          href={`/preview/${session()?.user?.workspaceId}/proposals/${item().id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Open Standalone Preview
+                        </a>
+                      </div>
+                    </>
+                  )}
+                </Show>
               </Show>
             </Show>
           </div>

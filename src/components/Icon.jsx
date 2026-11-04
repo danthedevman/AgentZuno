@@ -1,6 +1,10 @@
 import { Show } from 'solid-js';
 
 const icons = {
+  'menu-open': 'menu',
+  'menu-close': 'menu_open',
+  info: 'info',
+  more: 'more_vert',
   attachment: 'attach_file',
   chat: 'chat_bubble_outline',
   ticket: 'confirmation_number',

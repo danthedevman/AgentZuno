@@ -1,3 +1,4 @@
+import Toggle from './Toggle.jsx';
 import ToastMessage from './ToastMessage.jsx';
 import ValidatedForm from './ValidatedForm.jsx';
 import Dropdown from './Dropdown.jsx';
@@ -118,14 +119,11 @@ export default function IdentitySettings() {
                 }
               />
             </label>
-            <label class="checkbox-row">
-              <input
-                name="enabled"
-                type="checkbox"
-                checked={settings()?.settings?.enabled || false}
-              />
-              Enable enterprise sign-in
-            </label>
+            <Toggle
+              name="enabled"
+              label="Enable enterprise sign-in"
+              defaultChecked={settings()?.settings?.enabled || false}
+            />
             <div class="preference-row">
               <span>Automatically add employees on SSO sign-in</span>
               <button

@@ -1,3 +1,5 @@
+import Toggle from '../../components/Toggle.jsx';
+import ConnectorActionsForm from '../../components/ConnectorActionsForm.jsx';
 import BackLink from '../../components/BackLink.jsx';
 import ConnectorSetupInstructions from '../../components/ConnectorSetupInstructions.jsx';
 import ConnectorApplicationForm from '../../components/ConnectorApplicationForm.jsx';
@@ -52,24 +54,16 @@ function SupportInboxSettings(props) {
       }}
     >
       <p>{props.channel.mailbox}</p>
-      <label class="settings-switch">
-        <input
-          type="checkbox"
-          role="switch"
-          checked={enabled()}
-          onChange={(event) => setEnabled(event.currentTarget.checked)}
-        />{' '}
-        Enable Zuno for this support inbox
-      </label>
-      <label class="settings-switch">
-        <input
-          type="checkbox"
-          role="switch"
-          checked={autoReply()}
-          onChange={(event) => setAutoReply(event.currentTarget.checked)}
-        />{' '}
-        Automatically reply to incoming requests
-      </label>
+      <Toggle
+        label="Enable Zuno for this support inbox"
+        checked={enabled()}
+        onChange={setEnabled}
+      />
+      <Toggle
+        label="Automatically reply to incoming requests"
+        checked={autoReply()}
+        onChange={setAutoReply}
+      />
       <Dropdown
         name="department"
         label="Department"
@@ -128,7 +122,7 @@ export default function ConnectorsPage() {
       <Show when={params.provider}>
         <BackLink href="/workspace/connectors">Connectors</BackLink>
       </Show>
-      <div class="connections-heading">
+      <div class="connections-heading" data-list-actions>
         <PageHeading
           title={params.provider ? selectedChannel()?.name || 'Connector' : 'Connectors'}
         />
@@ -222,6 +216,7 @@ export default function ConnectorsPage() {
                       <p>Message delivery: {channel.deliveryStatus.toLowerCase()}</p>
                       <ConnectorSetupInstructions provider={channel.id} />
                       <ConnectorApplicationForm channel={channel} onSaved={refetch} />
+                      <ConnectorActionsForm channel={channel} onSaved={refetch} />
                       <label>
                         OAuth Callback
                         <input readonly value={channel.callbackUrl} />

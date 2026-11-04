@@ -1,3 +1,6 @@
+import MyTeamReport from '../../components/MyTeamReport.jsx';
+import { useNavigate } from '@solidjs/router';
+import { useWorkspacePath } from '../../services/workspaceRoutes.js';
 import Icon from '../../components/Icon.jsx';
 import { createSignal, Show, createResource, lazy, Suspense, For } from 'solid-js';
 import { useSearchParams } from '@solidjs/router';
@@ -13,17 +16,25 @@ const KnowledgeReport = lazy(() => import('./KnowledgeOverviewPage.jsx'));
 const KnowledgeChart = lazy(() => import('../../components/KnowledgeChart.jsx'));
 export default function ReportsPage() {
   const { access } = useWorkspace();
+  const navigate = useNavigate(),
+    path = useWorkspacePath();
   const [query, setQuery] = useSearchParams();
-  const canRead = () => !access.error && ['admin', 'read-only'].includes(access()?.role);
+  const canRead = () => !access.error && ['admin', 'read-only', 'agent'].includes(access()?.role);
   const report = () =>
-    ['knowledge', 'workflows', 'agents', 'audit'].includes(query.report)
+    (access()?.role === 'agent'
+      ? ['team']
+      : ['team', 'knowledge', 'workflows', 'agents', 'audit']
+    ).includes(query.report)
       ? query.report
-      : access()?.role === 'read-only'
-        ? 'audit'
-        : 'knowledge';
+      : access()?.role === 'agent'
+        ? 'team'
+        : access()?.role === 'read-only'
+          ? 'audit'
+          : 'knowledge';
   const days = () => (['7', '30', '90'].includes(query.days) ? query.days : '30');
   const [data, { refetch }] = createResource(
-    () => canRead() && !['knowledge', 'audit'].includes(report()) && `${report()}:${days()}`,
+    () =>
+      canRead() && !['team', 'knowledge', 'audit'].includes(report()) && `${report()}:${days()}`,
     () => api(`/api/helpdesk/reports/${report()}?days=${days()}`),
   );
   const [refreshKey, setRefreshKey] = createSignal(0);
@@ -33,12 +44,15 @@ export default function ReportsPage() {
       ariaLabel="Report"
       value={report()}
       onChange={(value) => setQuery({ report: value })}
-      options={[
-        { value: 'knowledge', label: 'Knowledge Health' },
-        { value: 'workflows', label: 'Workflow Execution' },
-        { value: 'agents', label: 'Agent Activity' },
-        { value: 'audit', label: 'Audit' },
-      ]}
+      options={(access()?.role === 'agent'
+        ? []
+        : [
+            { value: 'knowledge', label: 'Knowledge Health' },
+            { value: 'workflows', label: 'Workflow Execution' },
+            { value: 'agents', label: 'Agent Activity' },
+            { value: 'audit', label: 'Audit' },
+          ]
+      ).concat([{ value: 'team', label: 'My Team' }])}
     />
   );
   return (
@@ -58,17 +72,19 @@ export default function ReportsPage() {
           when={report() === 'knowledge'}
           fallback={
             <>
-              <div class="list-toolbar reports-toolbar">
+              <div class="list-toolbar reports-toolbar" data-list-actions>
                 {selector()}
-                <Dropdown
-                  ariaLabel="Reporting period"
-                  value={days()}
-                  onChange={(value) => setQuery({ days: value })}
-                  options={['7', '30', '90'].map((value) => ({
-                    value,
-                    label: `Last ${value} Days`,
-                  }))}
-                />
+                <Show when={report() !== 'team'}>
+                  <Dropdown
+                    ariaLabel="Reporting period"
+                    value={days()}
+                    onChange={(value) => setQuery({ days: value })}
+                    options={['7', '30', '90'].map((value) => ({
+                      value,
+                      label: `Last ${value} Days`,
+                    }))}
+                  />
+                </Show>
                 <button
                   class="knowledge-refresh-button"
                   type="button"
@@ -76,7 +92,7 @@ export default function ReportsPage() {
                   title="Refresh"
                   disabled={data.loading}
                   onClick={() => {
-                    if (report() === 'audit') setRefreshKey((value) => value + 1);
+                    if (['audit', 'team'].includes(report())) setRefreshKey((value) => value + 1);
                     else refetch();
                   }}
                 >
@@ -86,7 +102,10 @@ export default function ReportsPage() {
               <Show when={data.error}>
                 <ToastMessage tone="error">{data.error.message}</ToastMessage>
               </Show>
-              <Show when={report() !== 'audit'}>
+              <Show when={report() === 'team'}>
+                <MyTeamReport refreshKey={refreshKey()} />
+              </Show>
+              <Show when={!['audit', 'team'].includes(report())}>
                 <div class="knowledge-metrics">
                   <For
                     each={
@@ -182,6 +201,7 @@ export default function ReportsPage() {
               <Show when={report() === 'audit'}>
                 <RecordTable
                   label="Audit Logs"
+                  onRowClick={(item) => navigate(path(`/workspace/reports/audit/${item.id}`))}
                   refreshKey={refreshKey()}
                   source="/api/helpdesk/audit"
                   sourceParams={{ days: days() }}

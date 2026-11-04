@@ -2,9 +2,14 @@ import { createSignal } from 'solid-js';
 export const [pendingConfirmation, setPendingConfirmation] = createSignal(null);
 const queue = [];
 const confirmedFields = new Set();
-export function confirmAction(message, title = 'Confirm Removal', confirmLabel = 'Remove') {
+export function confirmAction(
+  message,
+  title = 'Confirm Removal',
+  confirmLabel = 'Remove',
+  options = {},
+) {
   return new Promise((resolve) => {
-    queue.push({ message, title, confirmLabel, resolve });
+    queue.push({ message, title, confirmLabel, requiredText: options.requiredText, resolve });
     if (!pendingConfirmation()) setPendingConfirmation(queue.shift());
   });
 }
