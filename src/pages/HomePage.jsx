@@ -3,6 +3,8 @@ import Icon from '../components/Icon.jsx';
 import { useSession } from '../context/SessionContext.jsx';
 import MarketingSection from '../components/MarketingSection.jsx';
 import AnimatedRequestChat from '../components/AnimatedRequestChat.jsx';
+import AnimatedKnowledgeChat from '../components/AnimatedKnowledgeChat.jsx';
+import AnimatedWorkflowBuilder from '../components/AnimatedWorkflowBuilder.jsx';
 import { For, Show, createSignal, onMount } from 'solid-js';
 import HeroWorkflowBackground from '../components/HeroWorkflowBackground.jsx';
 import { A, useNavigate } from '@solidjs/router';
@@ -16,7 +18,7 @@ export default function HomePage() {
   const [name, setName] = createSignal('AgentZuno');
   const [tagline, setTagline] = createSignal([
     'AgentZuno is an open source conversational AI help desk',
-    'Answer and automate user requests in Slack, Microsoft Teams, and email across your entire org',
+    'Answer and automate user requests in Slack, Microsoft Teams, and email',
     'Deploy in a day',
   ]);
 
@@ -137,29 +139,7 @@ export default function HomePage() {
             Explore the workflow SDK <span aria-hidden="true">→</span>
           </A>
         </div>
-        <div
-          class="marketing-workflow-preview marketing-text-preview"
-          aria-label="Laptop request workflow"
-        >
-          <div class="marketing-preview-top">
-            <span>Laptop Request</span>
-          </div>
-          <For
-            each={[
-              'Collect laptop and accessory choices',
-              'Ask the employee’s manager to approve',
-              'Route to Desktop Support',
-            ]}
-          >
-            {(label, index) => (
-              <div class="marketing-workflow-step">
-                <span>{index() + 1}</span>
-                <p>{label}</p>
-              </div>
-            )}
-          </For>
-          <div class="marketing-preview-bottom">Forms · Conditions · Approvals · Queues</div>
-        </div>
+        <AnimatedWorkflowBuilder />
       </MarketingSection>
       <MarketingSection
         class="marketing-section marketing-split is-reversed"
@@ -176,27 +156,11 @@ export default function HomePage() {
             Set access at the base, topic, and article level. Proposed article changes get a preview
             and require approval before they are saved.
           </p>
-          <A href="/docs#runtime-security">
-            Learn about access controls <span aria-hidden="true">→</span>
+          <A href="/docs#knowledge">
+            Explore the Knowledge guide <span aria-hidden="true">→</span>
           </A>
         </div>
-        <div class="marketing-knowledge-preview marketing-text-preview">
-          <div class="marketing-preview-top">Knowledge Center</div>
-          <div class="marketing-knowledge-folders">
-            <span>Getting Started</span>
-            <span>IT Support</span>
-            <span>People &amp; Teams</span>
-          </div>
-          <div class="marketing-knowledge-article">
-            <small>IT Support / Software</small>
-            <h3>How to request software access</h3>
-            <p>
-              Find the right request, provide the details, and track the approval in one
-              conversation.
-            </p>
-            <span>Published Article</span>
-          </div>
-        </div>
+        <AnimatedKnowledgeChat />
       </MarketingSection>
       <MarketingSection
         class="marketing-section marketing-centered marketing-governance"

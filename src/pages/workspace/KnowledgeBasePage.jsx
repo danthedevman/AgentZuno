@@ -1,7 +1,6 @@
-import BackLink from '../../components/BackLink.jsx';
+import Breadcrumbs from '../../components/Breadcrumbs.jsx';
 import ListPagination from '../../components/ListPagination.jsx';
 import { useSession } from '../../context/SessionContext.jsx';
-import KnowledgePermissions from '../../components/KnowledgePermissions.jsx';
 import Skeleton from '../../components/Skeleton.jsx';
 import { For, Show, createEffect, onCleanup, createResource, createSignal } from 'solid-js';
 import { useParams } from '@solidjs/router';
@@ -71,17 +70,24 @@ export default function KnowledgeBasePage() {
       <Show when={!base.error && base()}>
         {(item) => (
           <>
-            <BackLink href="/workspace/knowledge?tab=bases">Knowledge Bases</BackLink>
-            <details class="knowledge-permission-disclosure">
-              <summary>Permissions</summary>
-              <KnowledgePermissions kind="base" id={params.id} />
-            </details>
+            <Breadcrumbs
+              items={[
+                { label: 'Knowledge Bases', href: '/workspace/knowledge?tab=bases' },
+                { label: item().name },
+              ]}
+            />
             <div class="connections-heading">
               <div>
                 <PageHeading title={item().name} />
                 <span class="knowledge-base-context">Knowledge Base</span>
               </div>
               <div class="helpdesk-actions" data-list-actions>
+                <A
+                  class="workspace-button secondary small"
+                  href={`/workspace/records/knowledge-base/${params.id}/edit`}
+                >
+                  Edit Knowledge Base
+                </A>
                 <A
                   class="workspace-button secondary small"
                   href={`/workspace/knowledge/topics/new?base=${encodeURIComponent(params.id)}`}
@@ -185,13 +191,13 @@ export default function KnowledgeBasePage() {
                       </summary>
                       <Show when={openTopics().has(topic.id)}>
                         <div class="knowledge-topic-content">
-                          <details>
-                            <summary>Permissions</summary>
-                            <Show when={openTopics().has(topic.id)}>
-                              <KnowledgePermissions kind="topic" id={topic.id} />
-                            </Show>
-                          </details>
                           <div class="helpdesk-actions" data-list-actions>
+                            <A
+                              class="workspace-button secondary small"
+                              href={`/workspace/records/topic/${topic.id}/edit`}
+                            >
+                              Edit Topic
+                            </A>
                             <A
                               class="workspace-button secondary small"
                               href={`/workspace/create/article?base=${encodeURIComponent(params.id)}&topic=${encodeURIComponent(topic.id)}`}

@@ -1,7 +1,8 @@
 import { A, useLocation } from '@solidjs/router';
-import { createSignal, onMount, onCleanup } from 'solid-js';
+import { For, createSignal, onMount, onCleanup } from 'solid-js';
 import ChatMarkdown from '../components/ChatMarkdown.jsx';
 import CodeBlock from '../components/CodeBlock.jsx';
+import knowledgeGuide from '../../docs/knowledge.md?raw';
 import rolesGuide from '../../docs/roles-and-features.md?raw';
 import databaseGuide from '../../docs/databases.md?raw';
 import sdkGuide from '../../api/sdk/workflows/README.md?raw';
@@ -11,15 +12,28 @@ export default function DocsPage() {
   const sectionIds = [
     'getting-started',
     'roles-and-features',
+    'knowledge',
     'database-setup',
     'workflow-sdk',
     'runtime-security',
     'type-reference',
   ];
   const [activeSection, setActiveSection] = createSignal('getting-started');
+  const [sectionHeadings, setSectionHeadings] = createSignal({});
+  const [activeHeading, setActiveHeading] = createSignal('');
   let content;
   onMount(() => {
     const sections = sectionIds.map((id) => content.querySelector(`#${id}`));
+    const headingsBySection = {};
+    for (const section of sections) {
+      headingsBySection[section.id] = [...section.querySelectorAll('h2, h3')].map(
+        (heading, index) => {
+          heading.id = `${section.id}-${index + 1}`;
+          return { id: heading.id, label: heading.textContent, element: heading };
+        },
+      );
+    }
+    setSectionHeadings(headingsBySection);
     let frame;
     const updateActiveSection = () => {
       frame = undefined;
@@ -28,6 +42,12 @@ export default function DocsPage() {
         if (section.getBoundingClientRect().top <= 150) current = section.id;
       }
       setActiveSection(current);
+      const headings = headingsBySection[current];
+      let headingId = headings[0]?.id || '';
+      for (const heading of headings) {
+        if (heading.element.getBoundingClientRect().top <= 170) headingId = heading.id;
+      }
+      setActiveHeading(headingId);
     };
     const scheduleUpdate = () => {
       if (frame === undefined) frame = requestAnimationFrame(updateActiveSection);
@@ -36,9 +56,9 @@ export default function DocsPage() {
       const id =
         location.hash.slice(1) ||
         (location.pathname === '/docs/workflows' ? 'workflow-sdk' : 'getting-started');
-      if (sectionIds.includes(id)) {
+      if (content.querySelector(`[id="${CSS.escape(id)}"]`)) {
         content.querySelector(`#${id}`).scrollIntoView();
-        setActiveSection(id);
+        scheduleUpdate();
       }
     };
     openAnchor();
@@ -83,6 +103,12 @@ export default function DocsPage() {
               aria-current={activeSection() === 'roles-and-features' ? 'location' : undefined}
             >
               Roles &amp; Features
+            </a>
+            <a
+              href="#knowledge"
+              aria-current={activeSection() === 'knowledge' ? 'location' : undefined}
+            >
+              Knowledge
             </a>
             <a
               href="#database-setup"
@@ -130,16 +156,31 @@ export default function DocsPage() {
             </p>
           </section>
           <section id="roles-and-features">
-            <ChatMarkdown text={rolesGuide.replace(/^# /, '## ')} externalLinksNewTab />
+            <ChatMarkdown
+              text={rolesGuide.replace(/^# /, '## ')}
+              scrollTables
+              externalLinksNewTab
+            />
+          </section>
+          <section id="knowledge">
+            <ChatMarkdown
+              text={knowledgeGuide
+                .replace(/^# /, '## ')
+                .replaceAll('roles-and-features.md', '/docs#roles-and-features')}
+              scrollTables
+              externalLinksNewTab
+            />
           </section>
           <section id="database-setup">
             <ChatMarkdown
               text={databaseGuide.replaceAll('roles-and-features.md', '/docs#roles-and-features')}
+              scrollTables
               externalLinksNewTab
             />
           </section>
           <section id="workflow-sdk">
             <ChatMarkdown
+              scrollTables
               text={sdkGuide
                 .replace(/^# /, '## ')
                 .replaceAll('../../../docs/roles-and-features.md', '/docs#roles-and-features')}
@@ -164,6 +205,21 @@ export default function DocsPage() {
             <CodeBlock language="typescript" code={sdkTypes} />
           </section>
         </main>
+        <aside class="docs-page-index">
+          <nav aria-label="On this page">
+            <strong>On this page</strong>
+            <For each={sectionHeadings()[activeSection()] || []}>
+              {(heading) => (
+                <a
+                  href={`#${heading.id}`}
+                  aria-current={activeHeading() === heading.id ? 'location' : undefined}
+                >
+                  {heading.label}
+                </a>
+              )}
+            </For>
+          </nav>
+        </aside>
       </div>
     </div>
   );

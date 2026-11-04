@@ -1,4 +1,6 @@
 import ToastMessage from '../../components/ToastMessage.jsx';
+import Breadcrumbs from '../../components/Breadcrumbs.jsx';
+import KnowledgePermissions from '../../components/KnowledgePermissions.jsx';
 import ValidatedForm from '../../components/ValidatedForm.jsx';
 import { useWorkspacePath } from '../../services/workspaceRoutes.js';
 import A from '../../components/WorkspaceLink.jsx';
@@ -63,6 +65,23 @@ export default function CreatePage(props) {
       fallback={
         <section class="reading-page">
           <Show when={option()} fallback={<h1>Unknown content type</h1>}>
+            <Breadcrumbs
+              items={[
+                {
+                  label: recordType() === 'knowledge-base' ? 'Knowledge Bases' : 'Connectors',
+                  href:
+                    recordType() === 'knowledge-base'
+                      ? '/workspace/knowledge?tab=bases'
+                      : '/workspace/connectors',
+                },
+                props.record &&
+                  recordType() === 'knowledge-base' && {
+                    label: props.record.name,
+                    href: `/workspace/knowledge/bases/${props.record.id}`,
+                  },
+                { label: `${props.record ? 'Edit' : 'New'} ${option()?.name}` },
+              ]}
+            />
             <h1>
               {props.record ? 'Edit' : 'New'} {option()?.name.toLowerCase()}
             </h1>
@@ -102,6 +121,12 @@ export default function CreatePage(props) {
                 {isSaving() ? 'Saving…' : 'Save'}
               </button>
             </ValidatedForm>
+            <Show when={props.record && recordType() === 'knowledge-base'}>
+              <section class="knowledge-base-edit-permissions">
+                <h2>Permissions</h2>
+                <KnowledgePermissions kind="base" id={props.record.id} />
+              </section>
+            </Show>
           </Show>
         </section>
       }

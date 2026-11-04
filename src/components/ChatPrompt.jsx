@@ -8,7 +8,23 @@ import Icon from './Icon.jsx';
 export default function ChatPrompt(props) {
   const { session } = useSession();
   const isDemo = () => !!session()?.user?.isInteractiveDemo;
-  const [promptsOpen, setPromptsOpen] = createSignal(!props.value?.trim());
+  const [promptsOpen, setPromptsOpen] = createSignal(
+    (() => {
+      try {
+        return sessionStorage.getItem('agentzuno-demo-prompts-open') !== 'false';
+      } catch {
+        return true;
+      }
+    })(),
+  );
+  function togglePrompts(open) {
+    setPromptsOpen(open);
+    if (isDemo()) {
+      try {
+        sessionStorage.setItem('agentzuno-demo-prompts-open', String(open));
+      } catch {}
+    }
+  }
   const [demo] = createResource(isDemo, () => api('/api/demo'));
   let fileInput;
   let messageInput;
@@ -40,7 +56,7 @@ export default function ChatPrompt(props) {
         onSubmit={(event) => {
           event.preventDefault();
           if (isReady()) {
-            setPromptsOpen(false);
+            togglePrompts(false);
             props.onSubmit(event);
           }
         }}
@@ -50,7 +66,7 @@ export default function ChatPrompt(props) {
           <details
             class="demo-prompt-picker"
             open={promptsOpen()}
-            onToggle={(event) => setPromptsOpen(event.currentTarget.open)}
+            onToggle={(event) => togglePrompts(event.currentTarget.open)}
           >
             <summary>Suggested Prompts</summary>
             <div class="demo-prompt-options" aria-label="Predefined demo prompts">

@@ -1,3 +1,4 @@
+import ApprovalDecisionForm from './ApprovalDecisionForm.jsx';
 import RequestTasks from './RequestTasks.jsx';
 import RequestAttachments from './RequestAttachments.jsx';
 import { Portal } from 'solid-js/web';
@@ -34,7 +35,6 @@ export default function RequestPanel(props) {
     () => access()?.role === 'admin',
     () => api('/api/helpdesk/groups'),
   );
-  const [approvalComments, setApprovalComments] = createSignal({});
   const [ticket, { refetch }] = createResource(
     () => `${requestId()}:${props.refreshKey || 0}`,
     () => api(`/api/helpdesk/requests/${requestId()}`),
@@ -496,44 +496,23 @@ export default function RequestPanel(props) {
                         <section class="workflow-approval">
                           <h3>Workflow Approval</h3>
                           <p>{step.input.reason}</p>
-                          <label>
-                            Rejection Comment{step.requireRejectionComment ? '*' : ''}
-                            <textarea
-                              maxlength="2000"
-                              value={approvalComments()[`${run.id}:${step.id}`] || ''}
-                              onInput={(event) =>
-                                setApprovalComments((values) => ({
-                                  ...values,
-                                  [`${run.id}:${step.id}`]: event.currentTarget.value,
-                                }))
+                          <ApprovalDecisionForm
+                            requireComment={step.requireRejectionComment}
+                            onDecision={async (approved, comment) => {
+                              try {
+                                await api(`/api/helpdesk/workflow-runs/${run.id}/decisions`, {
+                                  method: 'POST',
+                                  body: JSON.stringify({ stepId: step.id, approved, comment }),
+                                });
+                                await refreshRuns();
+                                props.onChanged?.();
+                                return true;
+                              } catch (error) {
+                                setError(error.message);
+                                return false;
                               }
-                            />
-                          </label>
-                          <For each={[true, false]}>
-                            {(approved) => (
-                              <button
-                                class="workspace-button secondary small"
-                                onClick={async () => {
-                                  try {
-                                    await api(`/api/helpdesk/workflow-runs/${run.id}/decisions`, {
-                                      method: 'POST',
-                                      body: JSON.stringify({
-                                        stepId: step.id,
-                                        approved,
-                                        comment: approvalComments()[`${run.id}:${step.id}`] || '',
-                                      }),
-                                    });
-                                    await refreshRuns();
-                                    props.onChanged?.();
-                                  } catch (error) {
-                                    setError(error.message);
-                                  }
-                                }}
-                              >
-                                {approved ? 'Approve' : 'Reject'}
-                              </button>
-                            )}
-                          </For>
+                            }}
+                          />
                         </section>
                       )}
                     </For>
@@ -644,32 +623,16 @@ export default function RequestPanel(props) {
                           access()?.canApprove
                         }
                       >
-                        <ValidatedForm
-                          onSubmit={(event) => {
-                            event.preventDefault();
+                        <ApprovalDecisionForm
+                          disabled={saving()}
+                          onDecision={(approved, comment) =>
                             save('/approval-decisions', 'POST', {
                               approvalId: approval.id,
-                              decision: event.submitter.value,
-                            });
-                          }}
-                        >
-                          <button
-                            class="workspace-button small"
-                            name="decision"
-                            value="approved"
-                            disabled={saving()}
-                          >
-                            Approve
-                          </button>
-                          <button
-                            class="workspace-button secondary small"
-                            name="decision"
-                            value="rejected"
-                            disabled={saving()}
-                          >
-                            Reject
-                          </button>
-                        </ValidatedForm>
+                              decision: approved ? 'approved' : 'rejected',
+                              comment,
+                            })
+                          }
+                        />
                       </Show>
                     </section>
                   )}

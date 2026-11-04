@@ -15,7 +15,7 @@ export default function ChatMarkdown(props) {
       document,
     );
     const isDemo = /^\/demo(?:\/|$)/.test(window.location.pathname);
-    if (!props.externalLinksNewTab && !isDemo) return rendered;
+    if (!props.externalLinksNewTab && !props.scrollTables && !isDemo) return rendered;
     const root = document.createElement('div');
     root.innerHTML = rendered;
     for (const link of root.querySelectorAll('a[href]')) {
@@ -29,6 +29,17 @@ export default function ChatMarkdown(props) {
       ) {
         link.target = '_blank';
         link.rel = 'noopener noreferrer';
+      }
+    }
+    if (props.scrollTables) {
+      for (const table of root.querySelectorAll('table')) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'docs-table-scroll';
+        wrapper.tabIndex = 0;
+        wrapper.setAttribute('role', 'region');
+        wrapper.setAttribute('aria-label', 'Scrollable reference table');
+        table.replaceWith(wrapper);
+        wrapper.append(table);
       }
     }
     return root.innerHTML;

@@ -44,7 +44,8 @@ test('interactive demo uses real admin APIs with isolated records and blocks liv
     assert.notEqual(second.body.user.workspaceId, session.body.user.workspaceId);
     assert.equal((await call(`/api/helpdesk/workflows/${first.id}`)).status, 404);
     cookie = ownCookie;
-    const detail = await call(`/api/helpdesk/workflows/${first.id}`);
+    const allWorkflows = await call('/api/helpdesk/workflows');
+    const detail = { body: allWorkflows.body.find((item) => item.id === first.id) };
     const draft = await call('/api/helpdesk/workflows', 'POST', {
       name: detail.body.name,
       department: detail.body.department,
@@ -57,6 +58,20 @@ test('interactive demo uses real admin APIs with isolated records and blocks liv
       definition: detail.body.definition,
     });
     assert.equal(draft.status, 201, JSON.stringify(draft.body));
+    const general = await call(`/api/records/knowledge-base/${session.body.user.workspaceId}`);
+    assert.equal(general.status, 200);
+    const renamed = await call(
+      `/api/records/knowledge-base/${session.body.user.workspaceId}`,
+      'PATCH',
+      { name: 'Company Knowledge', description: 'Employee guidance' },
+    );
+    assert.equal(renamed.status, 200, JSON.stringify(renamed.body));
+    assert.equal(renamed.body.name, 'Company Knowledge');
+    const bases = await call('/api/helpdesk/lists/bases?list=1');
+    assert.equal(
+      bases.body.rows.filter((item) => item.id === session.body.user.workspaceId).length,
+      1,
+    );
     const auditOptions = await call(
       '/api/helpdesk/audit/workflows?q=' + encodeURIComponent(draft.body.name),
     );

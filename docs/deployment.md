@@ -54,3 +54,16 @@ If you add a custom domain, configure it on the Render web service and set the A
 The Blueprint uses paid Standard API, worker, vector and embedding services and a Starter web proxy. These are starting allocations, not a verified capacity guarantee for 500–1,000 employees. Load-test simultaneous chats, workflows and ingestion before rollout. Render bills services, persistent disks and applicable workspace/network usage separately; Atlas and AI usage add costs. Disk-backed services are single-instance and redeployments can interrupt them. Use Atlas backups, export/back up Qdrant as appropriate, and test recovery. This topology does not provide full high availability.
 
 Validate the Blueprint with Render's dashboard or `render blueprints validate render.yaml` before deployment. For troubleshooting, check the web `/health` endpoint, API logs, worker heartbeat with `node src/workerHealth.js` in the worker shell, queue depth and failed jobs. A successful web health check confirms the proxy is serving, not the health of every downstream service. Container image tags track upstream updates; review and pin tested digests for your production release.
+
+## Publish the website on GitHub Pages
+
+The included [GitHub Actions](https://docs.github.com/en/actions) workflow builds the Vite site and publishes the `dist` folder. GitHub Pages serves the static website; the API, database, worker, live chat, and authenticated workspace need a separate application host.
+
+1. In the repository, open **Settings → Pages** and set **Source** to **GitHub Actions**.
+2. Commit and push `.github/workflows/deploy-pages.yml` and your website changes to `main`.
+3. Open **Actions → Deploy website to GitHub Pages** and wait for the deployment to succeed. You can also run it manually.
+4. Under **Settings → Pages**, enter your custom domain, check DNS again, and enable **Enforce HTTPS** once GitHub provisions its certificate.
+
+For local verification, run `npm run build` followed by `npm start`. Do not deploy the source `index.html` directly: it references JSX that browsers cannot compile. The workflow deploys the built files automatically; you do not need to commit `dist`. The included `404.html` allows the client router to display direct links, although GitHub Pages still returns an HTTP 404 for those paths.
+
+See the [Vite GitHub Pages deployment guide](https://vite.dev/guide/static-deploy.html#github-pages) and [GitHub custom-domain instructions](https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site).

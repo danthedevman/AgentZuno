@@ -26,11 +26,11 @@ AgentZuno is self-hosted and uses MongoDB or PostgreSQL, plus Redis. AI provider
 
 Screenshots use fictional development records.
 
-![Catalog with searchable request tiles and collapsible categories](public/help/readme-catalog-dark.png)
+![Support chat with its submitted request and details panel](public/help/readme-request-chat-dark.png)
 
-Keep assigned work and workload reports together.
+Build and review a workflow alongside the Admin conversation.
 
-![My Work dashboard with assigned requests](public/help/readme-my-work-dark.png)
+![Workflow builder with its request form, approval, and routing steps](public/help/readme-workflow-builder-dark.png)
 
 ## Get started
 
@@ -51,7 +51,7 @@ Deploy on Render with the included [`render.yaml`](render.yaml) Blueprint. See [
 - **User:** Ask for help, browse permitted knowledge and catalog items, and submit and follow requests.
 - **Read Only:** Inspect permitted records and reports without changing operational data or running AI conversations.
 
-Approval permission and an explicit assignment are required to decide approvals. Role access does not override private-file or knowledge permissions. See [roles and everyday features](docs/roles-and-features.md) for step-by-step instructions.
+Approval permission and an explicit assignment are required to decide approvals. Role access does not override private-file or knowledge permissions. See [roles and everyday features](docs/roles-and-features.md) and the [Knowledge guide](docs/knowledge.md) for step-by-step instructions.
 
 ## Learn more
 

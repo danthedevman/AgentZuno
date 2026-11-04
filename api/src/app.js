@@ -139,7 +139,12 @@ export function createApi(options = {}) {
         });
       const types = Object.keys(keys).filter((type) => sections.has(keys[type]));
       for (const record of types.length ? await store.records(user.id, types) : [])
-        if (keys[record.type]) workspace[keys[record.type]].unshift(record);
+        if (keys[record.type]) {
+          const items = workspace[keys[record.type]];
+          const index = items.findIndex((item) => item.id === record.id);
+          if (index < 0) items.unshift(record);
+          else items.splice(index, 1, record);
+        }
     }
     for (const section of [
       'articles',

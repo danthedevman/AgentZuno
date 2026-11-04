@@ -426,15 +426,19 @@ export function createHelpdeskService(store, chats) {
       changes.status = 'waiting-for-approval';
       event = { type: 'approval-requested', approvalId: approval.id };
     } else if (action === 'decision') {
-      fields(input, ['version', 'approvalId', 'decision']);
+      fields(input, ['version', 'approvalId', 'decision', 'comment']);
       const approval = record.approvals.find(
         (item) => item.id === input.approvalId && item.status === 'pending',
       );
       if (!approval) fail('Pending approval not found.', 404);
       const decision = choice(input.decision, ['approved', 'rejected'], 'decision');
+      const comment =
+        input.comment === undefined || input.comment === ''
+          ? ''
+          : text(input.comment, 'Comment', 2000);
       changes.approvals = record.approvals.map((item) =>
         item.id === approval.id
-          ? { ...item, status: decision, decidedBy: user.id, decidedAt: now }
+          ? { ...item, status: decision, decidedBy: user.id, decidedAt: now, comment }
           : item,
       );
       changes.status = 'open';

@@ -8476,3 +8476,37 @@ button.catalog-item-card {
 .audit-report-filters > :first-child {
   width: min(360px, 100%);
 }
+.knowledge-base-edit-permissions {
+  margin-top: 32px;
+}
+
+.approval-decision-form,
+.approval-decision-form label,
+.approval-decision-actions {
+  display: grid;
+  gap: 12px;
+}
+.approval-decision-form label {
+  font-size: 12px;
+}
+.approval-decision-form textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 112px;
+  resize: vertical;
+  padding: 12px 14px;
+  border: 1px solid var(--workspace-line);
+  border-radius: 10px;
+  background: var(--workspace-bg);
+  color: var(--workspace-ink);
+  font: inherit;
+  line-height: 1.6;
+}
+.approval-decision-form textarea:focus-visible {
+  outline: 2px solid #818cf8;
+  outline-offset: 2px;
+}
+.approval-decision-actions .workspace-button {
+  width: 100%;
+  justify-content: center;
+}

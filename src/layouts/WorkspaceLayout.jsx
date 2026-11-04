@@ -31,7 +31,6 @@ const navigation = [
   ['/workspace/chat', 'chat', 'Chat'],
   ['/workspace/inbox', 'inbox', 'Inbox'],
   ['/workspace/catalog', 'catalog', 'Catalog'],
-  ['/workspace/approvals', 'check', 'Approvals'],
   ['/workspace/requests', 'request', 'My Requests'],
   ['/workspace/workflows', 'workflow', 'Workflows'],
   ['/workspace/data', 'data', 'Data Tables'],
@@ -101,7 +100,6 @@ function WorkspaceShell(props) {
     navigation.filter(([path]) => {
       if (path.endsWith('/my-work'))
         return !access.error && ['admin', 'agent'].includes(access()?.role);
-      if (path.endsWith('/approvals')) return !access.error && access()?.canApprove === true;
       if (
         path.endsWith('/catalog') ||
         path.endsWith('/requests') ||

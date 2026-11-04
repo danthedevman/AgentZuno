@@ -61,7 +61,7 @@ Tasks break fulfillment into smaller pieces. Admins and authorized Agents can cr
 
 ## Decide an approval — assigned approver
 
-Open Approvals or the assigned approval in Inbox. Review the request and its submitted answers, then choose Approve or Reject. Enter a rejection comment when the workflow requires one. The server rechecks your permission and assignment before accepting the decision. Approval resumes the published workflow; rejection follows its code's rejection path.
+Open the assigned approval in Inbox. Review the request and its submitted answers, then choose Approve or Reject. Selecting Reject opens a comment box. Enter a comment when required, then select Confirm Rejection. Cancel returns to the decision buttons. The server rechecks your permission and assignment before accepting the decision. Approval resumes the published workflow; rejection follows its code's rejection path.
 
 ## Publish and read knowledge
 

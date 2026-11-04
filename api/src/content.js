@@ -58,13 +58,24 @@ export function installContentRoutes(app, auth, store, designer = {}) {
   app.get('/api/records/:type/:id', requireUser, async (request, response) => {
     if (!['knowledge-base', 'file', 'connection', 'topic'].includes(request.params.type))
       return response.status(404).json({ error: 'Unknown record type.' });
-    const record = await store.record(request.user.id, request.params.id, request.params.type);
+    const record =
+      (await store.record(request.user.id, request.params.id, request.params.type)) ||
+      (request.params.type === 'knowledge-base' && request.params.id === request.user.workspaceId
+        ? {
+            ...(await readWorkspace(request.user)).knowledgeBases[0],
+            type: 'knowledge-base',
+            isDefault: true,
+          }
+        : null);
     if (!record) return response.status(404).json({ error: 'Record not found in your workspace.' });
     response.json(record);
   });
   async function saveRecord(request, response) {
     const existing = request.params.id
-      ? await store.record(request.user.id, request.params.id, request.params.type)
+      ? (await store.record(request.user.id, request.params.id, request.params.type)) ||
+        (request.params.type === 'knowledge-base' && request.params.id === request.user.workspaceId
+          ? { id: request.params.id, isDefault: true }
+          : null)
       : null;
     if (request.params.id && !existing)
       return response.status(404).json({ error: 'Record not found in your workspace.' });
@@ -100,9 +111,21 @@ export function installContentRoutes(app, auth, store, designer = {}) {
         base: request.user.isDemo ? `${request.user.id}-team` : request.user.workspaceId,
       });
     }
-    const saved = existing
-      ? await store.updateRecord(request.user.id, existing.id, type, record)
-      : await store.saveRecord(request.user.id, record);
+    let saved;
+    if (existing?.isDefault && type === 'knowledge-base') {
+      await designer.integrations
+        .collection('records')
+        .updateOne(
+          { _id: new ObjectId(existing.id), ownerId: request.user.id, type },
+          { $set: { ...record, updatedAt: new Date() }, $setOnInsert: { createdAt: new Date() } },
+          { upsert: true },
+        );
+      saved = await store.record(request.user.id, existing.id, type);
+    } else {
+      saved = existing
+        ? await store.updateRecord(request.user.id, existing.id, type, record)
+        : await store.saveRecord(request.user.id, record);
+    }
     response.status(existing ? 200 : 201).json(saved);
   }
   app.post('/api/records/:type', requireUser, saveRecord);

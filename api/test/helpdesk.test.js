@@ -149,11 +149,18 @@ test(
       const decided = await service.update(
         user,
         created.id,
-        { version: 2, approvalId: approval.approvals[0].id, decision: 'approved' },
+        {
+          version: 2,
+          approvalId: approval.approvals[0].id,
+          decision: 'rejected',
+          comment: 'Access is not needed',
+        },
         'decision',
       );
       assert.equal(decided.approvals[0].executionStatus, 'not-executed');
       assert.equal(decided.approvals[0].decidedBy, user.id);
+      assert.equal(decided.approvals[0].comment, 'Access is not needed');
+      assert.equal(decided.approvals[0].status, 'rejected');
       await assert.rejects(service.update(user, created.id, { version: 2, status: 'resolved' }), {
         status: 409,
       });
