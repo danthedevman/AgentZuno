@@ -1,3 +1,4 @@
+import RecordActivity from '../../components/RecordActivity.jsx';
 import BackLink from '../../components/BackLink.jsx';
 import Skeleton from '../../components/Skeleton.jsx';
 import { For, Show, createEffect, createResource, createSignal } from 'solid-js';
@@ -6,7 +7,7 @@ import { api } from '../../services/api.js';
 import { useWorkspace } from '../../context/WorkspaceContext.jsx';
 import { useWorkspacePath } from '../../services/workspaceRoutes.js';
 import { useToasts } from '../../context/ToastContext.jsx';
-import PageHeading from '../../components/PageHeading.jsx';
+import RecordHeader from '../../components/RecordHeader.jsx';
 import ValidatedForm from '../../components/ValidatedForm.jsx';
 import DataRecordField from '../../components/DataRecordField.jsx';
 import ToastMessage from '../../components/ToastMessage.jsx';
@@ -24,7 +25,7 @@ export default function DataRecordPage() {
     () => isAdmin() && params.id,
     (id) => api(`/api/helpdesk/data/tables/${id}`),
   );
-  const [record] = createResource(
+  const [record, { refetch }] = createResource(
     () => isAdmin() && !isNew() && `${params.id}/records/${params.recordId}`,
     (id) => api(`/api/helpdesk/data/tables/${id}`),
   );
@@ -34,6 +35,16 @@ export default function DataRecordPage() {
   });
   const [values, setValues] = createSignal({});
   const [saving, setSaving] = createSignal(false);
+  const [editing, setEditing] = createSignal(false);
+  const isEditing = () => isNew() || editing();
+  const recordTitle = () => {
+    const saved = !record.error && record()?.values;
+    const keys = ['name', 'title', 'number', 'assetTag', 'hostname', 'code'];
+    const value = keys
+      .map((key) => saved?.[key])
+      .find((value) => typeof value === 'string' && value.trim());
+    return value?.trim().slice(0, 160) || (!table.error && table()?.name) || 'Record';
+  };
   createEffect(() => {
     if (!record.error && record()) setValues({ ...record().values });
     else if (isNew()) setValues({});
@@ -58,7 +69,11 @@ export default function DataRecordPage() {
         },
       );
       notify({ tone: 'success', message: 'Record saved.' });
-      navigate(path(`/workspace/data/${params.id}`));
+      if (isNew()) navigate(path(`/workspace/data/${params.id}`));
+      else {
+        setEditing(false);
+        await refetch();
+      }
     } catch (error) {
       notify({ tone: 'error', message: error.message });
     } finally {
@@ -78,16 +93,27 @@ export default function DataRecordPage() {
         <BackLink href={`/workspace/data/${params.id}`}>
           {(!table.error && table()?.name) || 'Data Table'}
         </BackLink>
-        <div class="connections-heading">
-          <PageHeading title={isNew() ? 'Add Record' : 'Edit Record'} />
-        </div>
+        <RecordHeader
+          title={isNew() ? 'Add Record' : recordTitle()}
+          context={!isNew() && table()?.name !== recordTitle() ? table()?.name : undefined}
+        >
+          <Show when={!isEditing() && !record.error && record()}>
+            <button
+              type="button"
+              class="workspace-button secondary small"
+              onClick={() => setEditing(true)}
+            >
+              Edit
+            </button>
+          </Show>
+        </RecordHeader>
         <Show when={table.error || record.error}>
           <ToastMessage tone="error">{table.error?.message || record.error?.message}</ToastMessage>
         </Show>
         <Show when={table.loading || (!isNew() && record.loading)}>
           <div class="data-record-loading" aria-label="Loading record fields" aria-busy="true">
             <Skeleton label="Loading table name" lines={1} />
-            <div class="data-record-fields">
+            <div class="data-record-fields record-property-list">
               <For each={Array.from({ length: 8 })}>
                 {() => (
                   <div class="data-field-skeleton">
@@ -103,7 +129,9 @@ export default function DataRecordPage() {
           </div>
         </Show>
         <Show when={!table.error && table() && (isNew() || (!record.error && record()))}>
-          <h2>{table().name}</h2>
+          <Show when={isNew()}>
+            <h2>{table().name}</h2>
+          </Show>
           <Show when={record()?.sourceHref}>
             <A
               class="workspace-button secondary small"
@@ -114,31 +142,77 @@ export default function DataRecordPage() {
               Open Original Record →
             </A>
           </Show>
-          <ValidatedForm class="create-form" onSubmit={save}>
-            <div class="data-record-fields">
+          <ValidatedForm class="create-form record-surface record-property-sheet" onSubmit={save}>
+            <div class="data-record-fields record-property-list">
               <For each={table().fields}>
                 {(field) => (
-                  <DataRecordField
-                    includeDemo={Boolean(record()?.demoDatasetId)}
-                    readOnly={table().readOnlyFields?.includes(field.id)}
-                    field={field}
-                    value={values()[field.id]}
-                    onChange={(value) =>
-                      setValues((previous) => ({ ...previous, [field.id]: value }))
-                    }
-                  />
+                  <div
+                    classList={{
+                      'record-description-block':
+                        !isEditing() &&
+                        [
+                          'description',
+                          'details',
+                          'notes',
+                          'routingInstructions',
+                          'routing-instructions',
+                        ].includes(field.id),
+                      'record-field-full': [
+                        'name',
+                        'title',
+                        'description',
+                        'details',
+                        'notes',
+                        'routingInstructions',
+                        'routing-instructions',
+                      ].includes(field.id),
+                    }}
+                  >
+                    <DataRecordField
+                      includeDemo={Boolean(record()?.demoDatasetId)}
+                      detailsOnly={!isEditing()}
+                      readOnly={!isEditing() || table().readOnlyFields?.includes(field.id)}
+                      field={field}
+                      value={values()[field.id]}
+                      onChange={(value) =>
+                        setValues((previous) => ({ ...previous, [field.id]: value }))
+                      }
+                    />
+                  </div>
                 )}
               </For>
             </div>
-            <div class="helpdesk-actions">
-              <button class="workspace-button" disabled={saving()}>
-                {saving() ? 'Saving…' : 'Save Record'}
-              </button>
-              <A class="workspace-button secondary" href={`/workspace/data/${params.id}`}>
-                Cancel
-              </A>
-            </div>
+            <Show when={isEditing()}>
+              <div class="helpdesk-actions">
+                <button class="workspace-button" disabled={saving()}>
+                  {saving() ? 'Saving…' : 'Save Record'}
+                </button>
+                <Show
+                  when={!isNew()}
+                  fallback={
+                    <A class="workspace-button secondary" href={`/workspace/data/${params.id}`}>
+                      Cancel
+                    </A>
+                  }
+                >
+                  <button
+                    type="button"
+                    class="workspace-button secondary"
+                    disabled={saving()}
+                    onClick={() => {
+                      setValues({ ...record().values });
+                      setEditing(false);
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </Show>
+              </div>
+            </Show>
           </ValidatedForm>
+          <Show when={!isNew()}>
+            <RecordActivity kind="data" recordId={params.recordId} tableId={params.id} />
+          </Show>
           <Show when={!isNew() && params.id === 'ref-catalog-category'}>
             <section class="category-related-workflows">
               <h2>Related Workflows</h2>

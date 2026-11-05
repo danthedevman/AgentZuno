@@ -1,3 +1,4 @@
+import { documentationPages, documentationPath } from './docsNavigation.js';
 export const publicPages = [
   {
     path: '',
@@ -11,10 +12,9 @@ export const publicPages = [
     description:
       'Learn how to install AgentZuno, configure your AI provider, manage knowledge, and build conversational help desk workflows with the TypeScript SDK.',
   },
-  {
-    path: 'docs/workflows',
-    title: 'Workflow SDK Documentation | AgentZuno',
-    description:
-      'Build and run AgentZuno workflows with TypeScript. Learn about request forms, task assignment, approvals, permissions, and sandboxed execution.',
-  },
+  ...documentationPages.map((page) => ({
+    path: documentationPath(page).slice(1),
+    title: `${page.title} | AgentZuno Docs`,
+    description: page.description,
+  })),
 ];

@@ -35,7 +35,10 @@ export default function ConnectorApplicationForm(props) {
           await props.onSaved();
           notify({
             tone: 'success',
-            message: 'Connection details saved. Continue with authorization.',
+            message:
+              props.channel.id === 'teams'
+                ? 'Connection details saved. Configure the Teams bot below.'
+                : 'Connection details saved. Continue with authorization.',
           });
         } catch (error) {
           notify({ tone: 'error', message: error.message });
@@ -90,7 +93,7 @@ export default function ConnectorApplicationForm(props) {
         </label>
       </Show>
       <Show when={props.channel.connected}>
-        <p>Saving application details disconnects this connector until you authorize it again.</p>
+        <p>Saving application details requires you to confirm the connector settings again.</p>
       </Show>
       <button class="workspace-button small" disabled={saving()}>
         {saving() ? 'Saving…' : 'Save Connection Details'}

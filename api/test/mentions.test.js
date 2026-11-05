@@ -107,7 +107,7 @@ async function verify(database) {
     assert.equal(comment.body.notifications, undefined);
     const inbox = await call('/inbox?list=1', 'GET', null, 'Requester');
     assert.equal(inbox.body.total, 1);
-    assert.equal(inbox.body.rows[0].inboxNotice, 'Mentioned You');
+    assert.equal(inbox.body.rows[0].inboxNotice, 'Mentioned You in a Comment');
     assert.equal((await call('/inbox/unread', 'GET', null, 'Requester')).body.unread, true);
     assert.equal((await call('/inbox/viewed', 'POST', {}, 'Requester')).status, 200);
     assert.equal((await call('/inbox/unread', 'GET', null, 'Requester')).body.unread, false);

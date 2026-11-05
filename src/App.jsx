@@ -58,7 +58,7 @@ export default function App() {
         component={import.meta.env.VITE_STATIC_SITE === 'true' ? HomePage : InstallationPage}
       />
       <Route path="/docs" component={DocsPage} />
-      <Route path="/docs/workflows" component={DocsPage} />
+      <Route path="/docs/:guide" component={DocsPage} />
       <Route path="/login" component={LoginPage} />
       <Route path="/preview/:workspaceId/proposals/:id" component={ArticlePreviewPage} />
       <Route path="/invite" component={InvitePage} />

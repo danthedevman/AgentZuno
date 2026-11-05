@@ -259,7 +259,7 @@ test(
         helpdeskRequestId: ownId,
       };
       const validDraft = await chats.create(
-        { id: agent.id, workspaceId: workspace },
+        { id: agent.id, workspaceId: workspace, role: 'agent' },
         { text: 'Draft reply', requestId: randomUUID() },
         context,
       );
@@ -274,7 +274,7 @@ test(
           .collection('helpdeskMembers')
           .updateOne({ workspaceId: workspace, userId: agent.id }, { $set: { active: false } });
       const interruptedDraft = await chats.create(
-        { id: agent.id, workspaceId: workspace },
+        { id: agent.id, workspaceId: workspace, role: 'agent' },
         { text: 'Draft reply', requestId: randomUUID() },
         context,
       );
@@ -290,7 +290,7 @@ test(
         .updateOne({ workspaceId: workspace, userId: agent.id }, { $set: { active: true } });
       duringGeneration = async () => {};
       const queuedDraft = await chats.create(
-        { id: agent.id, workspaceId: workspace },
+        { id: agent.id, workspaceId: workspace, role: 'agent' },
         { text: 'Draft a support reply', requestId: randomUUID() },
         { providerOwnerId: admin.id, helpdeskPurpose: 'request-draft', helpdeskRequestId: ownId },
       );

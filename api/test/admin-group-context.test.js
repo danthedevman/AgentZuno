@@ -8,7 +8,7 @@ import { createPostgresDatabase } from '../src/storage/postgres.js';
 import { postgresConnection } from '../src/storage/configuration.js';
 import { createIntegrationStore } from '../src/integrationStore.js';
 import { createChatService } from '../src/chat.js';
-import { applyAdminGroupAction } from '../src/adminGroupActions.js';
+import { createAdminGroup } from '../src/adminGroupActions.js';
 import { toTypeScript } from '../sdk/workflows/index.js';
 
 async function verify(database) {
@@ -45,18 +45,51 @@ async function verify(database) {
     store,
     async (job) => pending.push(job),
     async (url, options) => {
+      const body = JSON.parse(options.body);
+      if (!body.input.some((item) => item.type === 'function_call_output'))
+        return Response.json({
+          output: [
+            {
+              type: 'function_call',
+              call_id: 'salesforce-group',
+              name: 'createGroup',
+              arguments: JSON.stringify({
+                name: 'Salesforce Support',
+                description: '',
+                routingInstructions: '',
+                assignmentEnabled: true,
+                approvalEnabled: true,
+              }),
+            },
+          ],
+        });
+      if (
+        !body.input.some(
+          (item) => item.type === 'function_call_output' && item.call_id === 'workflow-draft',
+        )
+      )
+        return Response.json({
+          output: [
+            {
+              type: 'function_call',
+              call_id: 'workflow-draft',
+              name: 'proposeWorkflow',
+              arguments: JSON.stringify({ source }),
+            },
+          ],
+        });
       const group = await database
         .collection('approvalGroups')
         .findOne({ ...scope, name: 'Salesforce Support' });
       assert.ok(group, 'The group must be persisted before generating the workflow');
-      assert.match(JSON.parse(options.body).instructions, /Server-confirmed group result: Created/);
+      assert.ok(body.input.some((item) => item.type === 'function_call_output'));
       return Response.json({
         output: [
           {
             content: [
               {
                 type: 'output_text',
-                text: 'I cannot create the group myself.\n```typescript\n' + source + '\n```',
+                text: 'Your workflow draft is ready to review.',
               },
             ],
           },
@@ -85,91 +118,39 @@ async function verify(database) {
     const completed = await chats.get(owner, chat.id);
     assert.equal(completed.status, 'complete', JSON.stringify(completed));
     assert.match(completed.messages.at(-1).text, /^Created \[Salesforce Support\]/);
-    assert.match(completed.messages.at(-1).text, /```typescript/);
+    assert.equal(completed.messages.at(-1).proposals.workflow.source, source);
     assert.doesNotMatch(completed.messages.at(-1).text, /cannot create/);
     const persisted = await database.collection('chats').findOne({ _id: new ObjectId(chat.id) });
-    const followup = {
-      ...persisted,
-      responseId: randomUUID(),
-      messages: [...persisted.messages, { role: 'user', text: 'can you add the group' }],
+    const followup = { ...persisted, responseId: randomUUID() };
+    const input = {
+      name: 'Salesforce Support',
+      description: '',
+      routingInstructions: '',
+      assignmentEnabled: true,
+      approvalEnabled: true,
     };
-    assert.match(
-      await applyAdminGroupAction(store, followup, 'I am proposing it again'),
-      /^Found the existing group \[Salesforce Support\]/,
-    );
+    assert.equal((await createAdminGroup(store, followup, input)).status, 'existing');
     assert.equal(
       await database
         .collection('approvalGroups')
         .countDocuments({ ...scope, name: 'Salesforce Support' }),
       1,
     );
+    const iam = { ...input, name: 'IAM' };
+    assert.equal((await createAdminGroup(store, followup, iam)).status, 'created');
     assert.equal(
-      await database
-        .collection('governanceAudit')
-        .countDocuments({ ...scope, action: 'admin-chat-create-group', outcome: 'completed' }),
-      1,
+      (await createAdminGroup(store, { ...followup, responseId: randomUUID() }, iam)).status,
+      'existing',
     );
-    const missing = {
-      ...followup,
-      messages: [
-        { role: 'user', text: prompt.replaceAll('salesforce', 'analytics') },
-        { role: 'user', text: 'can you add the group' },
-      ],
-    };
-    assert.match(await applyAdminGroupAction(store, missing, ''), /^Created \[Analytics Support\]/);
-    const iamMessages = [
-      {
-        role: 'user',
-        text: 'create a task for that group to provision the role, and one for the IAM team to update in Okta',
-      },
-      { role: 'user', text: 'what about the IAM team' },
-      { role: 'user', text: 'create it IAM' },
-    ];
-    assert.match(
-      await applyAdminGroupAction(store, { ...followup, messages: iamMessages }, ''),
-      /^Created \[IAM\]/,
-    );
-    assert.match(
-      await applyAdminGroupAction(
-        store,
-        {
-          ...followup,
-          responseId: randomUUID(),
-          messages: [...iamMessages, { role: 'user', text: 'create it now' }],
-        },
-        '',
-      ),
-      /^Found the existing group \[IAM\]/,
-    );
-    assert.equal(
-      await database.collection('approvalGroups').countDocuments({ ...scope, name: 'IAM' }),
-      1,
-    );
-    for (const text of [
-      "Don't create the group",
-      'Describe the group',
-      'How can I create the group?',
-    ]) {
-      const denied = {
-        ...followup,
-        messages: [
-          { role: 'user', text: prompt.replaceAll('salesforce', 'forbidden') },
-          { role: 'user', text },
-        ],
-      };
-      await applyAdminGroupAction(store, denied, '');
-      assert.equal(
-        await database
-          .collection('approvalGroups')
-          .countDocuments({ ...scope, name: 'Forbidden Support' }),
-        0,
+    for (const role of ['user', 'agent', 'read-only'])
+      await assert.rejects(
+        createAdminGroup(store, { ...followup, actionRole: role }, { ...input, name: 'Forbidden' }),
+        { status: 403 },
       );
-    }
-    await assert.rejects(applyAdminGroupAction(store, { ...missing, actionRole: 'user' }, ''), {
-      status: 403,
-    });
-    const other = { ...missing, workspaceId: String(new ObjectId()) };
-    await assert.rejects(applyAdminGroupAction(store, other, ''), { status: 403 });
+    await assert.rejects(
+      createAdminGroup(store, { ...followup, workspaceId: String(new ObjectId()) }, input),
+      { status: 403 },
+    );
   } finally {
     await store.close();
     if (oldKey === undefined) delete process.env.CREDENTIAL_ENCRYPTION_KEY;

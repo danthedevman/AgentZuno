@@ -1,4 +1,4 @@
-// Keep completed illustrations readable before fading into the next visible cycle.
+// Keep panel shells visible while their inner content fades into the next cycle.
 export function repeatMarketingAnimation(element, start, reset, duration) {
   let timer;
   let visible = false;

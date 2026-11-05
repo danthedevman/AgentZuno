@@ -18,15 +18,23 @@ export default function MentionTextarea(props) {
   const [start, setStart] = createSignal(0);
   const [active, setActive] = createSignal(0);
   const [selections, setSelections] = createSignal({});
-  const selectionKey = () => `${props.requestId}:${props.kind}`;
+  const endpoint = () =>
+    props.mentionEndpoint || `/api/helpdesk/requests/${props.requestId}/mention-options`;
+  const selectionKey = () => `${endpoint()}:${props.kind}`;
   const selected = () => selections()[selectionKey()] || [];
   const setSelected = (value) =>
     setSelections((current) => ({ ...current, [selectionKey()]: value }));
   createEffect(() => {
-    props.requestId;
+    endpoint();
     props.kind;
     setQuery(null);
     props.onMentionsChange(untrack(selected).map((person) => person.value));
+  });
+  createEffect(() => {
+    if (!props.value && untrack(selected).length) {
+      setSelected([]);
+      props.onMentionsChange([]);
+    }
   });
   createEffect(() => {
     const value = query();
@@ -37,10 +45,10 @@ export default function MentionTextarea(props) {
     onCleanup(() => clearTimeout(timer));
   });
   const [options] = createResource(
-    () => search() !== null && `${props.requestId}:${props.kind}:${search()}`,
+    () => search() !== null && `${endpoint()}:${props.kind}:${search()}`,
     () =>
       api(
-        `/api/helpdesk/requests/${props.requestId}/mention-options?${new URLSearchParams({ kind: props.kind, q: search() })}`,
+        `${endpoint()}?${new URLSearchParams({ kind: props.kind, q: search(), ...(props.tableId ? { tableId: props.tableId } : {}) })}`,
       ),
   );
   const visibleOptions = () =>

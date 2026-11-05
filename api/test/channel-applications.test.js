@@ -60,9 +60,13 @@ test(
           input.clientSecret,
         );
         assert.equal((await channelApplication(store, other, provider)).clientSecret, '');
-        const authorization = await service.start(admin, { provider });
-        assert.equal(new URL(authorization.url).searchParams.get('client_id'), input.clientId);
-        assert.ok(!authorization.url.includes(input.clientSecret));
+        if (provider === 'teams')
+          await assert.rejects(service.start(admin, { provider }), { status: 400 });
+        else {
+          const authorization = await service.start(admin, { provider });
+          assert.equal(new URL(authorization.url).searchParams.get('client_id'), input.clientId);
+          assert.ok(!authorization.url.includes(input.clientSecret));
+        }
         await assert.rejects(
           saveChannelApplication(store, { ...admin, role: 'user' }, provider, input),
           { status: 403 },

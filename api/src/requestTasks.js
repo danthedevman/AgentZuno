@@ -60,6 +60,20 @@ export async function taskInboxRecords(store, user) {
       href: `/workspace/tasks/${task._id}`,
     }));
 }
+export function validateTaskDueDate(value) {
+  if (value === undefined || value === '') return '';
+  if (
+    typeof value !== 'string' ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(value) ||
+    value < '1900-01-01' ||
+    value > '9999-12-31'
+  )
+    deny('Choose a valid due date.', 400);
+  const date = new Date(value + 'T00:00:00.000Z');
+  if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== value)
+    deny('Choose a valid due date.', 400);
+  return value;
+}
 export function createRequestTasks(store) {
   const tasks = () => store.collection('helpdeskTasks');
   async function parent(user, id, writing = false) {
@@ -95,7 +109,7 @@ export function createRequestTasks(store) {
     const requestId = String(request._id);
     if (
       !input ||
-      Object.keys(input).some((k) => !['title', 'description'].includes(k)) ||
+      Object.keys(input).some((k) => !['title', 'description', 'dueDate'].includes(k)) ||
       typeof input.title !== 'string' ||
       !input.title.trim() ||
       input.title.length > 160 ||
@@ -121,6 +135,7 @@ export function createRequestTasks(store) {
       requestId,
       title: input.title.trim(),
       description: input.description?.trim() || '',
+      dueDate: validateTaskDueDate(input.dueDate),
       status: 'open',
       queueName,
       createdBy: user.id,
@@ -181,7 +196,8 @@ export function createRequestTasks(store) {
     if (
       !input ||
       Object.keys(input).some(
-        (k) => !['title', 'description', 'assignedToId', 'status', 'version'].includes(k),
+        (k) =>
+          !['title', 'description', 'dueDate', 'assignedToId', 'status', 'version'].includes(k),
       ) ||
       !['open', 'in-progress', 'closed'].includes(input.status) ||
       !Number.isSafeInteger(input.version)
@@ -195,6 +211,7 @@ export function createRequestTasks(store) {
     if (!current) deny('Task not found.', 404);
     if (!canManage(user, current)) deny('This task is outside your assignment groups.');
     const changes = {};
+    if (input.dueDate !== undefined) changes.dueDate = validateTaskDueDate(input.dueDate);
     if (input.title !== undefined) {
       if (typeof input.title !== 'string' || !input.title.trim() || input.title.length > 160)
         deny('Enter a task title up to 160 characters.', 400);
@@ -302,6 +319,7 @@ export function installRequestTaskRoutes(app, store) {
         {
           Task: 'title',
           Status: 'status',
+          'Due Date': 'dueDate',
           'Assignment Group': 'queueName',
           'Assigned To': 'assignedToName',
           Updated: (record) => Date.parse(record.updatedAt),

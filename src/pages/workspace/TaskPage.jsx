@@ -1,3 +1,6 @@
+import RecordActivity from '../../components/RecordActivity.jsx';
+import RecordHeader from '../../components/RecordHeader.jsx';
+import RecordValue from '../../components/RecordValue.jsx';
 import { Show, createResource, createSignal, createEffect } from 'solid-js';
 import { useParams, useNavigate } from '@solidjs/router';
 import { api } from '../../services/api.js';
@@ -22,6 +25,7 @@ export default function TaskPage() {
     [busy, setBusy] = createSignal(false);
   const [title, setTitle] = createSignal(''),
     [description, setDescription] = createSignal('');
+  const [dueDate, setDueDate] = createSignal('');
   const [status, setStatus] = createSignal('open'),
     [assignedToId, setAssignedToId] = createSignal('');
   const [requestId, setRequestId] = createSignal(''),
@@ -49,6 +53,7 @@ export default function TaskPage() {
     if (value) {
       setTitle(value.title);
       setDescription(value.description);
+      setDueDate(value.dueDate || '');
       setStatus(value.status);
       setAssignedToId(value.assignedToId || '');
     }
@@ -64,7 +69,7 @@ export default function TaskPage() {
         if (!requestId()) throw new Error('Choose an originating request.');
         const created = await api(`/api/helpdesk/requests/${requestId()}/tasks`, {
           method: 'POST',
-          body: JSON.stringify({ title: title(), description: description() }),
+          body: JSON.stringify({ title: title(), description: description(), dueDate: dueDate() }),
         });
         navigate(path(`/workspace/tasks/${created.id}`), { replace: true });
       } else {
@@ -73,6 +78,7 @@ export default function TaskPage() {
           body: JSON.stringify({
             title: title(),
             description: description(),
+            dueDate: dueDate(),
             status: closeComplete ? 'closed' : status(),
             assignedToId: assignedToId(),
             version: task().version,
@@ -90,30 +96,37 @@ export default function TaskPage() {
   }
   return (
     <section class="reading-page task-record-page">
-      <header class="task-record-header">
+      <div class="record-page-breadcrumbs">
         <Breadcrumbs
           items={[
             { label: 'Tasks', href: '/workspace/data/ref-task' },
-            { label: isNew() ? 'New Task' : (!task.error && task()?.title) || 'Task' },
+            { label: isNew() ? 'New Task' : 'Task' },
           ]}
         />
-        <div class="helpdesk-actions">
-          <Show when={canEdit() && !isEditing()}>
-            <button
-              class="workspace-button secondary small"
-              disabled={busy()}
-              onClick={() => setEditing(true)}
-            >
-              Edit
-            </button>
-          </Show>
-          <Show when={!isNew() && canEdit() && task()?.status !== 'closed'}>
-            <button class="workspace-button small" disabled={busy()} onClick={() => save(true)}>
-              Close Complete
-            </button>
-          </Show>
-        </div>
-      </header>
+      </div>
+      <RecordHeader
+        title={isNew() ? 'New Task' : (!task.error && task()?.title) || 'Task'}
+        context={
+          !isNew() && !task.error && task()?.updatedAt
+            ? `Updated ${new Date(task().updatedAt).toLocaleString()}`
+            : undefined
+        }
+      >
+        <Show when={canEdit() && !isEditing()}>
+          <button
+            class="workspace-button secondary small"
+            disabled={busy()}
+            onClick={() => setEditing(true)}
+          >
+            Edit
+          </button>
+        </Show>
+        <Show when={!isNew() && canEdit() && task()?.status !== 'closed' && !isEditing()}>
+          <button class="workspace-button small" disabled={busy()} onClick={() => save(true)}>
+            Close Complete
+          </button>
+        </Show>
+      </RecordHeader>
       <Show when={task.loading && !task.latest}>
         <Skeleton label="Loading task" lines={6} />
       </Show>
@@ -128,99 +141,190 @@ export default function TaskPage() {
             save();
           }}
         >
-          <div class="task-record-layout">
-            <section class="task-content-card" aria-label="Task details">
-              <label>
-                Title
-                <input
-                  name="title"
-                  required
-                  maxlength="160"
-                  readOnly={!isEditing()}
-                  value={title()}
-                  onInput={(event) => setTitle(event.currentTarget.value)}
-                />
-              </label>
-              <ReferenceLookup
-                label="Originating Request"
-                name="request"
-                required={isNew()}
-                readOnly={!isNew()}
-                disabled={busy()}
-                value={isNew() ? requestId() : task()?.requestId}
-                options={
-                  isNew()
-                    ? ((!requests.error && requests()) || []).map((record) => ({
-                        value: record.id,
-                        label: `${record.number} · ${record.title}`,
-                      }))
-                    : [
-                        {
-                          value: task()?.requestId,
-                          label: task()?.requestReference.label,
-                          href: task()?.requestReference.href,
-                        },
-                      ]
+          <section class="record-surface record-property-sheet" aria-label="Task details">
+            <div class="record-property-list">
+              <div class="record-field-full">
+                <Show when={isEditing()} fallback={<RecordValue label="Title" value={title()} />}>
+                  <label>
+                    Title
+                    <input
+                      name="title"
+                      required
+                      maxlength="160"
+                      value={title()}
+                      onInput={(event) => setTitle(event.currentTarget.value)}
+                    />
+                  </label>
+                </Show>
+              </div>
+
+              <Show
+                when={isEditing()}
+                fallback={
+                  <RecordValue
+                    label="Status"
+                    badge={status()}
+                    value={
+                      status() === 'closed'
+                        ? 'Closed Complete'
+                        : status() === 'in-progress'
+                          ? 'In Progress'
+                          : 'Open'
+                    }
+                  />
                 }
-                onSearch={setRequestSearch}
-                onChange={setRequestId}
-              />
-              <label>
-                Details
-                <textarea
-                  name="description"
-                  rows="8"
-                  maxlength="7000"
-                  readOnly={!isEditing()}
-                  value={description()}
-                  onInput={(event) => setDescription(event.currentTarget.value)}
-                />
-              </label>
-            </section>
-            <aside class="task-assignment-card" aria-label="Task assignment">
-              <h2>Assignment</h2>
-              <label>
-                Status
-                <Dropdown
-                  ariaLabel="Task status"
-                  disabled={isNew() || !isEditing() || busy()}
-                  value={status()}
-                  options={[
-                    { value: 'open', label: 'Open' },
-                    { value: 'in-progress', label: 'In Progress' },
-                    { value: 'closed', label: 'Closed Complete' },
-                  ]}
-                  onChange={setStatus}
-                />
-              </label>
-              <Show when={!isNew()}>
+              >
                 <label>
-                  Assignment Group
-                  <input readOnly value={task()?.queueName || 'Unassigned'} />
+                  Status
+                  <Dropdown
+                    ariaLabel="Task status"
+                    disabled={isNew() || busy()}
+                    value={status()}
+                    options={[
+                      { value: 'open', label: 'Open' },
+                      { value: 'in-progress', label: 'In Progress' },
+                      { value: 'closed', label: 'Closed Complete' },
+                    ]}
+                    onChange={setStatus}
+                  />
                 </label>
+              </Show>
+              <Show when={!isNew()}>
+                <Show
+                  when={isEditing()}
+                  fallback={
+                    <RecordValue
+                      label="Assignment Group"
+                      value={task()?.queueName || 'Unassigned'}
+                    />
+                  }
+                >
+                  <label>
+                    Assignment Group
+                    <input readOnly value={task()?.queueName || 'Unassigned'} />
+                  </label>
+                </Show>
+                <Show
+                  when={isEditing()}
+                  fallback={
+                    <RecordValue
+                      label="Assigned To"
+                      value={task()?.assignedToName || 'Unassigned'}
+                      avatarId={task()?.assignedToId}
+                      avatarName={task()?.assignedToName}
+                      href={
+                        task()?.assignedToId ? `/workspace/users/${task().assignedToId}` : undefined
+                      }
+                    />
+                  }
+                >
+                  <ReferenceLookup
+                    label="Assigned To"
+                    placeholder="Unassigned"
+                    disabled={busy()}
+                    value={assignedToId()}
+                    options={
+                      (!assignees.error && assignees()) ||
+                      (task()?.assignedToId
+                        ? [
+                            {
+                              value: task().assignedToId,
+                              label: task().assignedToName || 'Agent',
+                              href: `/workspace/users/${task().assignedToId}`,
+                            },
+                          ]
+                        : [])
+                    }
+                    onChange={setAssignedToId}
+                  />
+                </Show>
+              </Show>
+              <Show
+                when={isEditing()}
+                fallback={
+                  <RecordValue
+                    label="Originating Request"
+                    value={task()?.requestReference?.label}
+                    href={task()?.requestReference?.href}
+                  />
+                }
+              >
                 <ReferenceLookup
-                  label="Assigned To"
-                  placeholder="Unassigned"
-                  readOnly={!isEditing()}
+                  label="Originating Request"
+                  name="request"
+                  required={isNew()}
+                  readOnly={!isNew()}
                   disabled={busy()}
-                  value={assignedToId()}
+                  value={isNew() ? requestId() : task()?.requestId}
                   options={
-                    (!assignees.error && assignees()) ||
-                    (task()?.assignedToId
-                      ? [
+                    isNew()
+                      ? ((!requests.error && requests()) || []).map((record) => ({
+                          value: record.id,
+                          label: `${record.number} · ${record.title}`,
+                        }))
+                      : [
                           {
-                            value: task().assignedToId,
-                            label: task().assignedToName || 'Agent',
-                            href: `/workspace/users/${task().assignedToId}`,
+                            value: task()?.requestId,
+                            label: task()?.requestReference?.label,
+                            href: task()?.requestReference?.href,
                           },
                         ]
-                      : [])
                   }
-                  onChange={setAssignedToId}
+                  onSearch={setRequestSearch}
+                  onChange={setRequestId}
                 />
               </Show>
-            </aside>
-          </div>
+
+              <Show
+                when={isEditing()}
+                fallback={
+                  <RecordValue
+                    label="Due Date"
+                    value={
+                      dueDate() ? new Date(dueDate() + 'T12:00:00').toLocaleDateString() : 'Not Set'
+                    }
+                  />
+                }
+              >
+                <label>
+                  Due Date
+                  <input
+                    name="dueDate"
+                    type="date"
+                    min="1900-01-01"
+                    max="9999-12-31"
+                    value={dueDate()}
+                    onInput={(event) => setDueDate(event.currentTarget.value)}
+                  />
+                </label>
+              </Show>
+              <Show when={!isNew() && task()?.createdAt}>
+                <RecordValue label="Created" value={new Date(task().createdAt).toLocaleString()} />
+              </Show>
+            </div>
+            <div
+              class="record-description-field"
+              classList={{ 'record-description-block': !isEditing() }}
+            >
+              <div class="record-field-full">
+                <Show
+                  when={isEditing()}
+                  fallback={<RecordValue label="Details" value={description()} />}
+                >
+                  <label>
+                    Details
+                    <textarea
+                      name="description"
+                      rows="6"
+                      maxlength="7000"
+                      value={description()}
+                      onInput={(event) => setDescription(event.currentTarget.value)}
+                    />
+                  </label>
+                </Show>
+              </div>
+            </div>
+          </section>
           <Show when={isEditing() && canEdit()}>
             <div class="helpdesk-actions">
               <button class="workspace-button" disabled={busy() || assignees.loading}>
@@ -242,6 +346,9 @@ export default function TaskPage() {
             </div>
           </Show>
         </ValidatedForm>
+        <Show when={!isNew()}>
+          <RecordActivity kind="task" recordId={params.taskId} />
+        </Show>
       </Show>
     </section>
   );

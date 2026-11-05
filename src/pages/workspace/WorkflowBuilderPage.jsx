@@ -612,6 +612,7 @@ export default function WorkflowBuilderPage() {
                       </Show>
                       <Show when={item.role === 'assistant'}>
                         <AgentProgress
+                          toolCalls={item.toolCalls || []}
                           phase={item.phase || item.status || 'complete'}
                           events={item.progress || []}
                         />

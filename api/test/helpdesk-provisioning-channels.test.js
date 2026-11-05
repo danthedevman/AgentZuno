@@ -370,7 +370,10 @@ test(
         {
           role: 'assistant',
           status: 'complete',
-          text: `Here is your workflow.\n\`\`\`typescript\n${toTypeScript(definition)}\n\`\`\``,
+          text: 'Review the workflow.',
+          proposals: {
+            workflow: { kind: 'workflow', source: toTypeScript(definition), definition },
+          },
         },
       ],
       updatedAt: new Date(),
@@ -395,7 +398,23 @@ test(
           {
             role: 'assistant',
             status: 'complete',
-            text: `\`\`\`typescript\n${toTypeScript({ ...definition, steps: [...definition.steps, { id: 'open-jira', action: 'jira.createIssue', params: { project: 'DESKTOP', issueType: 'Task', summary: 'Phone help' } }] })}\n\`\`\``,
+            text: 'Review the updated workflow.',
+            proposals: {
+              workflow: {
+                kind: 'workflow',
+                source: toTypeScript({
+                  ...definition,
+                  steps: [
+                    ...definition.steps,
+                    {
+                      id: 'open-jira',
+                      action: 'jira.createIssue',
+                      params: { project: 'DESKTOP', issueType: 'Task', summary: 'Phone help' },
+                    },
+                  ],
+                }),
+              },
+            },
           },
         ],
       };
@@ -408,7 +427,8 @@ test(
           {
             role: 'assistant',
             status: 'complete',
-            text: '```typescript\nexport default {};\n```',
+            text: 'Review this draft.',
+            proposals: { workflow: { kind: 'workflow', source: 'export default {};' } },
           },
         ],
       };

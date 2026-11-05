@@ -55,6 +55,7 @@ export default function RequestTasks(props) {
                 body: JSON.stringify({
                   title: form.get('title'),
                   description: form.get('description'),
+                  dueDate: form.get('dueDate') || '',
                 }),
               });
               setAdding(false);
@@ -69,6 +70,10 @@ export default function RequestTasks(props) {
           <label>
             Details
             <textarea name="description" maxlength="7000" />
+          </label>
+          <label>
+            Due Date
+            <input name="dueDate" type="date" min="1900-01-01" max="9999-12-31" />
           </label>
           <div class="helpdesk-actions">
             <button class="workspace-button small" disabled={busy()}>
@@ -109,6 +114,11 @@ export default function RequestTasks(props) {
                 {task.assignedToName || 'Unassigned'}
               </span>
             </div>
+            <Show when={task.dueDate}>
+              <span class="request-task-due">
+                Due {new Date(task.dueDate + 'T12:00:00').toLocaleDateString()}
+              </span>
+            </Show>
             <time datetime={task.updatedAt}>
               Updated {new Date(task.updatedAt).toLocaleString()}
             </time>

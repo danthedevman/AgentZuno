@@ -1,3 +1,4 @@
+import { nativePage } from './nativeListQuery.js';
 import { postgresWhere } from './postgresQuery.js';
 import pg from 'pg';
 import { BSON, ObjectId } from 'mongodb';
@@ -187,6 +188,9 @@ export function createPostgresDatabase(connection) {
       });
     }
     const api = {
+      nativePage(options) {
+        return nativePage(pool, ensure, decode, name, options);
+      },
       find(filter = {}, options = {}) {
         return cursor(() => select(filter), options.projection);
       },

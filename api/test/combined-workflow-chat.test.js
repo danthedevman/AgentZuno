@@ -59,11 +59,45 @@ test('a combined Admin request saves its group, continues generation, and execut
     async (job) => pending.push(job),
     async (url, options) => {
       const body = JSON.parse(options.body);
-      assert.ok(body.instructions.includes('app support'));
+      assert.match(body.instructions, /Never ask the administrator for trigger phrases/);
+      assert.match(body.instructions, /use the createGroup tool/);
+      assert.doesNotMatch(body.instructions, /return a fenced group JSON block/);
+      calls++;
+      if (!body.input.some((item) => item.type === 'function_call_output'))
+        return Response.json({
+          output: [
+            {
+              type: 'function_call',
+              call_id: 'create-app-support',
+              name: 'createGroup',
+              arguments: JSON.stringify({
+                name: 'app support',
+                description: 'Application support',
+                routingInstructions: '',
+                assignmentEnabled: true,
+                approvalEnabled: true,
+              }),
+            },
+          ],
+        });
+      if (
+        !body.input.some(
+          (item) => item.type === 'function_call_output' && item.call_id === 'workflow-draft',
+        )
+      )
+        return Response.json({
+          output: [
+            {
+              type: 'function_call',
+              call_id: 'workflow-draft',
+              name: 'proposeWorkflow',
+              arguments: JSON.stringify({ source }),
+            },
+          ],
+        });
       assert.ok(
         await database.collection('approvalGroups').findOne({ ...scope, name: 'app support' }),
       );
-      calls++;
       return Response.json({
         output: [
           {
@@ -71,7 +105,7 @@ test('a combined Admin request saves its group, continues generation, and execut
               {
                 type: 'output_text',
                 text:
-                  calls === 1
+                  calls === 0
                     ? 'The group is ready.'
                     : 'The workflow collects the board name and justification, then creates a fulfillment task.\n```typescript\n' +
                       source +
@@ -106,8 +140,26 @@ test('a combined Admin request saves its group, continues generation, and execut
     await chats.process(pending.shift());
     const completed = await chats.get(owner, chat.id);
     assert.equal(completed.status, 'complete', JSON.stringify(completed));
-    assert.equal(calls, 2);
-    assert.match(completed.messages.at(-1).text, /```typescript/);
+    assert.equal(calls, 3);
+    assert.deepEqual(
+      completed.messages.at(-1).toolCalls.map((call) => [call.name, call.status]),
+      [
+        ['createGroup', 'completed'],
+        ['proposeWorkflow', 'completed'],
+      ],
+    );
+    const execution = await database
+      .collection('governanceAudit')
+      .findOne({ action: 'chat-response-processing', sourceChatId: chat.id });
+    const toolAudit = await database
+      .collection('governanceAudit')
+      .findOne({ action: 'agent-tool-createGroup', sourceChatId: chat.id });
+    assert.equal(toolAudit.rootAuditId, execution._id);
+    assert.equal(toolAudit.parentAuditId, execution._id);
+    assert.equal(toolAudit.toolCallId, 'create-app-support');
+    assert.ok(toolAudit.responseId);
+    assert.equal(toolAudit.arguments, undefined);
+    assert.equal(completed.messages.at(-1).proposals.workflow.source, source);
     assert.match(completed.messages.at(-1).text, /Created \[app support\]/);
     assert.equal(await database.collection('helpdeskTasks').countDocuments(), 0);
     const validated = await inspectWorkflowSource(source);

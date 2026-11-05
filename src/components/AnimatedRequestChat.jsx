@@ -42,19 +42,13 @@ export default function AnimatedRequestChat() {
       }
       later(() => {
         setStage(2);
-        let index = 0;
-        const type = () => {
-          setResponse(message.slice(0, ++index));
-          if (index < message.length) later(type, 28);
-          else
-            later(() => {
-              setStage(3);
-              [450, 950, 1500, 2100, 3400].forEach((delay, index) =>
-                later(() => setStage(index + 4), delay * 1.5),
-              );
-            }, 200);
-        };
-        type();
+        setResponse(message);
+        later(() => {
+          setStage(3);
+          [450, 950, 1500, 2100, 3400].forEach((delay, index) =>
+            later(() => setStage(index + 4), delay * 1.5),
+          );
+        }, 650);
       }, 700);
     };
     onCleanup(
@@ -94,12 +88,7 @@ export default function AnimatedRequestChat() {
           classList={{ 'is-shown': stage() >= 2 }}
         >
           <Icon name="agent" class="marketing-agent-mark" />
-          <p>
-            {response()}
-            <Show when={stage() === 2}>
-              <span class="marketing-type-cursor" />
-            </Show>
-          </p>
+          <p>{response()}</p>
         </div>
         <div
           class="marketing-live-form"

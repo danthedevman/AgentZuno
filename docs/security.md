@@ -18,7 +18,7 @@ AgentZuno is an actively developed project. These controls describe implemented 
 
 - Public deployment requires HTTPS, secure cookies, service hardening, backups, and network restrictions; the default Compose stack does not provide all production protections.
 - Email verification and password recovery are not implemented.
-- A native Teams bot and ServiceNow/Jira workflow actions are not implemented.
+- A native Microsoft Teams bot is implemented; configure and validate its Azure/Bot Framework registration before use. ServiceNow/Jira workflow actions are not implemented.
 - Authored knowledge uses local Ollama embeddings and a separate Qdrant collection, combined with MongoDB keyword retrieval. Vector matches are candidates only; current publication, generation, workspace and base/topic/article permissions are rechecked. Local index outages fall back to authorized keyword retrieval. The semantic candidate scan is bounded to 2,000 indexed articles per workspace; larger workspaces currently use keyword retrieval until this limit is expanded.
 - Background jobs and external workflow actions do not guarantee exactly-once delivery.
 - Deleting requests or articles does not erase retained governance/run history, backups, or previously saved conversation messages. Do not treat this action as a complete privacy-erasure mechanism.

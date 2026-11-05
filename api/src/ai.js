@@ -1,3 +1,4 @@
+import { providerTools, readToolCalls } from './aiTools.js';
 import { decryptSecret, encryptSecret } from './secrets.js';
 import { readData } from './data.js';
 import { readAIStream } from './aiStream.js';
@@ -31,10 +32,11 @@ export async function generateReply(settings, messages, fetcher = fetch, onProgr
     body = {
       model: settings.model,
       instructions,
-      input: history,
+      input: [...history, ...(settings.toolTurns || [])],
       max_output_tokens: settings.maxOutputTokens,
       reasoning: { effort: settings.reasoning },
       store: false,
+      ...(settings.tools?.length ? { include: ['reasoning.encrypted_content'] } : {}),
     };
   } else if (settings.provider === 'anthropic') {
     url = 'https://api.anthropic.com/v1/messages';
@@ -43,7 +45,7 @@ export async function generateReply(settings, messages, fetcher = fetch, onProgr
     body = {
       model: settings.model,
       system: instructions,
-      messages: history,
+      messages: [...history, ...(settings.toolTurns || [])],
       max_tokens: settings.maxOutputTokens,
     };
   } else if (settings.provider === 'google') {
@@ -51,13 +53,17 @@ export async function generateReply(settings, messages, fetcher = fetch, onProgr
     headers['x-goog-api-key'] = key;
     body = {
       systemInstruction: { parts: [{ text: instructions }] },
-      contents: history.map(({ role, content }) => ({
-        role: role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: content }],
-      })),
+      contents: [
+        ...history.map(({ role, content }) => ({
+          role: role === 'assistant' ? 'model' : 'user',
+          parts: [{ text: content }],
+        })),
+        ...(settings.toolTurns || []),
+      ],
       generationConfig: { maxOutputTokens: settings.maxOutputTokens },
     };
   } else throw failure('Unsupported AI provider.');
+  if (settings.tools?.length) body.tools = providerTools(settings.provider, settings.tools);
   if (onProgress) {
     if (settings.provider === 'google')
       url = url.replace(':generateContent', ':streamGenerateContent?alt=sse');
@@ -85,7 +91,7 @@ export async function generateReply(settings, messages, fetcher = fetch, onProgr
       422,
     );
   if (onProgress && response.headers.get('content-type')?.includes('text/event-stream'))
-    return readAIStream(response, settings.provider, onProgress);
+    return readAIStream(response, settings.provider, onProgress, !!settings.tools?.length);
   // Bound the response while reading it, before parsing untrusted provider JSON.
   const reader = response.body.getReader();
   const chunks = [];
@@ -117,13 +123,15 @@ export async function generateReply(settings, messages, fetcher = fetch, onProgr
             .filter((item) => !item.thought)
             .map((item) => item.text || '')
             .join('\n');
-  if (!text.trim())
+  const toolCalls = settings.tools?.length ? readToolCalls(settings.provider, result) : [];
+  if (!text.trim() && !toolCalls.length)
     throw failure(
       'The provider returned no text. Increase the output limit or try another model.',
       422,
     );
   return {
     text: text.slice(0, 100000),
+    ...(settings.tools?.length ? { toolCalls, toolOutput: result } : {}),
     truncated:
       result.status === 'incomplete' ||
       result.stop_reason === 'max_tokens' ||

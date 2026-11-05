@@ -43,7 +43,18 @@ export const connectorActions = {
       description: 'Allow automatic replies when enabled for this support inbox.',
     },
   ],
-  teams: [],
+  teams: [
+    {
+      id: 'receiveMessages',
+      label: 'Receive Messages',
+      description: 'Process verified Teams messages from mapped workspace identities.',
+    },
+    {
+      id: 'respondToUsers',
+      label: 'Respond to Users',
+      description: 'Allow Zuno to answer private Teams conversations.',
+    },
+  ],
 };
 const policyId = (scope, provider) =>
   createHash('sha256').update(`${scope.ownerId}:${scope.workspaceId}:${provider}`).digest('hex');

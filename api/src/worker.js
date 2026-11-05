@@ -1,3 +1,5 @@
+import { createAuditRetention } from './auditRetention.js';
+import { createHelpdeskTeams } from './helpdeskTeams.js';
 import { createMentionDelivery } from './mentions.js';
 import { createHelpdeskService } from './helpdesk.js';
 import { enableLocalInstallation, needsDatabaseSetup } from './storage/configuration.js';
@@ -96,6 +98,21 @@ const chatWorker = new Worker(queueNames.chat, (job) => chats.process(job.data),
   connection,
   concurrency: 4,
 });
+const teams = createHelpdeskTeams(store, chats, queues.teams);
+const teamsWorker = new Worker(
+  queueNames.teams,
+  async (job) => {
+    if (!ObjectId.isValid(job.data.id)) return;
+    const source = await store.collection('helpdeskTeamsBots').findOne({
+      _id: new ObjectId(job.data.id),
+      ownerId: job.data.ownerId,
+      workspaceId: job.data.workspaceId,
+      enabled: true,
+    });
+    if (source) await teams.process(source);
+  },
+  { connection, concurrency: 2 },
+);
 const slack = createHelpdeskSlack(store, chats, queues.slack);
 const slackWorker = new Worker(
   queueNames.slack,
@@ -115,6 +132,15 @@ const slackWorker = new Worker(
 chatWorker.on('completed', async (job) => {
   try {
     const chat = await store.collection('chats').findOne({ _id: new ObjectId(job.data.id) });
+    if (chat?.teamsSourceId) {
+      const source = await store.collection('helpdeskTeamsBots').findOne({
+        _id: new ObjectId(chat.teamsSourceId),
+        ownerId: chat.providerOwnerId,
+        workspaceId: chat.workspaceId,
+        enabled: true,
+      });
+      if (source) await queues.teams(source);
+    }
     if (chat?.slackSourceId) {
       const source = await store.collection('helpdeskChannels').findOne({
         _id: new ObjectId(chat.slackSourceId),
@@ -203,7 +229,14 @@ const schedulerWorker = new Worker(
     await deliverInvitations();
     await deliverMentions();
     for (const run of await workflowExecution.recover()) await queues.workflow(run);
+    await createAuditRetention(store).cleanup();
     await connection.set('agentzuno-worker-heartbeat', String(Date.now()), 'EX', 120);
+    const teamsBots = await store
+      .collection('helpdeskTeamsBots')
+      .find({ enabled: true })
+      .limit(100)
+      .toArray();
+    for (const bot of teamsBots) await queues.teams(bot);
     const bots = await store
       .collection('helpdeskChannels')
       .find({
@@ -277,7 +310,14 @@ const schedulerWorker = new Worker(
   },
   { connection, concurrency: 1 },
 );
-for (const worker of [syncWorker, chatWorker, schedulerWorker, vectorWorker, emailWorker])
+for (const worker of [
+  syncWorker,
+  chatWorker,
+  schedulerWorker,
+  vectorWorker,
+  emailWorker,
+  teamsWorker,
+])
   worker.on('error', () => console.error('Background worker error; job state remains in Redis.'));
 chatWorker.on('failed', async (job) => {
   if (!job || (await job.getState()) !== 'failed') return;
@@ -315,6 +355,7 @@ async function close() {
     vectorWorker.close(),
     emailWorker.close(),
     slackWorker.close(),
+    teamsWorker.close(),
     workflowWorker.close(),
   ]);
   await scheduler.close();

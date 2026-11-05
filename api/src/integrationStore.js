@@ -16,6 +16,47 @@ export function createIntegrationStore(databaseOverride) {
     collection,
     async ready() {
       indexes ||= Promise.all([
+        collection('recordActivity').createIndex({
+          ownerId: 1,
+          workspaceId: 1,
+          'notifications.recipientId': 1,
+          createdAt: -1,
+        }),
+        collection('recordActivity').createIndex({
+          ownerId: 1,
+          workspaceId: 1,
+          kind: 1,
+          recordId: 1,
+          tableId: 1,
+          type: 1,
+          createdAt: -1,
+        }),
+        collection('auditRetentionSettings').createIndex(
+          { ownerId: 1, workspaceId: 1 },
+          { unique: true },
+        ),
+        collection('governanceAudit').createIndex({ ownerId: 1, workspaceId: 1, rootAuditId: 1 }),
+        collection('helpdeskTeamsBots').createIndex(
+          { ownerId: 1, workspaceId: 1 },
+          { unique: true },
+        ),
+        collection('helpdeskTeamsBots').createIndex({ workspaceId: 1 }, { unique: true }),
+        collection('helpdeskTeamsEvents').createIndex({
+          ownerId: 1,
+          workspaceId: 1,
+          sourceId: 1,
+          generation: 1,
+          status: 1,
+          createdAt: 1,
+        }),
+        collection('helpdeskTeamsEvents').createIndex({
+          ownerId: 1,
+          workspaceId: 1,
+          aadObjectId: 1,
+          createdAt: 1,
+        }),
+        collection('users').createIndex({ id: 1 }),
+        collection('users').createIndex({ workspaceId: 1 }),
         collection('helpdeskTasks').createIndex({
           ownerId: 1,
           workspaceId: 1,

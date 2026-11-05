@@ -8,7 +8,7 @@ AgentZuno can use MongoDB or PostgreSQL for the entire installation. Accounts, s
 
 1. Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) or [Docker Engine](https://docs.docker.com/engine/install/) with [Docker Compose](https://docs.docker.com/compose/install/).
 2. Run `docker compose up --build -d`. Compose provides both database services so either is ready to select. Only the selected engine stores application records.
-3. Open the web app and click Get Access. Before registration, the database wizard opens at `/setup/database`.
+3. Open the web app. On a new installation, the database wizard opens automatically at `/setup/database` before registration.
 4. Retrieve the server's setup token with `docker compose exec api cat /app/installation/setup.token`. Copy it into Setup Token. For local Node development, read `api/.installation/setup.token` instead. Keep this token private: it authorizes installation-wide database configuration.
 5. Choose MongoDB or PostgreSQL, then Use Bundled Database or Use My Own Connection.
 6. Select Connect and Continue. The server verifies connectivity and read/write access before saving the selection. Failed validation leaves setup incomplete and does not create a user.

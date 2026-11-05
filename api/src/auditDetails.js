@@ -9,6 +9,9 @@ export function auditDetails(value = {}) {
       'triggerType',
       'triggerLabel',
       'sourceChatId',
+      'responseId',
+      'toolCallId',
+      'toolName',
     ]
       .filter((key) => typeof value[key] === 'string' && value[key])
       .map((key) => [key, value[key].replace(/[\x00-\x1f\x7f]/g, '').slice(0, 200)]),

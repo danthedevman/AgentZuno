@@ -478,6 +478,7 @@ export default function ChatPage() {
                       }
                     >
                       <AgentProgress
+                        toolCalls={message.toolCalls || []}
                         phase={message.phase || message.status}
                         events={message.progress || []}
                       />

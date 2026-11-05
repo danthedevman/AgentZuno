@@ -1,6 +1,7 @@
+import { resolveChatActor } from './chatAuthorization.js';
 import { rateLimit } from 'express-rate-limit';
 import { ObjectId } from 'mongodb';
-import { deny, helpdeskScope, requireRole, resolveHelpdeskUser } from './helpdeskRoles.js';
+import { deny, helpdeskScope, requireRole } from './helpdeskRoles.js';
 import { listResponse } from './listQuery.js';
 
 const kinds = ['base', 'topic', 'article'];
@@ -30,11 +31,7 @@ export async function canReadAuthoredArticle(store, user, article) {
   return true;
 }
 export async function knowledgeActor(store, chat) {
-  return resolveHelpdeskUser(
-    store,
-    { id: chat.ownerId, workspaceId: chat.workspaceId },
-    chat.workspaceId,
-  );
+  return resolveChatActor(store, chat);
 }
 export function installKnowledgeAccessRoutes(app, store) {
   app.use(

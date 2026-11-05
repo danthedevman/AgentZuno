@@ -66,7 +66,7 @@ try {
         ...scope,
         requesterId,
         requestId: new ObjectId().toHexString(),
-          number: `REQ-${employee}-${index}`,
+        number: `REQ-${employee}-${index}`,
         title: `Employee ${employee} request ${index}`,
         description: 'Fictional load-test request',
         submissionState: 'submitted',

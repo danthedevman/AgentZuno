@@ -101,6 +101,8 @@ export function auditDatabase(database) {
                 target: name,
                 ...details,
                 requestAuditId: auditContext.getStore()?.auditId || null,
+                rootAuditId:
+                  auditContext.getStore()?.rootAuditId || auditContext.getStore()?.auditId || null,
                 changedFields: [
                   ...new Set([
                     ...keyNames(update.$set),

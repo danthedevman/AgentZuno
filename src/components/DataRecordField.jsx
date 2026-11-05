@@ -1,3 +1,4 @@
+import RecordValue from './RecordValue.jsx';
 import { Match, Switch, createResource } from 'solid-js';
 import ReferenceLookup from './ReferenceLookup.jsx';
 import { api } from '../services/api.js';
@@ -9,8 +10,34 @@ export default function DataRecordField(props) {
         `/api/helpdesk/data/tables/${id}/options${props.includeDemo || props.readOnly ? '?includeDemo=1' : ''}`,
       ),
   );
+  const selected = () =>
+    !options.error && options()?.find((option) => option.value === props.value);
+  const displayValue = () =>
+    props.field.type === 'boolean'
+      ? props.value
+        ? 'Yes'
+        : 'No'
+      : props.field.type === 'reference'
+        ? options.loading
+          ? 'Loading…'
+          : selected()?.label || '—'
+        : props.value === 0
+          ? '0'
+          : props.value;
   return (
     <Switch>
+      <Match when={props.detailsOnly}>
+        <RecordValue
+          label={props.field.label}
+          value={displayValue()}
+          href={
+            props.field.type === 'reference' && selected()
+              ? selected().href ||
+                `/workspace/data/${props.field.referenceTable}/records/${encodeURIComponent(selected().value)}`
+              : undefined
+          }
+        />
+      </Match>
       <Match when={props.field.type === 'reference'}>
         <ReferenceLookup
           name={props.field.id}
@@ -43,6 +70,28 @@ export default function DataRecordField(props) {
             <span />
           </button>
         </div>
+      </Match>
+      <Match
+        when={[
+          'description',
+          'details',
+          'notes',
+          'routingInstructions',
+          'routing-instructions',
+        ].includes(props.field.id)}
+      >
+        <label>
+          {props.field.label}
+          <textarea
+            name={props.field.id}
+            required={props.field.required}
+            rows="5"
+            maxlength="2000"
+            value={props.value ?? ''}
+            readOnly={props.readOnly}
+            onInput={(event) => props.onChange(event.currentTarget.value)}
+          />
+        </label>
       </Match>
       <Match when={true}>
         <label>

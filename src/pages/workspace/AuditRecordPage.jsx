@@ -39,6 +39,11 @@ export default function AuditRecordPage() {
     ['Triggered By', current()?.triggerLabel || current()?.action || current()?.method],
     ['Workflow Run', current()?.workflowRunId || '—'],
     ['Workflow Step', current()?.stepId || '—'],
+    ['Tool', current()?.toolName || '—'],
+    ['Tool Call', current()?.toolCallId || '—'],
+    ['Response', current()?.responseId || '—'],
+    ['Execution Audit', current()?.rootAuditId || current()?.id],
+    ['Parent Audit', current()?.parentAuditId || '—'],
     [
       'Request',
       current()?.requestId ? (
@@ -119,6 +124,18 @@ export default function AuditRecordPage() {
               render: (item) => date(item.startedAt),
             },
             { label: 'Action', key: 'action', sortKey: 'Action' },
+            {
+              label: 'Tool',
+              key: 'toolName',
+              sortKey: 'Tool',
+              render: (item) => item.toolName || '—',
+            },
+            {
+              label: 'Tool Call',
+              key: 'toolCallId',
+              sortable: false,
+              render: (item) => item.toolCallId || '—',
+            },
             { label: 'Outcome', key: 'outcome', sortKey: 'Outcome' },
             {
               label: 'Fields',

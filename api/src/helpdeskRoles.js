@@ -1,3 +1,4 @@
+import { canWorkRequest } from './requestPolicy.js';
 import { queryString, queryStrings, queryVersion } from './queryValues.js';
 import { requireExistingQueues } from './helpdeskQueues.js';
 import { listResponse } from './listQuery.js';
@@ -40,7 +41,7 @@ export function requestScope(user) {
 
 export function requireRequestOperator(user, record) {
   requireRole(user, ['admin', 'agent']);
-  if (user.role === 'agent' && !(user.queues || []).includes(record.queueName))
+  if (!canWorkRequest(user, record))
     deny('This request is outside your assigned queues.');
 }
 
@@ -85,30 +86,38 @@ export async function resolveHelpdeskUser(store, user, workspaceId = user?.works
   const isOwner = owner.id === user.id;
   if (!isOwner && (!member?.active || !helpdeskRoles.includes(member.role)))
     deny('You do not have access to this workspace.');
-  return {
-    ...user,
-    workspaceId,
-    helpdeskOwnerId: owner.id,
-    role: isOwner ? 'admin' : member.role,
-    queues: member?.queues || [],
-    canApprove: member?.canApprove === true,
-    isWorkspaceOwner: isOwner,
-  };
+  return Object.defineProperty(
+    {
+      ...user,
+      workspaceId,
+      helpdeskOwnerId: owner.id,
+      role: isOwner ? 'admin' : member.role,
+      queues: member?.queues || [],
+      canApprove: member?.canApprove === true,
+      isWorkspaceOwner: isOwner,
+    },
+    'permissionSessionId',
+    { value: user.permissionSessionId },
+  );
 }
 
 export function assumeHelpdeskRole(user, role) {
   if (!role) return user;
   if (user.role !== 'admin') deny('Only Admins can impersonate a role.');
   if (!helpdeskRoles.includes(role)) deny('Choose a valid role.', 400);
-  return {
-    ...user,
-    actualRole: 'admin',
-    role,
-    canImpersonate: true,
-    isImpersonating: role !== 'admin',
-    canApprove: role === 'admin' ? user.canApprove : false,
-    queues: role === 'agent' ? user.queues || [] : [],
-  };
+  return Object.defineProperty(
+    {
+      ...user,
+      actualRole: 'admin',
+      role,
+      canImpersonate: true,
+      isImpersonating: role !== 'admin',
+      canApprove: role === 'admin' ? user.canApprove : false,
+      queues: role === 'agent' ? user.queues || [] : [],
+    },
+    'permissionSessionId',
+    { value: user.permissionSessionId },
+  );
 }
 
 export function validateMember(input) {

@@ -21,7 +21,9 @@ The harness uses a test-only identity fixture to select users. It exercises work
 
 The adapter pushes fixed scalar scope and common request filters into parameterized SQL, while the document evaluator still enforces the complete filter. Scope indexes now match the JSONB expressions used by the queries. Non-unique indexes requested by the app are created rather than ignored.
 
-Complex document filters, sorting, and pagination still use the document evaluator after SQL candidate selection. Large workspaces can therefore remain expensive. Review query plans and real workload measurements before scaling; a native paginated repository for high-volume lists is the next larger optimization.
+Requests, Inbox and Audit table APIs now apply access filters, search, sorting, total counts and pagination in MongoDB aggregation or parameterized PostgreSQL queries. Inbox combines requests and tasks before counting and paging. Authorization may first load bounded identity, approval, archive or legacy-submission metadata; it does not load every request body to sort a page.
+
+Other document-adapter routes can still evaluate complex filters, sorting and pagination after SQL candidate selection. PostgreSQL native lists require ICU collation support and permission to create the application collation, for equivalent case-insensitive natural ordering. The bundled PostgreSQL image provides ICU. Review query plans and representative workloads before scaling.
 
 ## Validate a deployment
 

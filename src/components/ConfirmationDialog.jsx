@@ -8,18 +8,18 @@ export default function ConfirmationDialog() {
     setTyped('');
   });
   return (
-    <Show when={pendingConfirmation()}>
+    <Show when={pendingConfirmation()} keyed>
       {(item) => (
         <WorkspaceModal
-          title={item().title}
+          title={item.title}
           onClose={() => {
-            if (pendingConfirmation() === item()) finishConfirmation(false);
+            if (pendingConfirmation() === item) finishConfirmation(false);
           }}
         >
-          <p>{item().message}</p>
-          <Show when={item().requiredText}>
+          <p>{item.message}</p>
+          <Show when={item.requiredText}>
             <label>
-              Type {item().requiredText} to confirm
+              Type {item.requiredText} to confirm
               <input
                 aria-label="Confirmation name"
                 value={typed()}
@@ -40,10 +40,10 @@ export default function ConfirmationDialog() {
             <button
               type="button"
               class="workspace-button"
-              disabled={!!item().requiredText && typed() !== item().requiredText}
+              disabled={!!item.requiredText && typed() !== item.requiredText}
               onClick={() => finishConfirmation(true)}
             >
-              {item().confirmLabel}
+              {item.confirmLabel}
             </button>
           </div>
         </WorkspaceModal>

@@ -1,3 +1,4 @@
+import TeamsBotSettings from '../../components/TeamsBotSettings.jsx';
 import Toggle from '../../components/Toggle.jsx';
 import ConnectorActionsForm from '../../components/ConnectorActionsForm.jsx';
 import BackLink from '../../components/BackLink.jsx';
@@ -217,10 +218,15 @@ export default function ConnectorsPage() {
                       <ConnectorSetupInstructions provider={channel.id} />
                       <ConnectorApplicationForm channel={channel} onSaved={refetch} />
                       <ConnectorActionsForm channel={channel} onSaved={refetch} />
-                      <label>
-                        OAuth Callback
-                        <input readonly value={channel.callbackUrl} />
-                      </label>
+                      <Show when={channel.id === 'teams'}>
+                        <TeamsBotSettings channel={channel} onSaved={refetch} />
+                      </Show>
+                      <Show when={channel.id !== 'teams'}>
+                        <label>
+                          OAuth Callback
+                          <input readonly value={channel.callbackUrl} />
+                        </label>
+                      </Show>
                       <Show when={channel.id === 'slack'}>
                         <button
                           type="button"
@@ -275,26 +281,28 @@ export default function ConnectorsPage() {
                       </Show>
                     </div>
                     <div class="helpdesk-actions">
-                      <ValidatedForm
-                        onSubmit={(event) => {
-                          event.preventDefault();
-                          connect(channel.id);
-                        }}
-                      >
-                        <button
-                          class="workspace-button small"
-                          disabled={!channel.configured || !!busy()}
+                      <Show when={channel.id !== 'teams'}>
+                        <ValidatedForm
+                          onSubmit={(event) => {
+                            event.preventDefault();
+                            connect(channel.id);
+                          }}
                         >
-                          {busy() === channel.id
-                            ? 'Connecting…'
-                            : !channel.connected
-                              ? channel.id === 'slack'
-                                ? 'Add to Slack'
-                                : 'Connect'
-                              : 'Reauthorize'}
-                        </button>
-                      </ValidatedForm>
-                      <Show when={channel.connected}>
+                          <button
+                            class="workspace-button small"
+                            disabled={!channel.configured || !!busy()}
+                          >
+                            {busy() === channel.id
+                              ? 'Connecting…'
+                              : !channel.connected
+                                ? channel.id === 'slack'
+                                  ? 'Add to Slack'
+                                  : 'Connect'
+                                : 'Reauthorize'}
+                          </button>
+                        </ValidatedForm>
+                      </Show>
+                      <Show when={channel.connected && channel.id !== 'teams'}>
                         <ValidatedForm
                           onSubmit={async (event) => {
                             event.preventDefault();

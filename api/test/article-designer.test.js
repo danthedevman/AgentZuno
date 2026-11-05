@@ -7,14 +7,10 @@ import { createApi } from '../src/app.js';
 import { articleCandidate } from '../src/articleDesigner.js';
 
 test('article proposals parse bounded candidates and strip executable HTML', () => {
-  const candidate = articleCandidate(
-    'Here is a proposal.\n```json\n' +
-      JSON.stringify({
-        title: 'Help',
-        body: '<h2>Steps</h2><script>alert(1)</script><p onclick="x()">Safe</p><img src="https://invalid.test/x"><a href="javascript:x()">Link</a>',
-      }) +
-      '\n```',
-  );
+  const candidate = articleCandidate({
+    title: 'Help',
+    body: '<h2>Steps</h2><script>alert(1)</script><p onclick="x()">Safe</p><img src="https://invalid.test/x"><a href="javascript:x()">Link</a>',
+  });
   assert.equal(candidate.title, 'Help');
   assert.equal(candidate.body, '<h2>Steps</h2><p>Safe</p><a>Link</a>');
   assert.equal(articleCandidate('```json\n{"title":\n```'), null);
@@ -197,10 +193,12 @@ test(
           $set: {
             status: 'complete',
             'messages.1.status': 'complete',
-            'messages.1.text':
-              '```json\n' +
-              JSON.stringify({ title: 'AI proposal', body: '<p>Suggested text</p>' }) +
-              '\n```',
+            'messages.1.text': 'Review the proposed article.',
+            'messages.1.proposals.article': {
+              kind: 'article',
+              title: 'AI proposal',
+              body: '<p>Suggested text</p>',
+            },
           },
         },
       );

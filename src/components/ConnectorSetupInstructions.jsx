@@ -33,13 +33,14 @@ const setup = {
     ],
   },
   teams: {
-    link: 'https://learn.microsoft.com/en-us/graph/permissions-reference',
-    title: 'Microsoft Graph permissions documentation',
+    link: 'https://learn.microsoft.com/en-us/microsoftteams/platform/bots/how-to/create-a-bot-for-teams',
+    title: 'Microsoft Teams bot setup documentation',
     steps: [
-      'Register an organizational application in Microsoft Entra ID. Add a Web redirect URI matching the OAuth Callback below.',
-      'Configure delegated Microsoft Graph permissions User.Read and Chat.Read, and obtain the required tenant consent.',
-      'Create a client secret and save its value with the Application (client) ID below, then authorize the connection.',
-      'This connector currently authorizes Microsoft Graph access. Native Teams bot installation, incoming-message handling, and bot replies are not implemented by this connector.',
+      'Create a single-tenant Microsoft Entra application and an Azure Bot resource using the same application ID. Enable the Microsoft Teams channel.',
+      'Save the application ID and client secret below. Configure the Azure Bot messaging endpoint with the Teams Events URL.',
+      'Enter the Entra tenant ID and link employee Entra object IDs to active workspace users. Email addresses are never matched automatically; app and SSO permissions still apply.',
+      'Enable the bot, save its settings, and install your Teams app package with this bot ID in the personal scope. Personal chats receive answers; channel mentions direct employees to private chat.',
+      'Use a public HTTPS endpoint and test with your Microsoft tenant. Commercial Microsoft cloud is supported; sovereign-cloud endpoints and emulator authentication are not enabled.',
     ],
   },
 };

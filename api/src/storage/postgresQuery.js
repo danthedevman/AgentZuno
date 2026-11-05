@@ -13,6 +13,7 @@ export function postgresWhere(filter, values) {
     if (
       ![
         '_id',
+        'id',
         'ownerId',
         'workspaceId',
         'userId',

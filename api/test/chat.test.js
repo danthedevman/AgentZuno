@@ -16,7 +16,7 @@ test(
     process.env.CREDENTIAL_ENCRYPTION_KEY = randomBytes(32).toString('base64');
     const store = createIntegrationStore();
     const cleanup = new MongoClient(uri);
-    const user = { id: 'owner', workspaceId: new ObjectId().toHexString() };
+    const user = { id: 'owner', workspaceId: new ObjectId().toHexString(), role: 'admin' };
     const pending = [];
     const service = createChatService(
       store,

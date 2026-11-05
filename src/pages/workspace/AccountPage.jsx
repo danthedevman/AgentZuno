@@ -1,4 +1,5 @@
 import DemoSettings from '../../components/DemoSettings.jsx';
+import AuditSettings from '../../components/AuditSettings.jsx';
 import SmtpSettings from '../../components/SmtpSettings.jsx';
 import WorkforceProfile from '../../components/WorkforceProfile.jsx';
 import CustomDomainSettings from '../../components/CustomDomainSettings.jsx';
@@ -46,6 +47,7 @@ export default function AccountPage() {
         <ChatSettings />
         <DemoSettings />
         <SmtpSettings />
+        <AuditSettings />
         <CustomDomainSettings />
         <details
           class="settings-section"

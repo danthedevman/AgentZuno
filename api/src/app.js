@@ -1,3 +1,6 @@
+import { installRecordActivityRoutes } from './recordActivity.js';
+import { requireRole } from './helpdeskRoles.js';
+import { createHelpdeskTeams } from './helpdeskTeams.js';
 import { rateLimit } from 'express-rate-limit';
 import { installWorkflowReferenceRoutes } from './workflowReferences.js';
 import { installDatabaseSetupRoutes } from './storage/setup.js';
@@ -168,6 +171,22 @@ export function createApi(options = {}) {
   app.disable('x-powered-by');
   installAuditMiddleware(app, integrations, auth, { forceStorage: Boolean(options.database) });
   const slack = createHelpdeskSlack(integrations, chatService, queues.slack);
+  const teams = createHelpdeskTeams(integrations, chatService, queues.teams);
+  app.post(
+    '/api/helpdesk/channels/teams/events/:workspaceId',
+    express.json({ limit: '128kb' }),
+    async (request, response) => {
+      response
+        .status(202)
+        .json(
+          await teams.receive(
+            request.body,
+            request.headers.authorization,
+            request.params.workspaceId,
+          ),
+        );
+    },
+  );
   app.post(
     ['/api/helpdesk/channels/slack/events', '/api/helpdesk/channels/slack/events/:workspaceId'],
     express.raw({ type: 'application/json', limit: '128kb' }),
@@ -291,6 +310,10 @@ export function createApi(options = {}) {
       request.method === 'POST' &&
       ['/api/helpdesk/recent-views', '/api/helpdesk/inbox/viewed'].includes(request.path);
     const helpdeskWrite =
+      (request.method === 'POST' &&
+        /^\/api\/helpdesk\/record-activity\/(?:task|group|data)\/[a-f0-9]{24}$/.test(
+          request.path,
+        )) ||
       (request.method === 'PUT' && /^\/api\/helpdesk\/tasks\/[a-f0-9]{24}$/.test(request.path)) ||
       (['POST', 'PUT'].includes(request.method) &&
         /^\/api\/helpdesk\/requests\/[a-f0-9]{24}\/tasks(?:\/[a-f0-9]{24})?$/.test(request.path)) ||
@@ -308,13 +331,17 @@ export function createApi(options = {}) {
       (request.method === 'POST' &&
         /^\/api\/helpdesk\/(?:requests|articles)\/bulk-delete$/.test(request.path)) ||
       (request.method === 'PUT' && request.path === '/api/helpdesk/smtp') ||
+      (request.method === 'PUT' && request.path === '/api/helpdesk/audit-retention') ||
       (request.method === 'POST' && request.path === '/api/helpdesk/smtp/test') ||
       (request.method === 'POST' && request.path === '/api/helpdesk/catalog-images') ||
       (['POST', 'PUT'].includes(request.method) &&
         /^\/api\/helpdesk\/groups(?:\/[a-f0-9]{24})?$/.test(request.path)) ||
       invitationWrite ||
       knowledgePermissionsWrite ||
-      (request.method === 'PUT' && request.path === '/api/helpdesk/channels/slack/bot') ||
+      (request.method === 'PUT' &&
+        ['/api/helpdesk/channels/slack/bot', '/api/helpdesk/channels/teams/bot'].includes(
+          request.path,
+        )) ||
       (['POST', 'PUT'].includes(request.method) &&
         /^\/api\/helpdesk\/queues(?:\/[a-f0-9]{24})?$/.test(request.path)) ||
       (['POST', 'PUT'].includes(request.method) &&
@@ -569,6 +596,13 @@ export function createApi(options = {}) {
   installIntegrationRoutes(app, integrations, integrationService, queues);
   installChatRoutes(app, integrations, chatService);
   installHelpdeskRoutes(app, integrations, createHelpdeskService(integrations, chatService));
+  app.get('/api/helpdesk/channels/teams/bot', async (request, response) => {
+    requireRole(request.helpdeskUser, ['admin']);
+    response.json(await teams.settings(request.helpdeskUser));
+  });
+  app.put('/api/helpdesk/channels/teams/bot', async (request, response) =>
+    response.json(await teams.configure(request.helpdeskUser, request.body)),
+  );
   app.put('/api/helpdesk/channels/slack/bot', async (request, response) =>
     response.json(await slack.configure(request.helpdeskUser, request.body)),
   );
@@ -595,6 +629,7 @@ export function createApi(options = {}) {
   installHelpdeskWorkflowRoutes(app, integrations, chatService);
   installWorkflowReferenceRoutes(app, integrations);
   installAuditRoutes(app, integrations);
+  installRecordActivityRoutes(app, integrations);
   installKnowledgeAnalyticsRoutes(app, integrations, analytics);
   installConnectionOAuthRoutes(app, integrations, integrationService);
   app.get('/health', (request, response) =>
@@ -687,7 +722,9 @@ export function createApi(options = {}) {
   app.use((request, response) => response.status(404).json({ error: 'API route not found.' }));
   app.use((error, request, response, next) => {
     if (response.headersSent) return next(error);
-    const status = [400, 401, 403, 404, 409, 413, 421, 422, 429, 501, 503].includes(error.status)
+    const status = [400, 401, 403, 404, 409, 413, 421, 422, 429, 501, 502, 503].includes(
+      error.status,
+    )
       ? error.status
       : 500;
     if (status === 500) console.error('API request failed:', error.message);

@@ -1,3 +1,5 @@
+import { canWorkRequest as canReadNotes } from './requestPolicy.js';
+import { recordMentionRecords, createRecordMentionDelivery } from './recordMentions.js';
 import { queryString, queryStrings } from './queryValues.js';
 import { taskInboxRecords } from './requestTasks.js';
 import { randomUUID } from 'node:crypto';
@@ -5,8 +7,6 @@ import { helpdeskScope, deny } from './helpdeskRoles.js';
 import { smtpConfiguration, smtpTransport } from './smtpSettings.js';
 import { isEmailAddress } from './emailAddress.js';
 
-const canReadNotes = (user, record) =>
-  user.role === 'admin' || (user.role === 'agent' && user.queues.includes(record.queueName));
 async function recipient(store, service, record, id, kind) {
   const member = await store.collection('helpdeskMembers').findOne({
     ownerId: queryString(record.ownerId),
@@ -68,6 +68,17 @@ export async function prepareMentions(store, service, actor, record, entry, ids 
       });
   }
   return { mentions, notifications };
+}
+export function requestMentionNotice(user, record) {
+  const notice = record.notifications?.findLast(
+    (item) =>
+      item.recipientId === user.id && (item.kind !== 'work-note' || canReadNotes(user, record)),
+  );
+  return notice
+    ? notice.kind === 'work-note'
+      ? 'Mentioned You in a Work Note'
+      : 'Mentioned You in a Comment'
+    : undefined;
 }
 export function inboxMatches(user) {
   return [
@@ -159,16 +170,28 @@ export function installMentionRoutes(app, store, service) {
     const tasks = (await taskInboxRecords(store, user)).filter(
       (task) => !archived.some((item) => String(item.taskId) === task.id),
     );
+    const recordMentions = (await recordMentionRecords(store, user)).filter(
+      (entry) =>
+        !archived.some(
+          (item) => item.kind === 'record-mention' && String(item.requestId) === String(entry._id),
+        ),
+    );
     response.json({
       unread:
+        recordMentions.some(
+          (entry) => !state || new Date(entry.createdAt) > new Date(state.viewedAt),
+        ) ||
         tasks.some((task) => !state || new Date(task.updatedAt) > new Date(state.viewedAt)) ||
         primary.some((row) => !state || new Date(row.updatedAt) > new Date(state.viewedAt)),
-      hasMentions: rows.some((row) =>
-        row.notifications?.some(
-          (item) =>
-            item.recipientId === user.id && (item.kind !== 'work-note' || canReadNotes(user, row)),
+      hasMentions:
+        recordMentions.length > 0 ||
+        rows.some((row) =>
+          row.notifications?.some(
+            (item) =>
+              item.recipientId === user.id &&
+              (item.kind !== 'work-note' || canReadNotes(user, row)),
+          ),
         ),
-      ),
     });
   });
   app.post('/api/helpdesk/inbox/viewed', async (request, response) => {
@@ -189,7 +212,9 @@ export function installMentionRoutes(app, store, service) {
   });
 }
 export function createMentionDelivery(store, service, send) {
+  const deliverRecords = createRecordMentionDelivery(store, send);
   return async () => {
+    await deliverRecords();
     const rows = await store
       .collection('helpdeskRequests')
       .find({ 'notifications.emailStatus': 'pending' })

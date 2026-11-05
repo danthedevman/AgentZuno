@@ -2,7 +2,7 @@
 
 Admins author and publish workflows. Agents and Users can submit permitted published forms; they cannot change workflow code. Read Only users may inspect permitted configuration but cannot publish or execute it. Assigned approvers also need approval permission. See the [roles and features guide](../../../docs/roles-and-features.md).
 
-Install with `npm install ./api/sdk/workflows`. The package includes JavaScript helpers and TypeScript declarations. The application executes the published TypeScript's `run(ctx)` function; the TypeScript tab is editable source, not an export-only example.
+Install with `npm install ./api/sdk/workflows`. The package includes JavaScript helpers and TypeScript declarations. The application executes the published TypeScript's `run(ctx)` function; the Code tab is editable source, not an export-only example.
 
 ```typescript
 import { defineWorkflow } from '@agentzuno/workflows';

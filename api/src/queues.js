@@ -6,6 +6,7 @@ export const queueNames = {
   vector: 'agentzuno-vector',
   email: 'agentzuno-email',
   slack: 'agentzuno-slack',
+  teams: 'agentzuno-teams',
   workflow: 'agentzuno-workflow',
   chat: 'agentzuno-chat',
   scheduler: 'agentzuno-scheduler',
@@ -18,6 +19,9 @@ export function createQueues() {
           new Error('Redis is not configured. Start Redis and the worker to schedule imports.'),
           { status: 503, publicMessage: 'Redis is not configured. Start Redis and the worker.' },
         );
+      },
+      teams: async () => {
+        throw new Error('Redis is not configured.');
       },
       slack: async () => {
         throw new Error('Redis is not configured.');
@@ -48,6 +52,8 @@ export function createQueues() {
   const sync = new Queue(queueNames.sync, options);
   const vector = new Queue(queueNames.vector, options);
   vector.on('error', () => {});
+  const teams = new Queue(queueNames.teams, options);
+  teams.on('error', () => {});
   const slack = new Queue(queueNames.slack, options);
   slack.on('error', () => {});
   const email = new Queue(queueNames.email, options);
@@ -82,6 +88,16 @@ export function createQueues() {
           jobId: `vector-${item.sourceKind || 'imported'}-${item._id}-${item.runId}-${Math.floor(Date.now() / 300000)}`,
           attempts: 3,
           backoff: { type: 'exponential', delay: 30000 },
+        },
+      ),
+    teams: async (item) =>
+      teams.add(
+        'message',
+        { id: String(item._id), ownerId: item.ownerId, workspaceId: item.workspaceId },
+        {
+          jobId: `teams-${item._id}-${Date.now()}`,
+          attempts: 3,
+          backoff: { type: 'exponential', delay: 30000, jitter: 0.25 },
         },
       ),
     slack: async (item) =>
@@ -123,6 +139,7 @@ export function createQueues() {
         vector.close(),
         email.close(),
         slack.close(),
+        teams.close(),
         workflow.close(),
       ]);
       connection.disconnect();

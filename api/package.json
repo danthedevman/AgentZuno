@@ -19,6 +19,7 @@
     "express-rate-limit": "^8.7.3",
     "ioredis": "^6.0.0",
     "ipaddr.js": "^2.5.0",
+    "jose": "^6.2.15",
     "mingo": "^7.2.7",
     "mongodb": "^7.7.0",
     "nodemailer": "^10.3.1",

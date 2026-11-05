@@ -1,3 +1,4 @@
+import { documentationPages } from '../src/services/docsNavigation.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
@@ -13,7 +14,11 @@ test('production public pages contain readable HTML, unique metadata and valid s
       ? [['index.html', 'AgentZuno | Open Source AI Help Desk', 'Your help deskFrom ask to done']]
       : []),
     ['docs/index.html', 'Documentation | AgentZuno', 'Documentation'],
-    ['docs/workflows/index.html', 'Workflow SDK Documentation | AgentZuno', 'Documentation'],
+    ...documentationPages.map((page) => [
+      `docs/${page.slug}/index.html`,
+      `${page.title} | AgentZuno Docs`,
+      page.title,
+    ]),
   ]) {
     const dom = new JSDOM(await readFile(new URL(`../dist/${path}`, import.meta.url), 'utf8'));
     const document = dom.window.document;
@@ -42,7 +47,10 @@ test('application shells are empty and noindex; sitemap includes only public rou
     dom.window.close();
   }
   const sitemap = await readFile(new URL('../dist/sitemap.xml', import.meta.url), 'utf8');
-  assert.equal((sitemap.match(/<url>/g) || []).length, isStaticSite ? 3 : 2);
+  assert.equal(
+    (sitemap.match(/<url>/g) || []).length,
+    documentationPages.length + (isStaticSite ? 2 : 1),
+  );
   assert.ok(!/workspace|login|demo|register/.test(sitemap));
   const robots = await readFile(new URL('../dist/robots.txt', import.meta.url), 'utf8');
   assert.match(robots, /Disallow: .*workspace/);

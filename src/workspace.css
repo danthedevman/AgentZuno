@@ -1694,6 +1694,13 @@ button:disabled {
   gap: 8px;
   width: 100%;
 }
+.create-form :is(fieldset, .form-section) {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  align-self: stretch;
+}
 .create-form input,
 .create-form textarea {
   padding: 12px;
@@ -2840,16 +2847,15 @@ button:disabled {
 
 .knowledge-tabs {
   display: flex;
-  gap: 24px;
+  gap: 8px;
   overflow-x: auto;
-  border-bottom: 1px solid var(--workspace-line);
   margin-bottom: 26px;
 }
 .knowledge-tabs button {
   flex-shrink: 0;
-  padding: 0 0 13px;
+  padding: 8px 14px;
   border: none;
-  border-bottom: 2px solid transparent;
+  border-radius: 999px;
   background: transparent;
   color: var(--workspace-muted);
   font: inherit;
@@ -3620,7 +3626,6 @@ button.helpdesk-list-row {
   scroll-padding-inline: 18px;
   gap: 8px;
   padding: 12px 18px;
-  border-bottom: 1px solid var(--workspace-line);
 }
 .workflow-tabs button {
   flex: 0 0 auto;
@@ -3628,8 +3633,8 @@ button.helpdesk-list-row {
   padding: 8px 12px;
   background: transparent;
   color: var(--workspace-muted);
-  border: 1px solid transparent;
-  border-radius: 6px;
+  border: 0;
+  border-radius: 999px;
   cursor: pointer;
   font: inherit;
   font-size: 0.85rem;
@@ -3805,6 +3810,11 @@ button.helpdesk-list-row {
   border: 1px solid var(--workspace-line);
   border-radius: 10px;
   background: var(--workspace-panel);
+}
+.record-table-scroll.is-card-view {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 .record-table {
   width: 100%;
@@ -7804,9 +7814,8 @@ button.catalog-item-card {
   overscroll-behavior-x: contain;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 8px;
   margin: 20px 0;
-  border-bottom: 1px solid var(--workspace-line);
 }
 .record-detail-tabs button {
   flex: 0 0 auto;
@@ -7814,8 +7823,8 @@ button.catalog-item-card {
   color: var(--workspace-muted);
   background: transparent;
   border: 0;
-  border-bottom: 2px solid transparent;
-  padding: 12px 2px;
+  border-radius: 999px;
+  padding: 8px 14px;
   font: inherit;
   cursor: pointer;
 }
@@ -8696,7 +8705,7 @@ button.catalog-item-card {
   border-radius: 12px;
   color: var(--workspace-ink);
   text-decoration: none;
-  background: var(--workspace-soft);
+  background: var(--workspace-panel);
   transition:
     border-color 150ms ease,
     background 150ms ease;
@@ -9506,14 +9515,16 @@ button.catalog-item-card {
   height: 32px;
   padding-block: 5px;
 }
-.workspace-shell :is(.workflow-tabs, .record-detail-tabs) button[aria-selected='true'] {
-  border-color: #818cf84d;
-  border-radius: 6px;
+.workspace-shell
+  :is(.workflow-tabs, .record-detail-tabs, .knowledge-tabs)
+  button[aria-selected='true'] {
+  border: 0;
+  border-radius: 999px;
   background: #818cf826;
   color: #4338ca;
 }
 .workspace-shell[data-theme='dark']
-  :is(.workflow-tabs, .record-detail-tabs)
+  :is(.workflow-tabs, .record-detail-tabs, .knowledge-tabs)
   button[aria-selected='true'] {
   color: #c7d2fe;
 }
@@ -9605,4 +9616,398 @@ button.catalog-item-card {
 }
 .workspace-shell:not(.is-nav-expanded) .sidebar-link-placeholder span:last-child {
   display: none;
+}
+
+.agent-tool-activity {
+  margin-top: 10px;
+}
+.agent-tool-activity li time {
+  margin-left: auto;
+  flex-shrink: 0;
+  color: var(--workspace-muted);
+  font-size: 11px;
+}
+
+.record-surface {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 32px;
+  border: 1px solid var(--workspace-line);
+  border-radius: 14px;
+  background: var(--workspace-panel);
+}
+.record-form-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 28px 32px;
+  width: 100%;
+  min-width: 0;
+}
+.record-field-full {
+  grid-column: 1 / -1;
+}
+.record-value {
+  min-width: 0;
+  width: 100%;
+  margin: 0;
+}
+.record-value dt {
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--workspace-muted);
+}
+.record-value dd {
+  box-sizing: border-box;
+  margin: 0;
+  min-height: 44px;
+  padding-block: 10px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.record-value-reference {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--workspace-brand);
+}
+.record-value-reference .icon {
+  width: 16px;
+  height: 16px;
+  font-size: 16px;
+}
+@media (max-width: 650px) {
+  .record-surface {
+    padding: 18px;
+  }
+  .record-form-fields {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+}
+
+.record-page-breadcrumbs {
+  margin-bottom: 16px;
+}
+.record-page-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px 28px;
+  flex-wrap: wrap;
+  margin-bottom: 28px;
+}
+.record-page-title {
+  flex: 1;
+  min-width: 0;
+}
+.record-page-title .workspace-heading {
+  margin: 0;
+}
+.record-page-title .workspace-heading h1 {
+  overflow-wrap: anywhere;
+  line-height: 1.25;
+}
+.record-page-title > p {
+  margin: 10px 0 0;
+  color: var(--workspace-muted);
+  font-size: 12px;
+}
+.record-page-heading > .helpdesk-actions {
+  flex-shrink: 0;
+  margin: 0;
+}
+.record-section {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+  width: 100%;
+}
+.record-section > h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--workspace-ink);
+}
+.record-section + .record-section {
+  margin-top: 32px;
+  padding-top: 28px;
+  border-top: 1px solid var(--workspace-line);
+}
+.record-surface :is(.record-form-fields, .data-record-fields) {
+  gap: 28px 36px;
+}
+.record-form-fields > *,
+.data-record-fields > * {
+  min-width: 0;
+}
+.record-value-reference {
+  max-width: 100%;
+}
+.record-value-reference > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 650px) {
+  .record-page-heading {
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .record-page-title {
+    flex-basis: 100%;
+  }
+  .record-surface {
+    padding: 20px;
+  }
+  .record-surface :is(.record-form-fields, .data-record-fields) {
+    gap: 24px;
+  }
+  .record-section + .record-section {
+    margin-top: 26px;
+    padding-top: 24px;
+  }
+}
+
+/* Keep the expanded primary action compact and centered as one icon/text group. */
+.workspace-shell.is-nav-expanded .workspace-sidebar .rail-create {
+  justify-content: center;
+  gap: 6px;
+}
+
+.record-surface.record-property-sheet {
+  display: grid;
+  gap: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.record-property-list,
+.record-surface .data-record-fields.record-property-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  width: 100%;
+  gap: 16px;
+}
+.record-property-sheet .record-value {
+  display: grid;
+  grid-template-columns: minmax(150px, 220px) minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+}
+.record-property-sheet .record-value dt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  min-height: 44px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.record-property-sheet .record-value dt .icon {
+  flex: 0 0 18px;
+  font-size: 18px;
+  color: var(--workspace-muted);
+}
+.record-property-sheet .record-value dd {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-block: 8px;
+}
+.record-property-sheet .record-value .profile-avatar {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  font-size: 13px;
+}
+.record-property-sheet :is(.record-property-list, .group-settings) label,
+.record-property-sheet > label {
+  display: grid;
+  grid-template-columns: minmax(150px, 220px) minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+}
+.record-property-sheet label > :is(input, textarea, .shared-dropdown) {
+  grid-column: 2;
+  min-width: 0;
+  width: 100%;
+}
+.record-property-sheet .multi-select-field {
+  display: grid;
+  grid-template-columns: minmax(150px, 220px) minmax(0, 1fr);
+  align-items: start;
+  gap: 8px 16px;
+  width: 100%;
+}
+.record-property-sheet .multi-select-field > label {
+  display: block;
+  grid-column: 1;
+  padding-top: 12px;
+}
+.record-property-sheet .multi-select-field > :not(label) {
+  grid-column: 2;
+}
+.record-description-block {
+  padding: 24px;
+  border-radius: 12px;
+  background: var(--workspace-panel);
+  min-width: 0;
+}
+.record-description-block .record-value {
+  display: block;
+}
+.record-description-block .record-value dt .icon {
+  display: none;
+}
+.record-description-block .record-value dd {
+  display: block;
+  padding: 0;
+}
+.record-description-block label {
+  width: 100%;
+}
+.record-status-badge {
+  display: inline-flex;
+  border-radius: 20px;
+  padding: 2px 10px;
+  background: color-mix(in srgb, #818cf8 15%, transparent);
+  color: var(--workspace-brand);
+  font-size: 13px;
+}
+.record-status-badge.is-complete {
+  background: color-mix(in srgb, #2ab88a 15%, transparent);
+  color: var(--workspace-success, #2ab88a);
+}
+.record-activity {
+  margin-top: 36px;
+  min-width: 0;
+}
+.record-activity-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+.record-activity-tabs button {
+  border: 0;
+  border-radius: 24px;
+  padding: 10px 16px;
+  color: var(--workspace-muted);
+  background: transparent;
+  cursor: pointer;
+}
+.record-activity-tabs button[aria-selected='true'] {
+  color: var(--workspace-brand);
+  background: color-mix(in srgb, #818cf8 15%, transparent);
+}
+.record-activity-composer {
+  width: 100%;
+  margin-bottom: 24px;
+}
+.record-activity-composer label {
+  width: 100%;
+}
+.record-activity-feed {
+  display: grid;
+  gap: 24px;
+  animation: content-reveal 180ms ease-out;
+}
+.record-activity-entry {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.record-activity-entry > div {
+  flex: 1;
+  min-width: 0;
+}
+.record-activity-entry header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+.record-activity-entry time,
+.record-activity-empty {
+  color: var(--workspace-muted);
+  font-size: 13px;
+}
+.record-activity-entry p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.7;
+  margin: 8px 0 0;
+}
+.record-note-label {
+  color: var(--workspace-muted);
+  font-size: 12px;
+}
+@media (max-width: 650px) {
+  .record-property-sheet .record-value,
+  .record-property-sheet :is(.record-property-list, .group-settings) label,
+  .record-property-sheet > label,
+  .record-property-sheet .multi-select-field {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+  }
+  .record-property-sheet .record-value dt {
+    min-height: 24px;
+  }
+  .record-property-sheet label > :is(input, textarea, .shared-dropdown),
+  .record-property-sheet .multi-select-field > :not(label) {
+    grid-column: 1;
+  }
+  .record-description-block {
+    padding: 20px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .record-activity-feed {
+    animation: none;
+  }
+}
+
+.record-property-sheet
+  .record-description-field:not(.record-description-block)
+  > :is(label, .record-field-full > label) {
+  display: grid;
+  grid-template-columns: minmax(150px, 220px) minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+}
+.record-property-sheet .record-description-field:not(.record-description-block) textarea {
+  grid-column: 2;
+}
+.record-property-sheet .record-description-block label {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+.record-property-sheet .record-description-block textarea {
+  grid-column: auto;
+}
+.record-property-sheet .multi-select-options {
+  left: 236px;
+  right: 0;
+  width: auto;
+}
+@media (max-width: 650px) {
+  .record-property-sheet
+    .record-description-field:not(.record-description-block)
+    > :is(label, .record-field-full > label) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+  .record-property-sheet .record-description-field:not(.record-description-block) textarea {
+    grid-column: 1;
+  }
+  .record-property-sheet .multi-select-options {
+    left: 0;
+  }
 }

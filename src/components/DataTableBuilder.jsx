@@ -100,6 +100,7 @@ export default function DataTableBuilder(props) {
                   <Show when={message.role === 'assistant'} fallback={<p>{message.text}</p>}>
                     <ChatMarkdown text={workflowChatText(message.text)} />
                     <AgentProgress
+                      toolCalls={message.toolCalls || []}
                       phase={message.phase || message.status}
                       events={message.progress || []}
                     />

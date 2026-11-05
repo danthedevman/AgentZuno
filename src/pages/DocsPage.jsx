@@ -1,86 +1,188 @@
+import { A, useLocation, useNavigate } from '@solidjs/router';
+import { For, Show, createEffect, createSignal, onMount, onCleanup } from 'solid-js';
+import {
+  documentationPages,
+  documentationPath,
+  rewriteDocumentationLinks,
+} from '../services/docsNavigation.js';
+import { publicAsset } from '../services/publicAsset.js';
+import ChatMarkdown from '../components/ChatMarkdown.jsx';
+import CodeBlock from '../components/CodeBlock.jsx';
+import Icon from '../components/Icon.jsx';
+import gettingStartedGuide from '../../docs/getting-started.md?raw';
+import rolesGuide from '../../docs/roles-and-features.md?raw';
+import requestsGuide from '../../docs/requests-and-tasks.md?raw';
+import knowledgeGuide from '../../docs/knowledge.md?raw';
+import databaseGuide from '../../docs/databases.md?raw';
+import agentToolsGuide from '../../docs/agent-tools.md?raw';
+import integrationsGuide from '../../docs/integrations.md?raw';
 import testingGuide from '../../docs/testing.md?raw';
 import recoveryGuide from '../../docs/recovery.md?raw';
 import capacityGuide from '../../docs/capacity.md?raw';
-import { publicAsset } from '../services/publicAsset.js';
-import { A, useLocation } from '@solidjs/router';
-import { For, createEffect, createSignal, onMount, onCleanup } from 'solid-js';
-import ChatMarkdown from '../components/ChatMarkdown.jsx';
-import CodeBlock from '../components/CodeBlock.jsx';
-import knowledgeGuide from '../../docs/knowledge.md?raw';
-import rolesGuide from '../../docs/roles-and-features.md?raw';
-import databaseGuide from '../../docs/databases.md?raw';
+import securityGuide from '../../docs/security.md?raw';
 import sdkGuide from '../../api/sdk/workflows/README.md?raw';
 import sdkTypes from '../../api/sdk/workflows/index.d.ts?raw';
+
+const guides = {
+  'getting-started': gettingStartedGuide,
+  'roles-and-features': rolesGuide,
+  'requests-and-tasks': requestsGuide,
+  knowledge: knowledgeGuide,
+  'database-setup': databaseGuide,
+  'agent-tools': agentToolsGuide,
+  integrations: integrationsGuide,
+  testing: testingGuide,
+  recovery: recoveryGuide,
+  capacity: capacityGuide,
+  'runtime-security': securityGuide,
+  'workflow-sdk': sdkGuide,
+};
+
+function DocsScreenshot(props) {
+  return (
+    <figure class="docs-screenshot">
+      <a
+        href={publicAsset(props.src)}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={`Open screenshot: ${props.caption}`}
+      >
+        <img
+          src={publicAsset(props.src)}
+          alt={props.caption}
+          loading="lazy"
+          decoding="async"
+          width="1280"
+        />
+      </a>
+      <figcaption>{props.caption}</figcaption>
+    </figure>
+  );
+}
 export default function DocsPage() {
-  const location = useLocation();
-  const sectionIds = [
-    'getting-started',
-    'roles-and-features',
-    'knowledge',
-    'database-setup',
-    'testing',
-    'recovery',
-    'capacity',
-    'workflow-sdk',
-    'runtime-security',
-    'type-reference',
-  ];
-  const [activeSection, setActiveSection] = createSignal('getting-started');
-  const [sectionHeadings, setSectionHeadings] = createSignal({});
+  const location = useLocation(),
+    navigate = useNavigate();
+  const page = () =>
+    documentationPages.find(
+      (item) => documentationPath(item) === location.pathname.replace(/\/$/, ''),
+    );
+  const isOverview = () => location.pathname.replace(/\/$/, '') === '/docs';
+  const [headings, setHeadings] = createSignal([]);
   const [activeHeading, setActiveHeading] = createSignal('');
-  let content;
-  function openAnchor(hash) {
-    const id =
-      hash?.slice(1) ||
-      (location.pathname === '/docs/workflows' ? 'workflow-sdk' : 'getting-started');
-    content?.querySelector(`[id="${CSS.escape(id)}"]`)?.scrollIntoView({ block: 'start' });
+  const [menuOpen, setMenuOpen] = createSignal(false);
+  let content, menuButton;
+  const guide = () =>
+    rewriteDocumentationLinks(
+      (guides[page()?.id] || '').replace(/^# [^\n]*\n/, '').replace(/!\[[^\]]*\]\([^)]*\)/g, ''),
+    );
+  function scrollToHeading() {
+    if (!location.hash) {
+      window.scrollTo({ top: 0, behavior: 'instant' });
+      return;
+    }
+    let id;
+    try {
+      id = decodeURIComponent(location.hash.slice(1));
+    } catch {
+      return;
+    }
+    const target =
+      content?.querySelector(`[id="${CSS.escape(id)}"]`) ||
+      headings().find((item) => item.legacyId === id)?.element;
+    target?.scrollIntoView({ block: 'start', behavior: 'instant' });
   }
   createEffect(() => {
-    const hash = location.hash;
-    const frame = requestAnimationFrame(() => openAnchor(hash));
+    const path = location.pathname,
+      hash = location.hash;
+    const legacy =
+      isOverview() &&
+      documentationPages.find(
+        (item) => hash === '#' + item.id || hash.startsWith('#' + item.id + '-'),
+      );
+    if (legacy) {
+      navigate(documentationPath(legacy) + (hash === '#' + legacy.id ? '' : hash), {
+        replace: true,
+      });
+      return;
+    }
+    page();
+    setMenuOpen(false);
+    const frame = requestAnimationFrame(() => {
+      const used = new Set();
+      setHeadings(
+        [...content.querySelectorAll('h2, h3')].map((element, index) => {
+          const base =
+            element.textContent
+              .toLowerCase()
+              .replace(/[^a-z0-9\s-]/g, '')
+              .trim()
+              .replace(/\s+/g, '-') || 'section';
+          let id = base,
+            suffix = 2;
+          while (used.has(id)) id = `${base}-${suffix++}`;
+          used.add(id);
+          element.id = id;
+          return {
+            id,
+            label: element.textContent,
+            legacyId: `${page()?.id || 'overview'}-${index + 1}`,
+            element,
+          };
+        }),
+      );
+      setActiveHeading(headings()[0]?.id || '');
+      scrollToHeading();
+    });
     onCleanup(() => cancelAnimationFrame(frame));
   });
-  onMount(() => {
-    const sections = sectionIds.map((id) => content.querySelector(`#${id}`));
-    const headingsBySection = {};
-    for (const section of sections) {
-      headingsBySection[section.id] = [...section.querySelectorAll('h2, h3')].map(
-        (heading, index) => {
-          heading.id = `${section.id}-${index + 1}`;
-          return { id: heading.id, label: heading.textContent, element: heading };
-        },
-      );
-    }
-    setSectionHeadings(headingsBySection);
-    let frame;
-    const updateActiveSection = () => {
-      frame = undefined;
-      let current = sectionIds[0];
-      for (const section of sections) {
-        if (section.getBoundingClientRect().top <= 150) current = section.id;
-      }
-      setActiveSection(current);
-      const headings = headingsBySection[current];
-      let headingId = headings[0]?.id || '';
-      for (const heading of headings) {
-        if (heading.element.getBoundingClientRect().top <= 170) headingId = heading.id;
-      }
-      setActiveHeading(headingId);
-    };
-    const scheduleUpdate = () => {
-      if (frame === undefined) frame = requestAnimationFrame(updateActiveSection);
-    };
-    updateActiveSection();
-    window.addEventListener('scroll', scheduleUpdate, { passive: true });
-    window.addEventListener('resize', scheduleUpdate);
+  createEffect(() => {
+    if (!menuOpen()) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     onCleanup(() => {
-      window.removeEventListener('scroll', scheduleUpdate);
-      window.removeEventListener('resize', scheduleUpdate);
+      document.body.style.overflow = previous;
+    });
+  });
+  onMount(() => {
+    let frame;
+    const update = () => {
+      frame = undefined;
+      let selected = headings()[0]?.id || '';
+      for (const item of headings())
+        if (item.element.getBoundingClientRect().top <= 180) selected = item.id;
+      setActiveHeading(selected);
+    };
+    const schedule = () => {
+      if (window.innerWidth > 760) setMenuOpen(false);
+      if (frame === undefined) frame = requestAnimationFrame(update);
+    };
+    window.addEventListener('scroll', schedule, { passive: true });
+    window.addEventListener('resize', schedule);
+    onCleanup(() => {
+      window.removeEventListener('scroll', schedule);
+      window.removeEventListener('resize', schedule);
       if (frame !== undefined) cancelAnimationFrame(frame);
     });
   });
+  function closeMenu(event) {
+    if (event.target.closest('a')) {
+      setMenuOpen(false);
+      menuButton?.focus();
+    }
+  }
   return (
-    <div class="docs-page">
+    <div
+      class="docs-page"
+      onKeyDown={(event) => {
+        if (event.key === 'Escape' && menuOpen()) {
+          setMenuOpen(false);
+          menuButton?.focus();
+        }
+      }}
+    >
+      <a class="docs-skip-link" href="#docs-main">
+        Skip to content
+      </a>
       <header class="docs-header">
         <A href="/" class="docs-brand">
           <img
@@ -94,199 +196,198 @@ export default function DocsPage() {
           <A href="/docs" aria-current="page">
             Docs
           </A>
-          <A href="/login">Sign In</A>
-          <A class="workspace-button small" href="/register">
-            Get Access
-          </A>
+          <a
+            href="https://github.com/danthedevman/agentzuno"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="View AgentZuno on GitHub"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 .5a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2.1c-3.3.7-4-1.4-4-1.4-.5-1.4-1.3-1.7-1.3-1.7-1.1-.8.1-.8.1-.8 1.2.1 1.8 1.2 1.8 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-6A4.7 4.7 0 0 1 5.7 8.7c-.1-.3-.5-1.6.1-3.2 0 0 1-.3 3.3 1.2a11.4 11.4 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.6 1.6.2 2.9.1 3.2a4.7 4.7 0 0 1 1.2 3.3c0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.2c0 .3.2.7.8.6A12 12 0 0 0 12 .5Z" />
+            </svg>
+          </a>
         </nav>
       </header>
-      <div
-        class="docs-layout"
-        onClick={(event) => {
-          const hash = event.target.closest('a[href^="#"]')?.getAttribute('href');
-          if (hash) requestAnimationFrame(() => openAnchor(hash));
-        }}
-      >
-        <aside class="docs-navigation">
-          <nav aria-label="Documentation">
-            <a
-              href="#getting-started"
-              aria-current={activeSection() === 'getting-started' ? 'location' : undefined}
-            >
-              Getting Started
-            </a>
-            <a
-              href="#roles-and-features"
-              aria-current={activeSection() === 'roles-and-features' ? 'location' : undefined}
-            >
-              Roles &amp; Features
-            </a>
-            <a
-              href="#knowledge"
-              aria-current={activeSection() === 'knowledge' ? 'location' : undefined}
-            >
-              Knowledge
-            </a>
-            <a
-              href="#database-setup"
-              aria-current={activeSection() === 'database-setup' ? 'location' : undefined}
-            >
-              Database Setup
-            </a>
-            <a
-              href="#testing"
-              aria-current={activeSection() === 'testing' ? 'location' : undefined}
-            >
-              Testing
-            </a>
-            <a
-              href="#recovery"
-              aria-current={activeSection() === 'recovery' ? 'location' : undefined}
-            >
-              Backups &amp; Upgrades
-            </a>
-            <a
-              href="#capacity"
-              aria-current={activeSection() === 'capacity' ? 'location' : undefined}
-            >
-              Capacity Testing
-            </a>
-            <a
-              href="#workflow-sdk"
-              aria-current={activeSection() === 'workflow-sdk' ? 'location' : undefined}
-            >
-              Workflow SDK
-            </a>
-            <a
-              href="#runtime-security"
-              aria-current={activeSection() === 'runtime-security' ? 'location' : undefined}
-            >
-              Sandbox &amp; Permissions
-            </a>
-            <a
-              href="#type-reference"
-              aria-current={activeSection() === 'type-reference' ? 'location' : undefined}
-            >
-              TypeScript Reference
-            </a>
+      <div class="docs-mobile-toolbar">
+        <button
+          ref={menuButton}
+          type="button"
+          aria-expanded={menuOpen()}
+          aria-controls="docs-categories"
+          onClick={() => setMenuOpen(!menuOpen())}
+        >
+          <Icon name={menuOpen() ? 'close' : 'menu-open'} />
+          Browse Docs
+          <Icon name="chevron-down" />
+        </button>
+        <span>{page()?.title || 'Overview'}</span>
+      </div>
+      <div class="docs-layout">
+        <aside
+          class="docs-navigation"
+          id="docs-categories"
+          classList={{ 'is-open': menuOpen() }}
+          onClick={closeMenu}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              setMenuOpen(false);
+              menuButton?.focus();
+            }
+          }}
+        >
+          <nav aria-label="Documentation categories">
+            <A href="/docs" aria-current={isOverview() ? 'page' : undefined}>
+              Overview
+            </A>
+            <For each={documentationPages}>
+              {(item) => (
+                <A
+                  href={documentationPath(item)}
+                  aria-current={page()?.id === item.id ? 'page' : undefined}
+                >
+                  {item.title}
+                </A>
+              )}
+            </For>
           </nav>
-        </aside>
-        <main class="docs-content" ref={content}>
-          <h1>Documentation</h1>
-          <section id="getting-started">
-            <h2>Getting Started</h2>
-            <p>
-              Run the web app, API, worker, and infrastructure with Docker Compose. On first launch,
-              the app opens the database wizard. Choose MongoDB or PostgreSQL, then register the
-              first account. Future visits open Login or your signed-in workspace. Configure an AI
-              provider in workspace Settings, create queues, then build a workflow conversationally
-              or edit its TypeScript. Review and publish the workflow before employees can use it.
-            </p>
-            <CodeBlock
-              language="bash"
-              code={'docker compose up --build -d\n# Open http://localhost:3000'}
-            />
-            <p>
-              AI provider credentials and connector credentials stay on the server. Configure each
-              channel before using it with employees.
-            </p>
-          </section>
-          <section id="roles-and-features">
-            <ChatMarkdown
-              text={rolesGuide.replace(/^# /, '## ')}
-              scrollTables
-              externalLinksNewTab
-            />
-          </section>
-          <section id="knowledge">
-            <ChatMarkdown
-              text={knowledgeGuide
-                .replace(/^# /, '## ')
-                .replaceAll('roles-and-features.md', '/docs#roles-and-features')}
-              scrollTables
-              externalLinksNewTab
-            />
-          </section>
-          <section id="database-setup">
-            <ChatMarkdown
-              text={databaseGuide.replaceAll('roles-and-features.md', '/docs#roles-and-features')}
-              scrollTables
-              externalLinksNewTab
-            />
-          </section>
-          <section id="testing">
-            <ChatMarkdown
-              text={testingGuide
-                .replace(/^# /, '## ')
-                .replaceAll('roles-and-features.md', '/docs#roles-and-features')
-                .replaceAll('getting-started.md', '/docs#getting-started')
-                .replaceAll('recovery.md', '/docs#recovery')
-                .replaceAll('capacity.md', '/docs#capacity')
-                .replaceAll('testing.md', '/docs#testing')}
-              scrollTables
-              externalLinksNewTab
-            />
-          </section>
-          <section id="recovery">
-            <ChatMarkdown
-              text={recoveryGuide
-                .replace(/^# /, '## ')
-                .replaceAll('roles-and-features.md', '/docs#roles-and-features')
-                .replaceAll('getting-started.md', '/docs#getting-started')
-                .replaceAll('recovery.md', '/docs#recovery')
-                .replaceAll('capacity.md', '/docs#capacity')
-                .replaceAll('testing.md', '/docs#testing')}
-              scrollTables
-              externalLinksNewTab
-            />
-          </section>
-          <section id="capacity">
-            <ChatMarkdown
-              text={capacityGuide
-                .replace(/^# /, '## ')
-                .replaceAll('roles-and-features.md', '/docs#roles-and-features')
-                .replaceAll('getting-started.md', '/docs#getting-started')
-                .replaceAll('recovery.md', '/docs#recovery')
-                .replaceAll('capacity.md', '/docs#capacity')
-                .replaceAll('testing.md', '/docs#testing')}
-              scrollTables
-              externalLinksNewTab
-            />
-          </section>
-          <section id="workflow-sdk">
-            <ChatMarkdown
-              scrollTables
-              text={sdkGuide
-                .replace(/^# /, '## ')
-                .replaceAll('../../../docs/roles-and-features.md', '/docs#roles-and-features')}
-            />
-          </section>
-          <section id="runtime-security">
-            <h2>Sandbox &amp; Permissions</h2>
-            <p>
-              Published TypeScript runs in a fresh QuickJS WebAssembly runtime inside a worker
-              thread. The code has no direct network, filesystem, environment, or credential access.
-              The backend gateway checks each SDK action against the published workflow and current
-              workspace permissions.
-            </p>
-            <p>
-              Approvals pause a durable run. Completed step receipts are reused during replay.
-              Uncertain external delivery needs investigation; execution does not promise
-              exactly-once delivery.
-            </p>
-          </section>
-          <section id="type-reference">
-            <h2>TypeScript Reference</h2>
-            <CodeBlock language="typescript" code={sdkTypes} />
-          </section>
-        </main>
-        <aside class="docs-page-index">
-          <nav aria-label="On this page">
-            <strong>On this page</strong>
-            <For each={sectionHeadings()[activeSection()] || []}>
+          <nav class="docs-mobile-sections" aria-label="Jump to a section">
+            <strong>On this section</strong>
+            <For each={headings()}>
               {(heading) => (
                 <a
-                  href={`#${heading.id}`}
+                  href={'#' + heading.id}
+                  aria-current={activeHeading() === heading.id ? 'location' : undefined}
+                >
+                  {heading.label}
+                </a>
+              )}
+            </For>
+          </nav>
+        </aside>
+        <main class="docs-content" id="docs-main" ref={content}>
+          <h1>{page()?.title || (isOverview() ? 'Documentation' : 'Guide Not Found')}</h1>
+          <Show
+            when={page()}
+            fallback={
+              <Show
+                when={isOverview()}
+                fallback={<p>Choose a guide from the documentation categories.</p>}
+              >
+                <p>
+                  Learn how to run AgentZuno, build service workflows, and help your team get work
+                  done. Start with installation, then follow the guides for your role.
+                </p>
+                <h2>Start with your role</h2>
+                <p>
+                  <strong>Admins</strong> install the app, connect services, and publish workflows
+                  and knowledge. <strong>Agents</strong> handle assigned requests and tasks.{' '}
+                  <strong>Users</strong> ask questions and submit requests.{' '}
+                  <strong>Read Only</strong> users review permitted records and reports without
+                  changing them.
+                </p>
+                <h2>Find a guide</h2>
+                <div class="docs-guide-grid">
+                  <For each={documentationPages}>
+                    {(item) => (
+                      <A href={documentationPath(item)}>
+                        <strong>
+                          {item.title}
+                          <span aria-hidden="true">→</span>
+                        </strong>
+                        <p>{item.description}</p>
+                      </A>
+                    )}
+                  </For>
+                </div>
+                <DocsScreenshot
+                  src="/help/readme-my-work-dark.png"
+                  caption="My Work brings assigned requests and personal workload together"
+                />
+              </Show>
+            }
+          >
+            <p class="docs-guide-description">{page().description}</p>
+            <Show when={page().id === 'workflow-sdk'}>
+              <h2>Build a workflow through conversation</h2>
+              <ol>
+                <li>As an Admin, open Workflows and select New Workflow</li>
+                <li>
+                  Describe the request, form fields, assignment group, and any approvals. For
+                  example: “Create a laptop request with Mac or Windows choices, manager approval,
+                  and a task for Desktop Support”
+                </li>
+                <li>
+                  Review Visual, Form, Approvals, and Settings. Chat changes save to a draft; they
+                  do not publish it
+                </li>
+                <li>
+                  Choose whether it should appear in Catalog, check its permissions, and select
+                  Publish when ready
+                </li>
+                <li>
+                  Submit a permitted test request and inspect Runs before using it with your team
+                </li>
+              </ol>
+              <DocsScreenshot
+                src="/help/readme-workflow-builder-dark.png"
+                caption="The Admin conversation and workflow visual stay side by side"
+              />
+              <h2>Use workflow code</h2>
+              <p>
+                The Code tab contains the TypeScript that runs when the published workflow executes.
+                The reference below is for developers extending a workflow. Agents and employees use
+                the published request experience; they cannot change administrative code.
+              </p>
+            </Show>
+            <Show
+              when={page().id === 'type-reference'}
+              fallback={<ChatMarkdown text={guide()} scrollTables externalLinksNewTab />}
+            >
+              <h2>Workflow types</h2>
+              <p>
+                Use these declarations with the workflow SDK. Start with the{' '}
+                <A href="/docs/workflows">workflow guide</A> for a complete example and review the{' '}
+                <A href="/docs/security">sandbox boundaries</A> before adding actions.
+              </p>
+              <CodeBlock language="typescript" code={sdkTypes} />
+            </Show>
+            <Show when={page().id === 'requests-and-tasks'}>
+              <DocsScreenshot
+                src="/help/readme-request-chat-dark.png"
+                caption="A submitted request stays alongside its conversation"
+              />
+              <DocsScreenshot
+                src="/help/docs-task-record-dark.png"
+                caption="Task properties, due dates, Comments, and Work Notes"
+              />
+            </Show>
+            <Show when={page().id === 'getting-started'}>
+              <DocsScreenshot
+                src="/help/docs-database-setup.png"
+                caption="A new installation starts with database selection before account creation"
+              />
+            </Show>
+            <Show when={page().id === 'roles-and-features'}>
+              <DocsScreenshot
+                src="/help/readme-my-work-dark.png"
+                caption="Admins and agents use My Work to review their assigned workload"
+              />
+            </Show>
+            <nav class="docs-page-pagination" aria-label="More documentation">
+              <A href="/docs">All Guides</A>
+              <Show when={documentationPages[documentationPages.indexOf(page()) + 1]}>
+                {(next) => <A href={documentationPath(next())}>Next: {next().title} →</A>}
+              </Show>
+            </nav>
+          </Show>
+        </main>
+        <aside class="docs-page-index">
+          <nav aria-label="On this section">
+            <strong>On this section</strong>
+            <For each={headings()}>
+              {(heading) => (
+                <a
+                  href={'#' + heading.id}
                   aria-current={activeHeading() === heading.id ? 'location' : undefined}
                 >
                   {heading.label}

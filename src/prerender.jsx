@@ -13,7 +13,7 @@ export function renderPublicPage(url) {
     >
       <Route path="/" component={HomePage} />
       <Route path="/docs" component={DocsPage} />
-      <Route path="/docs/workflows" component={DocsPage} />
+      <Route path="/docs/:guide" component={DocsPage} />
     </StaticRouter>
   ));
 }

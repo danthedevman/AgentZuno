@@ -8,7 +8,7 @@ import { createHash } from 'node:crypto';
 import { helpdeskScope, requireRole, deny } from './helpdeskRoles.js';
 import { referenceTypes } from './workforceProfiles.js';
 import { listResponse } from './listQuery.js';
-export const dataDesignerInstructions = `You are the Admin agent designing reference and mapping tables. Ask concise clarifying questions. When requirements are clear, return the complete proposed table as fenced json: {"name":"Departments","description":"Purpose","fields":[{"id":"name","label":"Name","type":"text","required":true}]}. Maximum 20 fields; field IDs are unique lowercase letters/digits/hyphens, starting with a letter, max 40. Types: text, number, boolean, date, email, reference. A reference field must include referenceTable, either "users" or an existing table ID supplied by the server. Other fields cannot include referenceTable. Name max 80, description max 1000, labels max 80. Never invent table IDs, claim changes have been saved, execute code, create records, or grant permissions. Changes require explicit Admin review and Save. Preserve manually edited definitions supplied privately.`;
+export const dataDesignerInstructions = `You are the Admin agent designing reference and mapping tables. Ask concise clarifying questions. When requirements are clear, use the proposeDataTable tool with the complete proposed table: {"name":"Departments","description":"Purpose","fields":[{"id":"name","label":"Name","type":"text","required":true}]}. Maximum 20 fields; field IDs are unique lowercase letters/digits/hyphens, starting with a letter, max 40. Types: text, number, boolean, date, email, reference. A reference field must include referenceTable, either "users" or an existing table ID supplied by the server. Other fields cannot include referenceTable. Name max 80, description max 1000, labels max 80. Never invent table IDs, claim changes have been saved, execute code, create records, or grant permissions. Changes require explicit Admin review and Save. Preserve manually edited definitions supplied privately.`;
 const text = (value, max = 160) => {
   if (typeof value !== 'string' || !value.trim() || value.length > max)
     deny('Invalid data text.', 400);
@@ -107,6 +107,7 @@ const serviceDeskTypes = [
 const allBuiltinTypes = [...referenceTypes, ...serviceDeskTypes];
 const builtinFields = {
   task: [
+    optional('due-date', 'Due Date', 'date'),
     optional('request', 'Request', 'reference', 'ref-request'),
     optional('status', 'Status'),
     optional('assignment-group', 'Assignment Group', 'reference', 'ref-group'),
@@ -490,6 +491,7 @@ export function createAdminData(store) {
           ...record,
           id: String(record._id),
           name: record.title,
+          'due-date': record.dueDate || '',
           request: record.requestId || '',
           'assignment-group': String(
             taskGroups.find((group) => group.name === record.queueName)?._id || '',
@@ -998,9 +1000,7 @@ export function installAdminDataRoutes(app, store, chats) {
     let definition = previous.definition || null;
     if (latest?.status === 'complete') {
       try {
-        definition = defineDataTable(
-          JSON.parse(latest.text.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1] || latest.text),
-        );
+        definition = defineDataTable(latest.proposals?.dataTable?.definition);
         await store
           .collection('adminDataConversations')
           .updateOne({ _id: previous._id }, { $set: { definition, updatedAt: new Date() } });

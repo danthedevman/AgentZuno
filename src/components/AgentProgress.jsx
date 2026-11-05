@@ -94,6 +94,69 @@ export default function AgentProgress(props) {
           </span>
         </Show>
       </details>
+      <Show when={props.toolCalls?.length}>
+        <details class="agent-tool-activity">
+          <summary>Tools Used ({props.toolCalls.length})</summary>
+          <ol>
+            <For each={props.toolCalls}>
+              {(call) => (
+                <li data-state={call.status}>
+                  <span
+                    classList={{
+                      'activity-indicator': true,
+                      'is-processing': call.status === 'processing',
+                      'is-completed': call.status === 'completed',
+                      'is-failed': call.status === 'failed',
+                    }}
+                    aria-hidden="true"
+                  >
+                    <Icon
+                      name={
+                        call.status === 'completed'
+                          ? 'check'
+                          : call.status === 'failed'
+                            ? 'close'
+                            : 'settings'
+                      }
+                    />
+                  </span>
+                  <span>
+                    {{
+                      listAvailableTools: 'Discover Tools',
+                      getCurrentUser: 'Read Current User',
+                      listGroups: 'Look Up Groups',
+                      listReferenceTables: 'Look Up Data Tables',
+                      createGroup: 'Create Group',
+                      proposeWorkflow: 'Build Workflow Draft',
+                      proposeArticle: 'Prepare Article Preview',
+                      proposeDataTable: 'Prepare Table Definition',
+                      proposeRequestAction: 'Prepare Request Action',
+                    }[call.name] || 'Tool Call'}
+                  </span>
+                  <small>
+                    {call.status === 'processing'
+                      ? 'Processing'
+                      : call.status === 'failed'
+                        ? 'Failed'
+                        : 'Completed'}
+                  </small>
+                  <Show when={call.completedAt}>
+                    <time
+                      datetime={call.completedAt}
+                      title={new Date(call.completedAt).toLocaleString()}
+                    >
+                      {new Date(call.completedAt).toLocaleTimeString([], {
+                        hour: 'numeric',
+                        minute: '2-digit',
+                      })}
+                    </time>
+                  </Show>
+                </li>
+              )}
+            </For>
+          </ol>
+        </details>
+      </Show>
     </div>
   );
 }

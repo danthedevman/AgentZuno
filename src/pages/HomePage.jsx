@@ -86,6 +86,11 @@ export default function HomePage() {
 
   return (
     <main class="landing-main">
+      <div class="marketing-release-banner" aria-label="Release status">
+        <span>Early Release</span>
+        <span aria-hidden="true">·</span>
+        <span>Under active development</span>
+      </div>
       <nav class="landing-top-navigation" aria-label="Public navigation">
         <A class="marketing-brand-mark" href="/" aria-label="AgentZuno home">
           <img
@@ -137,7 +142,7 @@ export default function HomePage() {
             <Show
               when={hasConfiguredBackend()}
               fallback={
-                <A class="start-button" href="/docs#getting-started">
+                <A class="start-button" href="/docs/getting-started">
                   Get started with Docker <span aria-hidden="true">→</span>
                 </A>
               }
@@ -210,7 +215,7 @@ export default function HomePage() {
             Keep teams in control of who can access information and how it evolves, with review and
             approval built in.
           </p>
-          <A href="/docs#knowledge">
+          <A href="/docs/knowledge">
             Explore the Knowledge guide <span aria-hidden="true">→</span>
           </A>
         </div>
@@ -273,7 +278,7 @@ export default function HomePage() {
           <div class="marketing-section-actions">
             <A
               class="start-button"
-              href={hasConfiguredBackend() ? '/register' : '/docs#getting-started'}
+              href={hasConfiguredBackend() ? '/register' : '/docs/getting-started'}
             >
               {hasConfiguredBackend() ? 'Get Access' : 'Get started with Docker'}
             </A>

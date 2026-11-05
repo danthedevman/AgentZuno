@@ -400,7 +400,10 @@ export default function RecordTable(props) {
       <Show when={!isEmpty()}>
         <div
           class="record-table-scroll"
-          classList={{ 'is-ready': !!activeResult() || !props.source }}
+          classList={{
+            'is-ready': !!activeResult() || !props.source,
+            'is-card-view': !!props.renderCard || isMobile(),
+          }}
           aria-busy={result.loading}
         >
           <Show

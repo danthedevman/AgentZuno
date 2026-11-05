@@ -99,6 +99,7 @@ export function createHelpdeskChannels(store, fetcher = fetch) {
   async function list(user) {
     requireRole(user, ['admin']);
     const saved = await store.collection('helpdeskChannels').find(helpdeskScope(user)).toArray();
+    const teamsBot = await store.collection('helpdeskTeamsBots').findOne(helpdeskScope(user));
     const applications = await store
       .collection('helpdeskChannelApplications')
       .find(helpdeskScope(user))
@@ -200,12 +201,48 @@ export function createHelpdeskChannels(store, fetcher = fetch) {
                     ? 'Automatic replies enabled'
                     : 'Draft replies enabled'
                 : 'Not configured',
+          ...(id === 'teams'
+            ? {
+                teamsBot: {
+                  tenantId: teamsBot?.tenantId || '',
+                  enabled: teamsBot?.enabled === true,
+                  identityBindings: teamsBot?.identityBindings || [],
+                  version: teamsBot?.version || 0,
+                  eventsUrl: `${process.env.APP_ORIGIN || 'http://localhost:3000'}/api/helpdesk/channels/teams/events/${user.workspaceId}`,
+                },
+                description:
+                  'Receive private Teams support messages from mapped employees and reply with their permitted knowledge. Channel mentions receive a private-chat invitation.',
+                connected:
+                  teamsBot?.enabled === true && teamsBot.applicationVersion === application.version,
+                status: !application.hasClientSecret
+                  ? 'Not Configured'
+                  : teamsBot?.enabled && teamsBot.applicationVersion === application.version
+                    ? 'Connected'
+                    : 'Bot Disabled',
+                canReceive:
+                  teamsBot?.enabled === true &&
+                  teamsBot.applicationVersion === application.version &&
+                  enabled('receiveMessages'),
+                canSend:
+                  teamsBot?.enabled === true &&
+                  teamsBot.applicationVersion === application.version &&
+                  enabled('receiveMessages') &&
+                  enabled('respondToUsers'),
+                deliveryStatus: !application.hasClientSecret
+                  ? 'Not Configured'
+                  : teamsBot?.enabled && teamsBot.applicationVersion === application.version
+                    ? 'Private Bot Replies Enabled'
+                    : 'Bot Disabled',
+              }
+            : {}),
         };
       })
       .sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base', numeric: true }));
   }
   async function start(user, input) {
     requireRole(user, ['admin']);
+    if (input?.provider === 'teams')
+      deny('Configure the Teams bot instead of a delegated Graph account.', 400);
     if (!input || Object.keys(input).some((key) => key !== 'provider'))
       deny('Invalid authorization fields.', 400);
     const item = await config(user, input.provider);

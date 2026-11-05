@@ -1,3 +1,5 @@
+import { installAuditRetentionRoutes } from './auditRetention.js';
+import { databasePage } from './databasePage.js';
 import { databaseConfiguration, needsDatabaseSetup } from './storage/configuration.js';
 import { listResponse } from './listQuery.js';
 import { auditContext } from './recordAudit.js';
@@ -164,6 +166,7 @@ export function installAuditMiddleware(app, store, auth, options = {}) {
 }
 
 export function installAuditRoutes(app, store) {
+  installAuditRetentionRoutes(app, store);
   app.post('/api/helpdesk/exports', async (request, response) => {
     const { format, count, source } = request.body || {};
     if (
@@ -231,6 +234,11 @@ export function installAuditRoutes(app, store) {
       $or: [
         { _id: group },
         { requestAuditId: group },
+        { rootAuditId: record.rootAuditId || group },
+        ...(record.workflowRunId ? [{ workflowRunId: record.workflowRunId }] : []),
+        ...(record.sourceChatId && record.responseId
+          ? [{ sourceChatId: record.sourceChatId, responseId: record.responseId }]
+          : []),
         ...(record.resourceId ? [{ target: record.target, resourceId: record.resourceId }] : []),
       ],
     };
@@ -252,6 +260,7 @@ export function installAuditRoutes(app, store) {
         {
           Time: 'startedAt',
           Action: 'action',
+          Tool: 'toolName',
           Outcome: 'outcome',
           Fields: (item) => (item.changedFields || []).join(', '),
           Version: 'versionAfter',
@@ -362,15 +371,16 @@ export function installAuditRoutes(app, store) {
           [key]: { $regex: escaped, $options: 'i' },
         }));
       }
-      const total = await store.collection('governanceAudit').countDocuments(filter);
-      const currentPage = Math.min(page, Math.max(1, Math.ceil(total / pageSize)));
-      const rows = await store
-        .collection('governanceAudit')
-        .find(filter, { projection: { ownerId: 0, workspaceId: 0 } })
-        .sort({ [columns[sort]]: direction === 'asc' ? 1 : -1, _id: -1 })
-        .skip((currentPage - 1) * pageSize)
-        .limit(pageSize)
-        .toArray();
+      const result = await databasePage(store, [{ name: 'governanceAudit', filter }], {
+        sortField: columns[sort],
+        sortType: sort === 'Time' ? 'date' : sort === 'Version' ? 'number' : 'text',
+        direction,
+        page,
+        pageSize,
+        tieDirection: 'desc',
+        projection: auditProjection,
+      });
+      const { rows, total, page: currentPage } = result;
       const associations = await store
         .collection('helpdeskWorkflowConversations')
         .find(
@@ -424,13 +434,20 @@ export function installAuditRoutes(app, store) {
 
 export async function auditOperation(store, actor, action, target, perform, details = {}) {
   const id = randomUUID();
-  const contextDetails = auditDetails({ ...auditContext.getStore()?.details, ...details });
+  const parent = auditContext.getStore();
+  const rootAuditId = parent?.rootAuditId || parent?.auditId || id;
+  const contextDetails = auditDetails({ ...parent?.details, ...details });
   await store.collection('governanceAudit').insertOne({
     _id: id,
     ownerId: actor.ownerId || actor.id,
     actorId: actor.id,
     workspaceId: actor.workspaceId,
     actorType: 'worker',
+    role: actor.role,
+    actualRole: actor.actualRole || actor.role,
+    isImpersonating: actor.isImpersonating === true,
+    parentAuditId: parent?.auditId || null,
+    rootAuditId,
     method: 'JOB',
     target,
     action,
@@ -444,6 +461,7 @@ export async function auditOperation(store, actor, action, target, perform, deta
       {
         ...currentContext,
         auditId: id,
+        rootAuditId,
         details: contextDetails,
         actorType: 'worker',
         request: currentContext?.request || {
@@ -458,6 +476,9 @@ export async function auditOperation(store, actor, action, target, perform, deta
         $set: {
           completedAt: new Date(),
           outcome: result?.status === 'failed' ? 'denied-or-failed' : 'completed',
+          ...(Number.isSafeInteger(result?.deletedCount)
+            ? { deletedCount: result.deletedCount }
+            : {}),
         },
       },
     );

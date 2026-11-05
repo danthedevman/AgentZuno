@@ -2,6 +2,7 @@ import { Show } from 'solid-js';
 
 const icons = {
   drawer: 'view_sidebar',
+  calendar: 'calendar_today',
   notifications: 'notifications_none',
   profile: 'account_circle',
   'menu-open': 'menu',

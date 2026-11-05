@@ -330,6 +330,7 @@ export default function CreateArticlePage(props) {
                   />
                   <Show when={message.role === 'assistant'}>
                     <AgentProgress
+                      toolCalls={message.toolCalls || []}
                       events={message.progress || []}
                       phase={message.phase || message.status}
                     />

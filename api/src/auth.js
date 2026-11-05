@@ -31,13 +31,17 @@ export function createAuth() {
     if (session.user.isDemo || ['alex', 'jordan'].includes(session.user.id)) return null;
     const account = await accounts.findById(session.user.id);
     if (!account) return null;
-    return {
-      ...session.user,
-      impersonation: session.impersonation || null,
-      name: account.name,
-      profilePictureVersion: account.profilePictureVersion || 0,
-      role: session.user.isDemo ? 'user' : 'admin',
-    };
+    return Object.defineProperty(
+      {
+        ...session.user,
+        impersonation: session.impersonation || null,
+        name: account.name,
+        profilePictureVersion: account.profilePictureVersion || 0,
+        role: session.user.isDemo ? 'user' : 'admin',
+      },
+      'permissionSessionId',
+      { value: session._id },
+    );
   }
   async function setImpersonation(request, value) {
     if (!(await accounts.setImpersonation(token(request), value)))
