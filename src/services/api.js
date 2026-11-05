@@ -20,12 +20,7 @@ export async function api(path, options = {}) {
     !['/api/site', '/api/integration-catalog'].includes(path)
       ? { 'X-Workspace-Id': match[1] }
       : {};
-  const isDemo = options.demo ?? /^\/demo(?:\/|$)/.test(window.location.pathname);
-  const requestPath =
-    isDemo && path.startsWith('/api/') && !path.startsWith('/api/demo-api/')
-      ? `/api/demo-api${path}`
-      : path;
-  const response = await fetch(requestPath, {
+  const response = await fetch(path, {
     credentials: 'same-origin',
     ...options,
     headers: { 'Content-Type': 'application/json', ...scope, ...options.headers },

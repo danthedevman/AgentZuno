@@ -39,19 +39,8 @@ test('workspace APIs require authentication and demo credentials never create se
     assert.equal(demo.status, 401);
     assert.equal(demo.headers.get('set-cookie'), null);
     assert.equal((await fetch(origin + '/api/site')).status, 200);
-    const demoFixture = await (await fetch(origin + '/api/demo')).json();
-    assert.equal(demoFixture.name, 'Northstar Demo');
-    assert.ok(demoFixture.prompts.every((prompt) => typeof prompt.reply === 'string'));
-    assert.equal(
-      (
-        await fetch(origin + '/api/demo', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: '{}',
-        })
-      ).status,
-      405,
-    );
+    for (const path of ['/api/demo', '/api/demo-api/api/auth/session'])
+      assert.equal((await fetch(origin + path)).status, 401);
     assert.deepEqual(await (await fetch(origin + '/api/auth/session')).json(), { user: null });
     for (const path of [
       '/mock-data/private/alex.json',

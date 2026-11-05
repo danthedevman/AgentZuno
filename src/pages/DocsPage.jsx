@@ -1,3 +1,6 @@
+import testingGuide from '../../docs/testing.md?raw';
+import recoveryGuide from '../../docs/recovery.md?raw';
+import capacityGuide from '../../docs/capacity.md?raw';
 import { publicAsset } from '../services/publicAsset.js';
 import { A, useLocation } from '@solidjs/router';
 import { For, createEffect, createSignal, onMount, onCleanup } from 'solid-js';
@@ -15,6 +18,9 @@ export default function DocsPage() {
     'roles-and-features',
     'knowledge',
     'database-setup',
+    'testing',
+    'recovery',
+    'capacity',
     'workflow-sdk',
     'runtime-security',
     'type-reference',
@@ -128,6 +134,24 @@ export default function DocsPage() {
               Database Setup
             </a>
             <a
+              href="#testing"
+              aria-current={activeSection() === 'testing' ? 'location' : undefined}
+            >
+              Testing
+            </a>
+            <a
+              href="#recovery"
+              aria-current={activeSection() === 'recovery' ? 'location' : undefined}
+            >
+              Backups &amp; Upgrades
+            </a>
+            <a
+              href="#capacity"
+              aria-current={activeSection() === 'capacity' ? 'location' : undefined}
+            >
+              Capacity Testing
+            </a>
+            <a
               href="#workflow-sdk"
               aria-current={activeSection() === 'workflow-sdk' ? 'location' : undefined}
             >
@@ -186,6 +210,45 @@ export default function DocsPage() {
           <section id="database-setup">
             <ChatMarkdown
               text={databaseGuide.replaceAll('roles-and-features.md', '/docs#roles-and-features')}
+              scrollTables
+              externalLinksNewTab
+            />
+          </section>
+          <section id="testing">
+            <ChatMarkdown
+              text={testingGuide
+                .replace(/^# /, '## ')
+                .replaceAll('roles-and-features.md', '/docs#roles-and-features')
+                .replaceAll('getting-started.md', '/docs#getting-started')
+                .replaceAll('recovery.md', '/docs#recovery')
+                .replaceAll('capacity.md', '/docs#capacity')
+                .replaceAll('testing.md', '/docs#testing')}
+              scrollTables
+              externalLinksNewTab
+            />
+          </section>
+          <section id="recovery">
+            <ChatMarkdown
+              text={recoveryGuide
+                .replace(/^# /, '## ')
+                .replaceAll('roles-and-features.md', '/docs#roles-and-features')
+                .replaceAll('getting-started.md', '/docs#getting-started')
+                .replaceAll('recovery.md', '/docs#recovery')
+                .replaceAll('capacity.md', '/docs#capacity')
+                .replaceAll('testing.md', '/docs#testing')}
+              scrollTables
+              externalLinksNewTab
+            />
+          </section>
+          <section id="capacity">
+            <ChatMarkdown
+              text={capacityGuide
+                .replace(/^# /, '## ')
+                .replaceAll('roles-and-features.md', '/docs#roles-and-features')
+                .replaceAll('getting-started.md', '/docs#getting-started')
+                .replaceAll('recovery.md', '/docs#recovery')
+                .replaceAll('capacity.md', '/docs#capacity')
+                .replaceAll('testing.md', '/docs#testing')}
               scrollTables
               externalLinksNewTab
             />

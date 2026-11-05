@@ -9525,3 +9525,84 @@ button.catalog-item-card {
 .workspace-shell .record-detail-tabs button {
   padding-inline: 12px;
 }
+
+.workspace-shell
+  :is(.workflow-tabs, .request-workspace-panel > .record-detail-tabs, .chat-request-heading) {
+  scrollbar-width: none;
+}
+.workspace-shell
+  :is(
+    .workflow-tabs,
+    .request-workspace-panel > .record-detail-tabs,
+    .chat-request-heading
+  )::-webkit-scrollbar {
+  display: none;
+}
+.my-work-page .record-detail-tabs {
+  border-bottom: 0;
+  gap: 8px;
+}
+.workspace-shell .my-work-page .record-detail-tabs button {
+  border: 0;
+  border-radius: 999px;
+  padding: 8px 14px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .record-table-scroll.is-ready tbody,
+  .record-table-scroll.is-ready .record-card-list {
+    animation: content-reveal 200ms ease-out both;
+  }
+  .record-table-scroll:not(.is-ready) .loading-skeleton {
+    animation: none;
+  }
+}
+
+.group-settings {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  margin: 0;
+  padding: 20px;
+  border: 1px solid var(--workspace-line);
+  border-radius: 10px;
+}
+.group-settings legend {
+  padding-inline: 6px;
+  color: var(--workspace-ink);
+  font-weight: 600;
+}
+.group-settings .preference-row {
+  margin: 0;
+}
+
+.sidebar-links-loading {
+  display: grid;
+  gap: 8px;
+}
+.sidebar-link-placeholder {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-inline: 12px;
+}
+.sidebar-link-placeholder span {
+  background: var(--workspace-soft);
+  border-radius: 5px;
+}
+.sidebar-link-placeholder span:first-child {
+  width: 20px;
+  height: 20px;
+  flex: none;
+}
+.sidebar-link-placeholder span:last-child {
+  width: 100px;
+  height: 12px;
+}
+.workspace-shell:not(.is-nav-expanded) .sidebar-link-placeholder {
+  justify-content: center;
+  padding: 0;
+}
+.workspace-shell:not(.is-nav-expanded) .sidebar-link-placeholder span:last-child {
+  display: none;
+}

@@ -6,7 +6,7 @@ import ConversationSkeleton from '../../components/ConversationSkeleton.jsx';
 import SplitResizeHandle from '../../components/SplitResizeHandle.jsx';
 import Breadcrumbs from '../../components/Breadcrumbs.jsx';
 import ChatPrompt from '../../components/ChatPrompt.jsx';
-import WorkflowFormNode from '../../components/WorkflowFormNode.jsx';
+import WorkflowVisual from '../../components/WorkflowVisual.jsx';
 import WorkflowApprovalEditor from '../../components/WorkflowApprovalEditor.jsx';
 import WorkflowSettingsEditor from '../../components/WorkflowSettingsEditor.jsx';
 import { confirmRemovedFields, clearConfirmedFields } from '../../services/confirmations.js';
@@ -40,16 +40,6 @@ import { useWorkspace } from '../../context/WorkspaceContext.jsx';
 import Icon from '../../components/Icon.jsx';
 import AgentProgress from '../../components/AgentProgress.jsx';
 const isExternalAction = (action) => action.includes('.') && action !== 'task.create';
-
-const actionNames = {
-  'task.create': 'Create fulfillment task',
-  route: 'Route request',
-  handoff: 'Hand off to support',
-  approval: 'Request approval',
-  'servicenow.createIncident': 'Create ServiceNow incident',
-  'slack.postMessage': 'Notify Slack channel',
-  'jira.createIssue': 'Create Jira ticket',
-};
 
 export default function WorkflowBuilderPage() {
   const { access } = useWorkspace();
@@ -219,28 +209,6 @@ export default function WorkflowBuilderPage() {
       ...(manualRouting() === undefined ? {} : { routing: manualRouting() }),
     };
   });
-  const hasNamedApprovers = () =>
-    tab() === 'visual' &&
-    isAdmin() &&
-    definition()?.steps.some(
-      (step) => step.action === 'approval' && step.params.target !== 'manager',
-    );
-  const [visualApprovers] = createResource(hasNamedApprovers, () => api('/api/helpdesk/members'));
-  const [visualApprovalGroups] = createResource(
-    () =>
-      hasNamedApprovers() &&
-      definition()?.steps.some(
-        (step) => step.action === 'approval' && step.params.target === 'group',
-      ),
-    () =>
-      api(
-        `/api/helpdesk/approval-groups?reference=1${current()?.demoDatasetId ? '&includeDemo=1' : ''}`,
-      ),
-  );
-  const approverLabel = (id) =>
-    (!visualApprovers.error && visualApprovers()?.find((person) => person.userId === id))?.name ||
-    (!visualApprovers.error && visualApprovers()?.find((person) => person.userId === id))?.email ||
-    'Approver';
   const processing = () =>
     !!chatId() &&
     conversation()?.id === chatId() &&
@@ -755,142 +723,13 @@ export default function WorkflowBuilderPage() {
               class="workflow-panel"
             >
               <Show when={tab() === 'visual'}>
-                <div class="workflow-visual-toolbar" role="group" aria-label="Workflow zoom">
-                  <span class="workflow-state">
-                    {definition() ? (current()?.enabled ? 'Published' : 'Draft') : ''}
-                  </span>
-                  <div class="workflow-zoom-controls">
-                    <button
-                      type="button"
-                      class="workspace-button secondary small"
-                      aria-label="Zoom out"
-                      disabled={!definition() || visualZoom() <= 50}
-                      onClick={() => setVisualZoom((value) => value - 25)}
-                    >
-                      −
-                    </button>
-                    <output aria-live="polite" aria-label="Zoom level">
-                      {visualZoom()}%
-                    </output>
-                    <button
-                      type="button"
-                      class="workspace-button secondary small"
-                      aria-label="Zoom in"
-                      disabled={!definition() || visualZoom() >= 150}
-                      onClick={() => setVisualZoom((value) => value + 25)}
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-                <Show
-                  when={definition()}
-                  fallback={
-                    <div class="workflow-empty">
-                      <p>Your workflow will appear here as you build it with the Admin agent.</p>
-                    </div>
-                  }
-                >
-                  {(value) => (
-                    <>
-                      <ol class="workflow-nodes" style={{ zoom: visualZoom() / 100 }}>
-                        <li class="workflow-node trigger">
-                          <span>Receive request</span>
-                          <strong>{value().form?.title || value().name}</strong>
-                        </li>
-                        <Show when={value().form}>
-                          {(form) => <WorkflowFormNode form={form()} />}
-                        </Show>
-                        <For each={value().routing || []}>
-                          {(rule) => (
-                            <li class="workflow-node">
-                              <span>Choose the right support team</span>
-                              <strong>{rule.queueName}</strong>
-                              <p>
-                                If{' '}
-                                {rule.conditions
-                                  .map(
-                                    (condition) =>
-                                      `${value().form?.fields.find((field) => field.id === condition.fieldId)?.label || condition.fieldId} ${condition.operator === 'equals' ? 'is' : 'is not'} ${String(condition.value)}`,
-                                  )
-                                  .join(rule.match === 'all' ? ' and ' : ' or ')}
-                              </p>
-                              <small>
-                                {rule.action === 'handoff' ? 'Handoff' : 'Route Request'}
-                              </small>
-                            </li>
-                          )}
-                        </For>
-                        <For each={value().steps}>
-                          {(step) => (
-                            <li class="workflow-node">
-                              <span>{actionNames[step.action]}</span>
-                              <strong>
-                                {['route', 'handoff'].includes(step.action)
-                                  ? step.params.queueName
-                                  : step.action === 'task.create'
-                                    ? `${step.params.title} · ${step.params.queueName}`
-                                    : step.action === 'approval'
-                                      ? step.params.reason
-                                      : step.action === 'slack.postMessage'
-                                        ? 'Send a message to the support channel'
-                                        : 'Complete the next step'}
-                              </strong>
-                              <Show when={step.action === 'approval'}>
-                                <div class="workflow-approver-list">
-                                  <small>Approvers</small>
-                                  <Show
-                                    when={step.params.target === 'manager'}
-                                    fallback={
-                                      <Show
-                                        when={
-                                          !visualApprovers.loading &&
-                                          (step.params.target !== 'group' ||
-                                            !visualApprovalGroups.loading)
-                                        }
-                                        fallback={<Skeleton label="Loading approvers" lines={1} />}
-                                      >
-                                        <ul>
-                                          <Show
-                                            when={step.params.target === 'group'}
-                                            fallback={
-                                              <li>
-                                                <A href={`/workspace/users/${step.params.userId}`}>
-                                                  {approverLabel(step.params.userId)}
-                                                </A>
-                                              </li>
-                                            }
-                                          >
-                                            <li>
-                                              <A
-                                                href={`/workspace/users/groups/${step.params.groupId}`}
-                                              >
-                                                {(
-                                                  !visualApprovalGroups.error &&
-                                                  visualApprovalGroups()?.find(
-                                                    (group) => group.id === step.params.groupId,
-                                                  )
-                                                )?.name || 'Approval Group'}
-                                              </A>
-                                            </li>
-                                          </Show>
-                                        </ul>
-                                      </Show>
-                                    }
-                                  >
-                                    <ul>
-                                      <li>Requester’s Manager</li>
-                                    </ul>
-                                  </Show>
-                                </div>
-                              </Show>
-                            </li>
-                          )}
-                        </For>
-                      </ol>
-                    </>
-                  )}
-                </Show>
+                <WorkflowVisual
+                  definition={definition()}
+                  workflow={current()}
+                  canManage={isAdmin()}
+                  zoom={visualZoom()}
+                  onZoomChange={setVisualZoom}
+                />
                 <Show when={!conversation.error && conversation()?.validationError}>
                   <ToastMessage tone="error" message={conversation().validationError} />
                 </Show>

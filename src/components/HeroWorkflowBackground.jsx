@@ -1,3 +1,4 @@
+import { repeatMarketingAnimation } from '../services/marketingAnimation.js';
 import { For, Show, createSignal, createEffect, onMount, onCleanup } from 'solid-js';
 import Icon from './Icon.jsx';
 export default function HeroWorkflowBackground() {
@@ -18,30 +19,28 @@ export default function HeroWorkflowBackground() {
   });
   onMount(() => {
     const start = () => {
+      timers.forEach(clearTimeout);
+      timers.length = 0;
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         reducedMotion = true;
         setStage(11);
         return;
       }
       [100, 450, 850, 1250, 1650, 2050, 2600, 3150, 3700, 4700, 5500].forEach((delay, index) =>
-        timers.push(setTimeout(() => setStage(index + 1), delay)),
+        timers.push(setTimeout(() => setStage(index + 1), delay * 1.5)),
       );
     };
-    if (!window.IntersectionObserver) {
-      start();
-      return;
-    }
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) {
-          observer.disconnect();
-          start();
-        }
-      },
-      { threshold: 0.25 },
+    onCleanup(
+      repeatMarketingAnimation(
+        element,
+        start,
+        () => {
+          setStage(0);
+          transcript?.scrollTo({ top: 0 });
+        },
+        9000,
+      ),
     );
-    observer.observe(element);
-    onCleanup(() => observer.disconnect());
   });
   onCleanup(() => timers.forEach(clearTimeout));
   return (

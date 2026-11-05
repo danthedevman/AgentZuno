@@ -1,3 +1,4 @@
+import { postgresWhere } from './postgresQuery.js';
 import pg from 'pg';
 import { BSON, ObjectId } from 'mongodb';
 import { find, aggregate } from 'mingo';
@@ -41,7 +42,7 @@ export function createPostgresDatabase(connection) {
               `CREATE TABLE IF NOT EXISTS ${table} (id text PRIMARY KEY, doc jsonb NOT NULL)`,
             );
             await client.query(
-              `CREATE INDEX IF NOT EXISTS ${table}_scope ON ${table} ((doc->>'ownerId'), (doc->>'workspaceId'))`,
+              `CREATE INDEX IF NOT EXISTS ${table}_scope_jsonb ON ${table} ((COALESCE(doc #> '{ownerId}', 'null'::jsonb)), (COALESCE(doc #> '{workspaceId}', 'null'::jsonb)))`,
             );
             await client.query('COMMIT');
           } catch (error) {
@@ -58,45 +59,11 @@ export function createPostgresDatabase(connection) {
       );
     return tables.get(name);
   }
-  // Push immutable ID/scope constraints into SQL; the shared query evaluator handles
-  // nested arrays and expression filters before sorting, pagination or aggregation.
-  function where(filter, values) {
-    const clauses = [];
-    for (const [field, value] of Object.entries(filter || {})) {
-      if (field === '$and') {
-        for (const part of value) clauses.push(where(part, values));
-        continue;
-      }
-      if (
-        ![
-          '_id',
-          'ownerId',
-          'workspaceId',
-          'userId',
-          'providerOwnerId',
-          'requestId',
-          'tableId',
-        ].includes(field)
-      )
-        continue;
-      if (
-        value === undefined ||
-        value === null ||
-        (typeof value === 'object' && !(value instanceof ObjectId))
-      )
-        continue;
-      values.push(field === '_id' ? key(value) : JSON.stringify(encode(value)));
-      clauses.push(
-        field === '_id' ? `id = $${values.length}` : `doc->'${field}' = $${values.length}::jsonb`,
-      );
-    }
-    return clauses.filter(Boolean).join(' AND ') || 'TRUE';
-  }
   async function rows(name, filter, client = pool, lock = false) {
     const table = await ensure(name),
       params = [];
     const result = await client.query(
-      `SELECT doc FROM ${table} WHERE ${where(filter, params)}${lock ? ' FOR UPDATE' : ''}`,
+      `SELECT doc FROM ${table} WHERE ${postgresWhere(filter, params)}${lock ? ' FOR UPDATE' : ''}`,
       params,
     );
     return result.rows.map((row) => decode(row.doc));
@@ -285,7 +252,6 @@ export function createPostgresDatabase(connection) {
       },
       async createIndex(fields, options = {}) {
         const table = await ensure(name);
-        if (!options.unique && !options.expireAfterSeconds) return table;
         if (options.expireAfterSeconds !== undefined) {
           const field = Object.keys(fields)[0];
           if (!/^[a-zA-Z][a-zA-Z0-9]*$/.test(field)) throw new Error('Invalid expiry field.');
@@ -302,9 +268,12 @@ export function createPostgresDatabase(connection) {
           expiryTimers.add(timer);
           return table;
         }
-        const index = identifier(name + JSON.stringify(fields));
+        const index = identifier(
+          name + (options.unique ? '' : ':lookup:') + JSON.stringify(fields),
+        );
         const expressions = Object.keys(fields).map((field) => {
-          if (!/^[a-zA-Z][a-zA-Z0-9_.]*$/.test(field)) throw new Error('Invalid index field.');
+          if (!/^(?:_id|[a-zA-Z][a-zA-Z0-9_.]*)$/.test(field))
+            throw new Error('Invalid index field.');
           return `(COALESCE(doc #> '{${field.split('.').join(',')}}', 'null'::jsonb))`;
         });
         // The current partial unique indexes only constrain presence/type of scalar fields.
@@ -319,7 +288,7 @@ export function createPostgresDatabase(connection) {
           },
         );
         await pool.query(
-          `CREATE UNIQUE INDEX IF NOT EXISTS ${index} ON ${table} (${expressions.join(',')})${partial.length ? ' WHERE ' + partial.join(' AND ') : ''}`,
+          `CREATE ${options.unique ? 'UNIQUE ' : ''}INDEX IF NOT EXISTS ${index} ON ${table} (${expressions.join(',')})${partial.length ? ' WHERE ' + partial.join(' AND ') : ''}`,
         );
         return index;
       },

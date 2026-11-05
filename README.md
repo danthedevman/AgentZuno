@@ -6,9 +6,9 @@ AgentZuno is a free, open source conversational AI help desk. It brings employee
 
 ## Why I built this
 
-Seeing the price tags on platforms like Salesforce, Jira, Zendesk, and Serval, as well as the increase in AI marketing for agents and automation across social sites like LinkedIn, it got me thinking: with AI tools available to development teams everywhere, what could one engineer build with the same tools?
+Seeing more AI product marketing on LinkedIn from platforms like Salesforce, Jira, ServiceNow, and Serval got me thinking: with the same AI tools available to anyone, what could one engineer build?
 
-I wanted to see how quickly I could build an AI help desk using Codex, my experience with enterprise platforms, and knowing the right questions to ask. I also love building marketing sites and taking the time to iterate over exactly what to say and how to communicate it, so this project gave me a chance to do both. I used my personal Codex Plus plan with $100 worh of backup credits. I’m sharing the code so anyone can try it, learn from it, and make it their own.
+I wanted to see how quickly I could build an AI help desk using Codex and what I’ve learned from working with enterprise platforms. I also enjoy building marketing sites and iterating on the right way to communicate and market a product, so this project gave me a chance to do both. I used Codex through my personal subscription, with $100 in extra credits. I’m sharing the code so anyone can try it, judge it, learn from it, and make it their own.
 
 ## What it brings together
 

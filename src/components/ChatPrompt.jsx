@@ -1,31 +1,9 @@
-import { useSession } from '../context/SessionContext.jsx';
-import { api } from '../services/api.js';
 import ChatSendButton from './ChatSendButton.jsx';
 import { confirmAction } from '../services/confirmations.js';
-import { For, Show, createEffect, createResource, createSignal, onMount } from 'solid-js';
+import { For, Show, createEffect, onMount } from 'solid-js';
 import Icon from './Icon.jsx';
 
 export default function ChatPrompt(props) {
-  const { session } = useSession();
-  const isDemo = () => !!session()?.user?.isInteractiveDemo;
-  const [promptsOpen, setPromptsOpen] = createSignal(
-    (() => {
-      try {
-        return sessionStorage.getItem('agentzuno-demo-prompts-open') !== 'false';
-      } catch {
-        return true;
-      }
-    })(),
-  );
-  function togglePrompts(open) {
-    setPromptsOpen(open);
-    if (isDemo()) {
-      try {
-        sessionStorage.setItem('agentzuno-demo-prompts-open', String(open));
-      } catch {}
-    }
-  }
-  const [demo] = createResource(isDemo, () => api('/api/demo'));
   let fileInput;
   let messageInput;
   let hasFocused = false;
@@ -52,39 +30,15 @@ export default function ChatPrompt(props) {
     <>
       <form
         novalidate
-        class={`chat-prompt${isDemo() ? ' is-demo-readonly' : ''}`}
+        class="chat-prompt"
         onSubmit={(event) => {
           event.preventDefault();
           if (isReady()) {
-            togglePrompts(false);
             props.onSubmit(event);
           }
         }}
         aria-label="Send a chat message"
       >
-        <Show when={isDemo() && !demo.error && demo()}>
-          <details
-            class="demo-prompt-picker"
-            open={promptsOpen()}
-            onToggle={(event) => togglePrompts(event.currentTarget.open)}
-          >
-            <summary>Suggested Prompts</summary>
-            <div class="demo-prompt-options" aria-label="Predefined demo prompts">
-              <For each={demo().prompts}>
-                {(prompt) => (
-                  <button
-                    type="button"
-                    class="workspace-button secondary small"
-                    disabled={props.disabled}
-                    onClick={() => props.onInput?.(prompt.prompt)}
-                  >
-                    {prompt.prompt}
-                  </button>
-                )}
-              </For>
-            </div>
-          </details>
-        </Show>
         <Show when={props.onFiles}>
           <input
             ref={fileInput}
@@ -104,9 +58,7 @@ export default function ChatPrompt(props) {
             type="button"
             aria-label="Attach files"
             title="Attach TXT, Markdown, CSV, JSON, or LOG files (up to 100 KB each)"
-            disabled={
-              isDemo() || props.disabled || props.uploading || props.attachments?.length >= 5
-            }
+            disabled={props.disabled || props.uploading || props.attachments?.length >= 5}
             onClick={() => fileInput.click()}
           >
             <Icon name="attachment" />
@@ -119,15 +71,13 @@ export default function ChatPrompt(props) {
           ref={messageInput}
           id="chat-message"
           name="message"
-          placeholder={
-            isDemo() ? 'Choose a suggested prompt' : props.placeholder || 'Ask me anything'
-          }
+          placeholder={props.placeholder || 'Ask me anything'}
           rows="3"
           maxlength="7000"
           value={props.value}
           onInput={(event) => props.onInput(event.currentTarget.value)}
           onKeyDown={handleKeyDown}
-          readOnly={props.readOnly || isDemo()}
+          readOnly={props.readOnly}
         />
         <div class="prompt-toolbar">
           <ChatSendButton disabled={!isReady()} />

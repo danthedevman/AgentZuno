@@ -2,7 +2,6 @@ import { publicAsset } from '../services/publicAsset.js';
 import { createMemo } from 'solid-js';
 import { useParams } from '@solidjs/router';
 import { renderChatMarkdown, normalizeChatLinks } from '../services/chatMarkdown.js';
-import { workspacePath } from '../services/workspaceRoutes.js';
 
 export default function ChatMarkdown(props) {
   const params = useParams();
@@ -15,8 +14,7 @@ export default function ChatMarkdown(props) {
       },
       document,
     );
-    const isDemo = /^\/demo(?:\/|$)/.test(window.location.pathname);
-    if (!props.externalLinksNewTab && !props.scrollTables && !isDemo) return rendered;
+    if (!props.externalLinksNewTab && !props.scrollTables) return rendered;
     const root = document.createElement('div');
     root.innerHTML = rendered;
     for (const link of root.querySelectorAll('a[href]')) {
@@ -26,8 +24,6 @@ export default function ChatMarkdown(props) {
         (url.pathname === '/docs' || url.pathname.startsWith('/docs/'))
       )
         link.setAttribute('href', publicAsset(url.pathname + url.search + url.hash));
-      if (isDemo && url.origin === window.location.origin)
-        link.setAttribute('href', workspacePath(url.pathname + url.search + url.hash));
       if (
         props.externalLinksNewTab &&
         ['https:', 'http:'].includes(url.protocol) &&

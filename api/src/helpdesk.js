@@ -332,7 +332,6 @@ export function createHelpdeskService(store, chats) {
     await ensureOrigin(user, record, context);
     const execution = createWorkflowExecution(store);
     const runId = await execution.ensureRun(record);
-    if (user.isInteractiveDemo && runId) await execution.process(runId);
     return safeRequest(record, user);
   }
   async function update(user, id, input, action) {

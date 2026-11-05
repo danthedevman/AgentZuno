@@ -117,6 +117,34 @@ async function verify(database) {
       ],
     };
     assert.match(await applyAdminGroupAction(store, missing, ''), /^Created \[Analytics Support\]/);
+    const iamMessages = [
+      {
+        role: 'user',
+        text: 'create a task for that group to provision the role, and one for the IAM team to update in Okta',
+      },
+      { role: 'user', text: 'what about the IAM team' },
+      { role: 'user', text: 'create it IAM' },
+    ];
+    assert.match(
+      await applyAdminGroupAction(store, { ...followup, messages: iamMessages }, ''),
+      /^Created \[IAM\]/,
+    );
+    assert.match(
+      await applyAdminGroupAction(
+        store,
+        {
+          ...followup,
+          responseId: randomUUID(),
+          messages: [...iamMessages, { role: 'user', text: 'create it now' }],
+        },
+        '',
+      ),
+      /^Found the existing group \[IAM\]/,
+    );
+    assert.equal(
+      await database.collection('approvalGroups').countDocuments({ ...scope, name: 'IAM' }),
+      1,
+    );
     for (const text of [
       "Don't create the group",
       'Describe the group',

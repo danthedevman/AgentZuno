@@ -1,20 +1,14 @@
 import { browserTimeZone } from '../services/timezones.js';
-import { useLocation } from '@solidjs/router';
 import { createContext, createResource, useContext } from 'solid-js';
 import { api } from '../services/api.js';
 
 const SessionContext = createContext();
 
 export function SessionProvider(props) {
-  const location = useLocation();
-  const mode = () => (/^\/demo(?:\/|$)/.test(location.pathname) ? 'demo' : 'live');
-  const [resource, { refetch }] = createResource(mode, async (source) => ({
-    ...(import.meta.env.VITE_STATIC_SITE === 'true'
-      ? { user: null }
-      : await api('/api/auth/session', { demo: source === 'demo' })),
-    mode: source,
-  }));
-  const session = () => (!resource.error && resource()?.mode === mode() ? resource() : undefined);
+  const [resource, { refetch }] = createResource(async () =>
+    import.meta.env.VITE_STATIC_SITE === 'true' ? { user: null } : api('/api/auth/session'),
+  );
+  const session = () => (!resource.error ? resource() : undefined);
   for (const key of ['loading', 'error', 'state'])
     Object.defineProperty(session, key, { get: () => resource[key] });
   const [preferences, { mutate: updatePreferences, refetch: refreshPreferences }] = createResource(

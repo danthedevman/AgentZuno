@@ -32,11 +32,11 @@ const navigation = [
   ['/workspace/my-work', 'work', 'My Work'],
   ['/workspace/chat', 'chat', 'Chat'],
   ['/workspace/inbox', 'inbox', 'Inbox'],
-  ['/workspace/catalog', 'catalog', 'Catalog'],
   ['/workspace/requests', 'request', 'My Requests'],
+  ['/workspace/catalog', 'catalog', 'Catalog'],
+  ['/workspace/knowledge', 'book-pen', 'Knowledge'],
   ['/workspace/workflows', 'workflow', 'Workflows'],
   ['/workspace/data', 'data', 'Data Tables'],
-  ['/workspace/knowledge', 'book-pen', 'Knowledge'],
   ['/workspace/reports', 'reports', 'Reports'],
   ['/workspace/connectors', 'plug', 'Connectors'],
 ];
@@ -236,10 +236,6 @@ function WorkspaceShell(props) {
     }
   });
   async function handleSignOut() {
-    if (session()?.user?.isInteractiveDemo) {
-      navigate('/');
-      return;
-    }
     try {
       await signOut();
       navigate('/workspace');
@@ -404,36 +400,52 @@ function WorkspaceShell(props) {
           aria-label="Workspace navigation"
           onScroll={() => setSidebarTooltip(null)}
         >
-          <For each={visibleNavigation()}>
-            {([path, icon, label]) => (
-              <A
-                class="rail-link"
-                href={path}
-                end={path === '/workspace'}
-                activeClass="is-active"
-                onClick={() => {
-                  activeDialog()?.close();
-                  if (isNarrow()) setIsNavigationExpanded(false);
-                }}
-                aria-label={label}
-              >
-                <Icon name={icon} />
-                <Show
-                  when={
-                    path === '/workspace/inbox' &&
-                    !route.pathname.endsWith('/inbox') &&
-                    !inboxState.error &&
-                    inboxState()?.unread
-                  }
+          <Show
+            when={!session.loading && !access.loading && access()}
+            fallback={
+              <div class="sidebar-links-loading" role="status" aria-label="Loading navigation">
+                <For each={navigation}>
+                  {() => (
+                    <div class="sidebar-link-placeholder">
+                      <span />
+                      <span />
+                    </div>
+                  )}
+                </For>
+              </div>
+            }
+          >
+            <For each={visibleNavigation()}>
+              {([path, icon, label]) => (
+                <A
+                  class="rail-link"
+                  href={path}
+                  end={path === '/workspace'}
+                  activeClass="is-active"
+                  onClick={() => {
+                    activeDialog()?.close();
+                    if (isNarrow()) setIsNavigationExpanded(false);
+                  }}
+                  aria-label={label}
                 >
-                  <span class="inbox-unread-dot" role="img" aria-label="Unread inbox items" />
-                </Show>
-                <span class="rail-tooltip" aria-hidden="true">
-                  {label}
-                </span>
-              </A>
-            )}
-          </For>
+                  <Icon name={icon} />
+                  <Show
+                    when={
+                      path === '/workspace/inbox' &&
+                      !route.pathname.endsWith('/inbox') &&
+                      !inboxState.error &&
+                      inboxState()?.unread
+                    }
+                  >
+                    <span class="inbox-unread-dot" role="img" aria-label="Unread inbox items" />
+                  </Show>
+                  <span class="rail-tooltip" aria-hidden="true">
+                    {label}
+                  </span>
+                </A>
+              )}
+            </For>
+          </Show>
         </nav>
         <div class="sidebar-bottom">
           <button
@@ -497,7 +509,7 @@ function WorkspaceShell(props) {
             onClick={() => document.getElementById('profile-popover').hidePopover()}
           >
             <Icon name="users" />
-            Users
+            Users &amp; Groups
           </A>
         </Show>
         <Show when={isPersonal() && isAdmin()}>
@@ -585,30 +597,7 @@ function WorkspaceShell(props) {
         class="workspace-body"
         inert={!!activeDialog() || (isNarrow() && isNavigationExpanded())}
       >
-        <Show when={session()?.user?.isInteractiveDemo} fallback={<AIProviderBanner />}>
-          <div class="ai-provider-banner interactive-demo-banner">
-            <span>Interactive Demo · Fictional Data</span>
-            <div>
-              <button
-                type="button"
-                class="workspace-button secondary small"
-                onClick={async () => {
-                  if (
-                    await confirmAction('Reset changes made in this demo?', 'Reset Demo', 'Reset')
-                  ) {
-                    await api('/api/demo/reset', { method: 'POST', body: '{}' });
-                    window.location.assign('/demo');
-                  }
-                }}
-              >
-                Reset Demo
-              </button>
-              <A class="workspace-button small" href="/register">
-                Get Access
-              </A>
-            </div>
-          </div>
-        </Show>
+        <AIProviderBanner />
         <main id="workspace-main" class="workspace-main">
           <Show when={props.previewRole && props.previewRole !== 'admin'}>
             <div class="role-preview-banner" role="status">
@@ -645,7 +634,12 @@ function WorkspaceShell(props) {
               <button onClick={() => window.location.reload()}>Try again</button>
             </div>
           </Show>
-          <Show when={!workspace.error}>{props.children}</Show>
+          <Show
+            when={!session.loading && session()?.user && !access.loading}
+            fallback={<Skeleton label="Loading workspace" lines={6} />}
+          >
+            <Show when={!workspace.error}>{props.children}</Show>
+          </Show>
         </main>
       </div>
     </div>
@@ -697,8 +691,6 @@ export default function WorkspaceLayout(props) {
           : '/login',
         { replace: true },
       );
-    else if (session()?.user?.isInteractiveDemo && location.pathname.replace(/\/$/, '') === '/demo')
-      navigate('/demo/my-work', { replace: true });
     else if (
       !access.loading &&
       !access.error &&
@@ -708,7 +700,7 @@ export default function WorkspaceLayout(props) {
         `/workspace/${params.workspaceId}/${['admin', 'agent'].includes(access()?.role) ? 'my-work' : 'chat'}${location.search}`,
         { replace: true },
       );
-    else if (session()?.user && !session().user.isInteractiveDemo && !params.workspaceId)
+    else if (session()?.user && !params.workspaceId)
       navigate(
         location.pathname.replace('/workspace', `/workspace/${session().user.workspaceId}`) +
           location.search,
@@ -717,7 +709,7 @@ export default function WorkspaceLayout(props) {
   });
   return (
     <Show
-      when={!!session()?.user && (!access.loading || canAccess())}
+      when={session.loading || !!session()?.user}
       fallback={
         <div class="workspace-loading-shell">
           <div class="workspace-loading-rail" aria-hidden="true" />
@@ -742,7 +734,7 @@ export default function WorkspaceLayout(props) {
       }
     >
       <Show
-        when={canAccess() || (session.loading && isConnections())}
+        when={session.loading || canAccess()}
         fallback={
           <main class="login-page">
             <section class="login-panel">

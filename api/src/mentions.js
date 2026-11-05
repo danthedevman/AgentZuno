@@ -64,7 +64,7 @@ export async function prepareMentions(store, service, actor, record, entry, ids 
         entryId: entry.id,
         kind,
         createdAt: entry.createdAt,
-        emailStatus: actor.isInteractiveDemo ? 'disabled' : 'pending',
+        emailStatus: 'pending',
       });
   }
   return { mentions, notifications };

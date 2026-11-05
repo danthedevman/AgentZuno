@@ -285,7 +285,7 @@ export default function RecordTable(props) {
       // Keep tab placeholders visible for one short transition rather than a single flash.
       if (changedView)
         await new Promise((resolve) =>
-          setTimeout(resolve, Math.max(0, 160 - (performance.now() - started))),
+          setTimeout(resolve, Math.max(0, 240 - (performance.now() - started))),
         );
       if (viewKey() === source.viewKey) loadedViewKey = source.viewKey;
       return { ...data, viewKey: source.viewKey };

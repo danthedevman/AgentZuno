@@ -31,8 +31,8 @@ export default function QueuePage(props) {
   const [instructions, setInstructions] = createSignal('');
   const [memberIds, setMemberIds] = createSignal([]);
   const [active, setActive] = createSignal(true);
-  const [assignmentEnabled, setAssignmentEnabled] = createSignal(false);
-  const [approvalEnabled, setApprovalEnabled] = createSignal(false);
+  const [assignmentEnabled, setAssignmentEnabled] = createSignal(true);
+  const [approvalEnabled, setApprovalEnabled] = createSignal(true);
   const [saving, setSaving] = createSignal(false);
   createEffect(() => {
     if (!record.error && record()) {
@@ -125,47 +125,50 @@ export default function QueuePage(props) {
               onInput={(event) => setDescription(event.currentTarget.value)}
             />
           </label>
-          <For
-            each={[
-              { label: 'Assignment Group', value: assignmentEnabled, set: setAssignmentEnabled },
-              { label: 'Approval Group', value: approvalEnabled, set: setApprovalEnabled },
-            ]}
-          >
-            {(toggle) => (
-              <>
-                <div class="preference-row">
-                  <span>{toggle.label}</span>
-                  <button
-                    type="button"
-                    class="toggle-switch"
-                    role="switch"
-                    aria-label={toggle.label}
-                    aria-checked={toggle.value()}
-                    disabled={!editing()}
-                    onClick={() => toggle.set(!toggle.value())}
-                  >
-                    <span />
-                  </button>
-                </div>
-                <Show when={toggle.label === 'Assignment Group'}>
-                  {' '}
-                  <Show when={assignmentEnabled()}>
-                    <label>
-                      Routing Instructions
-                      <textarea
-                        name="routingInstructions"
-                        maxlength="2000"
-                        rows="5"
-                        value={instructions()}
-                        readOnly={!editing()}
-                        onInput={(event) => setInstructions(event.currentTarget.value)}
-                      />
-                    </label>
+          <fieldset class="group-settings">
+            <legend>Group Settings</legend>
+            <For
+              each={[
+                { label: 'Assignment Group', value: assignmentEnabled, set: setAssignmentEnabled },
+                { label: 'Approval Group', value: approvalEnabled, set: setApprovalEnabled },
+              ]}
+            >
+              {(toggle) => (
+                <>
+                  <div class="preference-row">
+                    <span>{toggle.label}</span>
+                    <button
+                      type="button"
+                      class="toggle-switch"
+                      role="switch"
+                      aria-label={toggle.label}
+                      aria-checked={toggle.value()}
+                      disabled={!editing()}
+                      onClick={() => toggle.set(!toggle.value())}
+                    >
+                      <span />
+                    </button>
+                  </div>
+                  <Show when={toggle.label === 'Assignment Group'}>
+                    {' '}
+                    <Show when={assignmentEnabled()}>
+                      <label>
+                        Routing Instructions
+                        <textarea
+                          name="routingInstructions"
+                          maxlength="2000"
+                          rows="5"
+                          value={instructions()}
+                          readOnly={!editing()}
+                          onInput={(event) => setInstructions(event.currentTarget.value)}
+                        />
+                      </label>
+                    </Show>
                   </Show>
-                </Show>
-              </>
-            )}
-          </For>
+                </>
+              )}
+            </For>
+          </fieldset>
 
           <MultiSelectLookup
             name="members"

@@ -747,7 +747,6 @@ export function installWorkflowExecutionRoutes(app, store) {
       request.body.approved,
       request.body.comment,
     );
-    if (app.locals.isInteractiveDemo) await service.process(request.params.id);
     response.json(result);
   });
 }

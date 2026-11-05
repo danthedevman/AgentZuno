@@ -11,7 +11,6 @@ export default function PageError(props) {
     if (`${location.pathname}${location.search}` !== failedPath) props.onRetry();
   });
   const destination = () => {
-    if (/^\/demo(?:\/|$)/.test(location.pathname)) return '/demo';
     const id =
       location.pathname.match(/^\/workspace\/([a-f0-9]{24})(?:\/|$)/)?.[1] ||
       session()?.user?.impersonation?.workspaceId ||

@@ -1,3 +1,4 @@
+import { repeatMarketingAnimation } from '../services/marketingAnimation.js';
 import { Show, createSignal, onCleanup, onMount } from 'solid-js';
 import Icon from './Icon.jsx';
 
@@ -8,27 +9,28 @@ export default function AnimatedKnowledgeChat() {
   const timers = [];
   onMount(() => {
     const start = () => {
+      timers.forEach(clearTimeout);
+      timers.length = 0;
       setStage(1);
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         setStage(4);
         return;
       }
       [650, 1550, 2300].forEach((delay, index) =>
-        timers.push(setTimeout(() => setStage(index + 2), delay)),
+        timers.push(setTimeout(() => setStage(index + 2), delay * 1.5)),
       );
     };
-    if (!window.IntersectionObserver) return start();
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) {
-          observer.disconnect();
-          start();
-        }
-      },
-      { threshold: 0.2 },
+    onCleanup(
+      repeatMarketingAnimation(
+        element,
+        start,
+        () => {
+          setStage(0);
+          setArticleOpen(false);
+        },
+        4000,
+      ),
     );
-    observer.observe(element);
-    onCleanup(() => observer.disconnect());
   });
   onCleanup(() => timers.forEach(clearTimeout));
   return (

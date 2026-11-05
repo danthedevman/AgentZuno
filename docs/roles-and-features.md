@@ -83,11 +83,9 @@ For an audit review, choose Audit, select a time period, and optionally filter b
 
 Use the list's secondary actions to export permitted records as CSV or JSON. Audit records exclude secrets and private content. Older records may not contain newer workflow or trigger metadata. A completed audit operation records that operation's outcome; it does not by itself prove that the whole request is resolved.
 
-## Explore without changing a live workspace
+## Try fictional records in your workspace
 
-The public Try It demo uses the same Admin UI with fictional records and predefined prompts. Suggested prompts live inside the chat input and collapse after submission. Each visitor's changes stay in API memory and disappear after reset, expiration, or an API restart. The public demo does not call a live AI provider or external connector.
-
-Loading demo data through Settings in a registered workspace is different: those records are stored in the installation's selected database and tagged for removal. They can be used with the workspace's enabled AI provider. Keep real and tagged demo records separate when building real workflows.
+Admins can open Settings, choose an industry, and select Load Demo Data. These records are stored in the installation's selected database and tagged for removal. They can be used with the workspace's enabled AI provider. Use Remove Demo Data to remove the tagged records with confirmation. Other roles use permitted records through their ordinary app views. Keep real and tagged demo records separate when building real workflows.
 
 ## Keep your profile current
 

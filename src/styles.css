@@ -3202,3 +3202,19 @@ html:not(.app-ready)
   outline: 2px solid #a5b4fc;
   outline-offset: 3px;
 }
+
+.hero-conversation-visual,
+.marketing-live-chat,
+.marketing-builder {
+  transition: opacity 500ms ease;
+}
+.is-restarting:is(.hero-conversation-visual, .marketing-live-chat, .marketing-builder) {
+  opacity: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-conversation-visual,
+  .marketing-live-chat,
+  .marketing-builder {
+    transition: none;
+  }
+}

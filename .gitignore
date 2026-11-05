@@ -5,3 +5,6 @@ coverage/
 dist/
 
 api/.installation/
+
+playwright-report/
+test-results/

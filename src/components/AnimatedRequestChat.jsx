@@ -1,3 +1,4 @@
+import { repeatMarketingAnimation } from '../services/marketingAnimation.js';
 import { Show, createEffect, createSignal, onMount, onCleanup } from 'solid-js';
 import Icon from './Icon.jsx';
 export default function AnimatedRequestChat() {
@@ -31,6 +32,8 @@ export default function AnimatedRequestChat() {
   onMount(() => {
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const start = () => {
+      timers.forEach(clearTimeout);
+      timers.clear();
       setStage(1);
       if (reduced) {
         setResponse(message);
@@ -42,33 +45,30 @@ export default function AnimatedRequestChat() {
         let index = 0;
         const type = () => {
           setResponse(message.slice(0, ++index));
-          if (index < message.length) later(type, 18);
+          if (index < message.length) later(type, 28);
           else
             later(() => {
               setStage(3);
               [450, 950, 1500, 2100, 3400].forEach((delay, index) =>
-                later(() => setStage(index + 4), delay),
+                later(() => setStage(index + 4), delay * 1.5),
               );
             }, 200);
         };
         type();
       }, 700);
     };
-    if (!window.IntersectionObserver) {
-      start();
-      return;
-    }
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting && entry.intersectionRatio >= 0.15)) {
-          observer.disconnect();
-          start();
-        }
-      },
-      { threshold: 0.15, rootMargin: '0px' },
+    onCleanup(
+      repeatMarketingAnimation(
+        element,
+        start,
+        () => {
+          setStage(0);
+          setResponse('');
+          messages?.scrollTo({ top: 0 });
+        },
+        12000,
+      ),
     );
-    observer.observe(element);
-    onCleanup(() => observer.disconnect());
   });
   onCleanup(() => timers.forEach(clearTimeout));
   return (

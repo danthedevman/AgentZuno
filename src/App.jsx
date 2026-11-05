@@ -64,7 +64,7 @@ export default function App() {
       <Route path="/invite" component={InvitePage} />
       <Route path="/setup/database" component={DatabaseSetupPage} />
       <Route path="/register" component={RegisterPage} />
-      <Route path={['/workspace', '/workspace/:workspaceId', '/demo']} component={WorkspaceLayout}>
+      <Route path={['/workspace', '/workspace/:workspaceId']} component={WorkspaceLayout}>
         <Route path="/" component={WorkspaceHomePage} />
         <Route path="/setup" component={SetupPage} />
         <Route path="/my-work" component={MyWorkPage} />

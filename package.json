@@ -15,9 +15,11 @@
     "build": "node scripts/build.mjs",
     "dev:api": "npm --prefix api run dev",
     "start:api": "npm --prefix api start",
-    "test:ui": "node --test test/*.test.js"
+    "test:ui": "node --test test/*.test.js",
+    "test:browser": "playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "jsdom": "^30.1.3",
     "prettier": "^3.6.2",
     "vite": "^7.3.7",

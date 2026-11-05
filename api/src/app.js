@@ -1,5 +1,4 @@
 import { rateLimit } from 'express-rate-limit';
-import { installInteractiveDemoRoutes } from './interactiveDemo.js';
 import { installWorkflowReferenceRoutes } from './workflowReferences.js';
 import { installDatabaseSetupRoutes } from './storage/setup.js';
 import { installArticleAttachmentRoutes } from './articleAttachments.js';
@@ -64,27 +63,7 @@ export function createApi(options = {}) {
       message: { error: 'Too many requests. Try again shortly.' },
     }),
   );
-  app.locals.isInteractiveDemo = options.isInteractiveDemo === true;
-  if (!options.isInteractiveDemo) {
-    installDatabaseSetupRoutes(app);
-    installInteractiveDemoRoutes(app, createApi);
-    app.use('/api', (request, response, next) => {
-      try {
-        if (
-          request.headers.referer &&
-          /^\/demo(?:\/|$)/.test(new URL(request.headers.referer).pathname) &&
-          !request.path.startsWith('/demo')
-        )
-          return response
-            .status(403)
-            .json({ error: 'Interactive demo actions must use isolated demo storage.' });
-      } catch {}
-      next();
-    });
-  }
-  app.get('/api/demo', async (request, response) =>
-    response.json(await readData('interactive-demo.json')),
-  );
+  installDatabaseSetupRoutes(app);
   const auth = options.auth || createAuth();
   const store = createContentStore(undefined, options.database);
   const integrations = createIntegrationStore(options.database);
@@ -95,13 +74,7 @@ export function createApi(options = {}) {
   const analytics = createKnowledgeAnalytics(integrations, loadWorkspace, integrationService);
   app.locals.close = async () => {
     await Promise.allSettled([...(app.locals.auditPending || [])]);
-    return Promise.all([
-      store.close(),
-      auth.close(),
-      integrations.close(),
-      queues.close(),
-      app.locals.closeInteractiveDemo?.(),
-    ]);
+    return Promise.all([store.close(), auth.close(), integrations.close(), queues.close()]);
   };
   async function loadWorkspace(user, requestedSections, metadataOnly = false) {
     const sections = new Set(
