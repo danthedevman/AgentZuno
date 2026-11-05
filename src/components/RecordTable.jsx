@@ -484,7 +484,12 @@ export default function RecordTable(props) {
             <Show when={isMobile() && !props.renderCard}>
               <div class="mobile-record-controls">
                 <For each={columns().filter((column) => column.headerStart)}>
-                  {(column) => column.headerStart()}
+                  {(column) => (
+                    <label class="mobile-select-all">
+                      {column.headerStart()}
+                      <span>Select All</span>
+                    </label>
+                  )}
                 </For>
                 <Show when={props.source}>
                   <Dropdown
