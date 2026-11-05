@@ -9,7 +9,9 @@ export function SessionProvider(props) {
   const location = useLocation();
   const mode = () => (/^\/demo(?:\/|$)/.test(location.pathname) ? 'demo' : 'live');
   const [resource, { refetch }] = createResource(mode, async (source) => ({
-    ...(await api('/api/auth/session', { demo: source === 'demo' })),
+    ...(import.meta.env.VITE_STATIC_SITE === 'true'
+      ? { user: null }
+      : await api('/api/auth/session', { demo: source === 'demo' })),
     mode: source,
   }));
   const session = () => (!resource.error && resource()?.mode === mode() ? resource() : undefined);

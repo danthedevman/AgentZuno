@@ -50,7 +50,7 @@ import CreatePage from './pages/workspace/CreatePage.jsx';
 
 export default function App() {
   return (
-    <Router root={AppLayout}>
+    <Router base={import.meta.env.BASE_URL.replace(/\/$/, '')} root={AppLayout}>
       <Route path="/" component={HomePage} />
       <Route path="/docs" component={DocsPage} />
       <Route path="/docs/workflows" component={DocsPage} />

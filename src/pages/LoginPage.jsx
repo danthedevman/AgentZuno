@@ -1,3 +1,4 @@
+import { publicAsset } from '../services/publicAsset.js';
 import ToastMessage from '../components/ToastMessage.jsx';
 import ValidatedForm from '../components/ValidatedForm.jsx';
 import { A, useNavigate, useSearchParams } from '@solidjs/router';
@@ -90,7 +91,7 @@ export default function LoginPage(props) {
   return (
     <main class="login-page">
       <A class="login-brand" href="/">
-        <img src="/agentzuno-wordmark.svg" alt="AgentZuno" width="240" height="60" />
+        <img src={publicAsset('/agentzuno-wordmark.svg')} alt="AgentZuno" width="240" height="60" />
       </A>
       <section class="login-panel">
         <h1>{isRegister() ? 'Register' : 'Welcome back.'}</h1>

@@ -1,3 +1,4 @@
+import { publicAsset } from '../services/publicAsset.js';
 import { confirmAction } from '../services/confirmations.js';
 import AIProviderBanner from '../components/AIProviderBanner.jsx';
 import ProfileAvatar from '../components/ProfileAvatar.jsx';
@@ -232,7 +233,7 @@ function WorkspaceShell(props) {
             >
               <img
                 class="sidebar-brand-mark"
-                src="/agentzuno-mark.svg"
+                src={publicAsset('/agentzuno-mark.svg')}
                 width="28"
                 height="28"
                 alt=""

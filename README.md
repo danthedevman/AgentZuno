@@ -81,3 +81,5 @@ Registration collects a name, email address, and password; the name is saved to 
 Database setup now precedes registration. Choose bundled MongoDB/PostgreSQL or a custom connection for the entire installation. See [database setup and operations](docs/databases.md) for token retrieval, storage behavior, security, backups and migration limits.
 
 The public [Try It demo](/demo) uses the exact admin workspace routes, layouts and components, backed by isolated, short-lived in-memory API sessions seeded from fictional fixtures. Visitors can explore predefined conversations, forms, workflows, requests, approvals, knowledge, groups and connectors without registering or invoking an AI provider. Reset Demo discards changes; sessions expire after 30 minutes; real workspace records and integration credentials are never loaded into the demo.
+
+GitHub Pages builds automatically use the configured repository or custom-domain base path. See the [deployment guide](docs/deployment.md#publish-the-website-on-github-pages) for static-site limits and verification.

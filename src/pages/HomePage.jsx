@@ -1,3 +1,4 @@
+import { publicAsset } from '../services/publicAsset.js';
 import ProfileAvatar from '../components/ProfileAvatar.jsx';
 import Icon from '../components/Icon.jsx';
 import { useSession } from '../context/SessionContext.jsx';
@@ -23,6 +24,7 @@ export default function HomePage() {
   ]);
 
   onMount(async () => {
+    if (import.meta.env.VITE_STATIC_SITE === 'true') return;
     try {
       const portalResponse = await fetch('/api/portal');
       if (portalResponse.ok) {
@@ -59,7 +61,7 @@ export default function HomePage() {
       <nav class="landing-top-navigation" aria-label="Public navigation">
         <A class="marketing-brand-mark" href="/" aria-label="AgentZuno home">
           <img
-            src="/agentzuno-wordmark.svg"
+            src={publicAsset('/agentzuno-wordmark.svg')}
             loading="eager"
             fetchpriority="high"
             decoding="sync"
@@ -262,7 +264,12 @@ export default function HomePage() {
             <span>Serval</span>
           </div>
           <div class="ownership-brand">
-            <img src="/agentzuno-wordmark.svg" width="192" height="48" alt="AgentZuno" />
+            <img
+              src={publicAsset('/agentzuno-wordmark.svg')}
+              width="192"
+              height="48"
+              alt="AgentZuno"
+            />
             <p>Build on your own terms</p>
           </div>
         </div>
@@ -310,7 +317,12 @@ export default function HomePage() {
               aria-label="OpenAI"
             >
               <span class="provider-logo">
-                <img src="/provider-logos/openai.svg" width="32" height="32" alt="" />
+                <img
+                  src={publicAsset('/provider-logos/openai.svg')}
+                  width="32"
+                  height="32"
+                  alt=""
+                />
               </span>
             </a>
             <a
@@ -320,7 +332,12 @@ export default function HomePage() {
               aria-label="Anthropic"
             >
               <span class="provider-logo">
-                <img src="/provider-logos/anthropic.svg" width="32" height="32" alt="" />
+                <img
+                  src={publicAsset('/provider-logos/anthropic.svg')}
+                  width="32"
+                  height="32"
+                  alt=""
+                />
               </span>
             </a>
             <a
@@ -330,14 +347,19 @@ export default function HomePage() {
               aria-label="Google Gemini"
             >
               <span class="provider-logo">
-                <img src="/provider-logos/gemini.png" width="32" height="32" alt="" />
+                <img
+                  src={publicAsset('/provider-logos/gemini.png')}
+                  width="32"
+                  height="32"
+                  alt=""
+                />
               </span>
             </a>
           </div>
           <div class="landing-actions">
             <a
               class="start-button"
-              href="https://github.com/danthedevman/AgentZuno"
+              href="https://github.com/danthedevman/agentzuno"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -352,7 +374,7 @@ export default function HomePage() {
       <footer class="marketing-footer">
         <div>
           <A class="marketing-footer-brand" href="/" aria-label="AgentZuno home">
-            <img src="/agentzuno-wordmark.svg" width="160" height="40" alt="" />
+            <img src={publicAsset('/agentzuno-wordmark.svg')} width="160" height="40" alt="" />
           </A>
           <p>Conversations that move work forward</p>
         </div>

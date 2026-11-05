@@ -1,3 +1,4 @@
+import { publicAsset } from '../services/publicAsset.js';
 import { A, useLocation } from '@solidjs/router';
 import { For, createEffect, createSignal, onMount, onCleanup } from 'solid-js';
 import ChatMarkdown from '../components/ChatMarkdown.jsx';
@@ -76,7 +77,12 @@ export default function DocsPage() {
     <div class="docs-page">
       <header class="docs-header">
         <A href="/" class="docs-brand">
-          <img src="/agentzuno-wordmark.svg" alt="AgentZuno" width="144" height="36" />
+          <img
+            src={publicAsset('/agentzuno-wordmark.svg')}
+            alt="AgentZuno"
+            width="144"
+            height="36"
+          />
         </A>
         <nav aria-label="Public navigation">
           <A href="/docs" aria-current="page">

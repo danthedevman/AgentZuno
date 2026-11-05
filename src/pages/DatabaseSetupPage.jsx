@@ -1,3 +1,4 @@
+import { publicAsset } from '../services/publicAsset.js';
 import { A, useNavigate } from '@solidjs/router';
 import { createResource, createSignal, Show } from 'solid-js';
 import { api } from '../services/api.js';
@@ -39,7 +40,7 @@ export default function DatabaseSetupPage() {
   return (
     <main class="login-page database-setup-page">
       <A class="login-brand" href="/">
-        <img src="/agentzuno-wordmark.svg" alt="AgentZuno" width="240" height="60" />
+        <img src={publicAsset('/agentzuno-wordmark.svg')} alt="AgentZuno" width="240" height="60" />
       </A>
       <section class="login-panel">
         <h1>Choose Your Database</h1>
