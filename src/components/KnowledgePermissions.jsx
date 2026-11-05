@@ -8,20 +8,43 @@ export default function KnowledgePermissions(props) {
   const [mode, setMode] = createSignal('inherit');
   const [userIds, setUserIds] = createSignal([]);
   const [version, setVersion] = createSignal(0);
+  const [roles, setRoles] = createSignal([]);
   const [saving, setSaving] = createSignal(false);
   const [message, setMessage] = createSignal('');
   const endpoint = () => `/api/helpdesk/knowledge-permissions/${props.kind}/${props.id}`;
   const [policy] = createResource(
-    () => props.id,
+    () => props.id || false,
     async () => {
       const result = await api(endpoint());
       setMode(result.mode);
       setUserIds(result.userIds);
       setVersion(result.version);
+      setRoles(result.roles || []);
       return result;
     },
   );
   const [members] = createResource(() => api('/api/helpdesk/members'));
+  async function savePermissions(id = props.id) {
+    if (policy.loading || members.loading || policy.error || members.error)
+      throw new Error('Permissions could not be loaded. Reload and try again.');
+    const result = await api(`/api/helpdesk/knowledge-permissions/${props.kind}/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        mode: mode(),
+        userIds: userIds(),
+        roles: roles(),
+        version: version(),
+      }),
+    });
+    setVersion(result.version);
+    return result;
+  }
+  props.controller?.({
+    save: savePermissions,
+    get ready() {
+      return !policy.loading && !members.loading && !policy.error && !members.error;
+    },
+  });
   return (
     <section class="knowledge-permissions">
       <Show when={policy.loading || members.loading}>
@@ -35,6 +58,7 @@ export default function KnowledgePermissions(props) {
         </Show>
         <Dropdown
           ariaLabel="Knowledge access"
+          disabled={props.disabled || saving()}
           value={mode()}
           options={[
             { value: 'inherit', label: props.kind === 'base' ? 'Admins Only' : 'Inherit' },
@@ -46,6 +70,7 @@ export default function KnowledgePermissions(props) {
         <Show when={mode() === 'restricted'}>
           <MultiSelectLookup
             label="Users"
+            disabled={props.disabled || saving()}
             placeholder="Search users…"
             value={userIds()}
             options={((!members.error && members()) || [])
@@ -61,35 +86,28 @@ export default function KnowledgePermissions(props) {
         <p class="field-help">
           Base, topic, and article restrictions apply together. Admins retain management access.
         </p>
-        <button
-          type="button"
-          class="workspace-button secondary small"
-          disabled={saving() || policy.loading || !!policy.error}
-          onClick={async () => {
-            setSaving(true);
-            setMessage('');
-            try {
-              const result = await api(endpoint(), {
-                method: 'PUT',
-                body: JSON.stringify({
-                  mode: mode(),
-                  userIds: userIds(),
-                  roles: [],
-                  version: version(),
-                }),
-              });
-              setVersion(result.version);
-              setMessage('Permissions saved.');
-            } catch (error) {
-              setMessage(error.message);
-            } finally {
-              setSaving(false);
-            }
-          }}
-        >
-          {' '}
-          {saving() ? 'Saving…' : 'Save Permissions'}
-        </button>
+        <Show when={!props.embedded}>
+          <button
+            type="button"
+            class="workspace-button secondary small"
+            disabled={saving() || policy.loading || !!policy.error}
+            onClick={async () => {
+              setSaving(true);
+              setMessage('');
+              try {
+                await savePermissions();
+                setMessage('Permissions saved.');
+              } catch (error) {
+                setMessage(error.message);
+              } finally {
+                setSaving(false);
+              }
+            }}
+          >
+            {' '}
+            {saving() ? 'Saving…' : 'Save Permissions'}
+          </button>
+        </Show>
         <Show when={message()}>
           <ToastMessage>{message()}</ToastMessage>
         </Show>

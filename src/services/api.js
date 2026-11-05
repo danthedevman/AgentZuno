@@ -52,6 +52,7 @@ export async function api(path, options = {}) {
       status: response.status,
     });
   if (
+    !options.deferSavedEvent &&
     !['GET', 'HEAD'].includes(options.method || 'GET') &&
     !/uploads|attachments|article-proposals$|preferences|permissions|oauth|test|recent-views/.test(
       path,

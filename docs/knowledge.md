@@ -16,7 +16,7 @@ See [Roles & Features](roles-and-features.md) for the broader role guide. Knowle
 1. Open **Knowledge → Bases** and create a knowledge base, such as IT Support.
 2. Open the base and add a topic, such as Getting Connected. Topics group related articles and can be expanded to browse their contents.
 3. Create an article from the base or topic. Give it a clear title and select its required topic.
-4. To change the base name, description, or access, select **Edit Knowledge Base** from its detail view.
+4. To change the base name, description, or access, select **Edit Knowledge Base** from its detail view. Set the permissions in the form and select **Save** to save both the base details and access settings.
 
 Use separate bases when teams need different collections or access boundaries. Use topics to make a collection easier to browse.
 

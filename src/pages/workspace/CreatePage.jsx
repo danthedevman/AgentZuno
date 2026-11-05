@@ -28,25 +28,34 @@ export default function CreatePage(props) {
     })[recordType()];
   const [isSaving, setIsSaving] = createSignal(false);
   const [error, setError] = createSignal('');
+  const [permissions, setPermissions] = createSignal();
+  const [savedRecordId, setSavedRecordId] = createSignal(props.record?.id);
 
   async function save(event) {
     event.preventDefault();
     if (!session()?.user || isSaving()) return;
+    if (recordType() === 'knowledge-base' && !permissions()?.ready) return;
+    const form = new FormData(event.currentTarget);
     setIsSaving(true);
     setError('');
     try {
-      const form = new FormData(event.currentTarget);
       const record = {
         name: form.get('name'),
         description: form.get('description'),
       };
       const saved = await api(
-        `/api/records/${recordType()}${props.record ? '/' + props.record.id : ''}`,
+        `/api/records/${recordType()}${savedRecordId() ? '/' + savedRecordId() : ''}`,
         {
-          method: props.record ? 'PATCH' : 'POST',
+          method: savedRecordId() ? 'PATCH' : 'POST',
+          deferSavedEvent: recordType() === 'knowledge-base',
           body: JSON.stringify(record),
         },
       );
+      setSavedRecordId(saved.id);
+      if (recordType() === 'knowledge-base') {
+        await permissions().save(saved.id);
+        window.dispatchEvent(new Event('agentzuno-form-saved'));
+      }
       await refresh();
       const destination = {
         'knowledge-base': `/workspace/knowledge/bases/${saved.id}`,
@@ -95,6 +104,7 @@ export default function CreatePage(props) {
                 Name
                 <input
                   name="name"
+                  disabled={isSaving()}
                   required
                   maxlength="160"
                   value={props.record?.name || searchParams.name || ''}
@@ -104,29 +114,40 @@ export default function CreatePage(props) {
                 Description
                 <textarea
                   name="description"
+                  disabled={isSaving()}
                   rows="6"
                   maxlength="20000"
                   value={props.record?.description || ''}
                 />
               </label>
 
+              <Show when={recordType() === 'knowledge-base'}>
+                <section class="knowledge-base-edit-permissions">
+                  <h2>Permissions</h2>
+                  <KnowledgePermissions
+                    kind="base"
+                    id={props.record?.id}
+                    embedded
+                    disabled={isSaving()}
+                    controller={setPermissions}
+                  />
+                </section>
+              </Show>
               <Show when={error()}>
                 <ToastMessage tone="error">{error()}</ToastMessage>
               </Show>
               <button
                 class="workspace-button"
                 type="submit"
-                disabled={!session()?.user || isSaving()}
+                disabled={
+                  !session()?.user ||
+                  isSaving() ||
+                  (recordType() === 'knowledge-base' && !permissions()?.ready)
+                }
               >
                 {isSaving() ? 'Saving…' : 'Save'}
               </button>
             </ValidatedForm>
-            <Show when={props.record && recordType() === 'knowledge-base'}>
-              <section class="knowledge-base-edit-permissions">
-                <h2>Permissions</h2>
-                <KnowledgePermissions kind="base" id={props.record.id} />
-              </section>
-            </Show>
           </Show>
         </section>
       }
