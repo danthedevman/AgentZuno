@@ -3070,7 +3070,7 @@ html:not(.app-ready)
 }
 
 .homepage .marketing-hero-heading {
-  font-size: clamp(36px, 4.5vw, 64px);
+  font-size: clamp(38px, 4.8vw, 68px);
   line-height: 1.2;
   letter-spacing: -0.035em;
 }
@@ -3079,6 +3079,6 @@ html:not(.app-ready)
 }
 @media (max-width: 700px) {
   .homepage .marketing-hero-heading {
-    font-size: clamp(28px, 7vw, 44px);
+    font-size: clamp(32px, 8.5vw, 50px);
   }
 }
