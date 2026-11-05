@@ -1,15 +1,16 @@
-import { requestFields as fields, requestText as text, requestChoice as choice, requestError as fail } from './requestValidation.js';
+import {
+  requestFields as fields,
+  requestText as text,
+  requestChoice as choice,
+  requestError as fail,
+} from './requestValidation.js';
 import { canWorkRequest as canWork, canReadRequest } from './requestPolicy.js';
 import { safeRequest } from './requestPresentation.js';
 import { createRequestMutations } from './requestMutations.js';
 import { recordMentionRecords, recordMentionDto } from './recordMentions.js';
 import { requestListPage, inboxListPage } from './requestListRepository.js';
 import { queryString, queryVersion } from './queryValues.js';
-import {
-  installMentionRoutes,
-  inboxMatches,
-  requestMentionNotice,
-} from './mentions.js';
+import { installMentionRoutes, inboxMatches, requestMentionNotice } from './mentions.js';
 import { validateWorkflowReferenceAnswers } from './workflowReferences.js';
 import { installGlobalSearch } from './globalSearch.js';
 import { createRequestTasks, installRequestTaskRoutes, taskInboxRecords } from './requestTasks.js';
@@ -53,7 +54,14 @@ const scope = helpdeskScope;
 
 export function createHelpdeskService(store, chats) {
   const requests = () => store.collection('helpdeskRequests');
-  const update = createRequestMutations(store, { get, settings, canRead: (user, record) => canRead(user, record), safeRequest, departments, statuses });
+  const update = createRequestMutations(store, {
+    get,
+    settings,
+    canRead: (user, record) => canRead(user, record),
+    safeRequest,
+    departments,
+    statuses,
+  });
   async function ensureOrigin(user, record, context = {}) {
     if (record.chatId || context.deferOrigin) return record;
     const chatId = new ObjectId();

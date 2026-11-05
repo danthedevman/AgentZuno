@@ -2,13 +2,21 @@ const actionFields = {
   route: ['queueName'],
   handoff: ['queueName'],
   'task.create': ['queueName', 'title', 'description'],
+  'task.wait': ['taskStepId'],
+  'data.read': ['tableId', 'recordId', 'recordIdField', 'fields'],
+  'data.create': ['tableId', 'fields'],
+  'data.update': ['tableId', 'recordId', 'recordIdField', 'fields'],
+  'data.delete': ['tableId', 'recordId', 'recordIdField', 'fields'],
   approval: ['reason', 'target', 'userId', 'groupId', 'requireRejectionComment'],
   'servicenow.createIncident': ['assignmentGroup', 'shortDescription'],
   'slack.postMessage': ['channel', 'text'],
   'jira.createIssue': ['project', 'issueType', 'summary'],
 };
 export const workflowActions = Object.keys(actionFields);
-export const isExternalAction = (action) => action.includes('.') && action !== 'task.create';
+export const isExternalAction = (action) =>
+  action.includes('.') &&
+  !['task.create', 'task.wait'].includes(action) &&
+  !action.startsWith('data.');
 function object(value, fields) {
   if (
     !value ||
@@ -66,6 +74,50 @@ export function defineWorkflow(input) {
       throw new Error('Invalid workflow step.');
     const keys = actionFields[step.action];
     object(step.params, keys);
+    if (step.action === 'task.wait')
+      return {
+        id: step.id,
+        action: step.action,
+        params: { taskStepId: text(step.params.taskStepId, 40) },
+      };
+    if (step.action.startsWith('data.')) {
+      const params = step.params;
+      if (
+        typeof params.tableId !== 'string' ||
+        !/^(ref-[a-z-]{1,60}|[a-f0-9]{24})$/.test(params.tableId) ||
+        !Array.isArray(params.fields) ||
+        params.fields.length > 20 ||
+        (!params.fields.length && step.action !== 'data.delete') ||
+        new Set(params.fields).size !== params.fields.length ||
+        params.fields.some(
+          (field) => typeof field !== 'string' || !/^[a-z][a-z0-9-]{0,39}$/.test(field),
+        )
+      )
+        throw new Error('Choose a table and explicit allowed fields.');
+      if (step.action !== 'data.create' && !params.recordId === !params.recordIdField)
+        throw new Error('Select one fixed record or form reference field.');
+      if (
+        params.recordId &&
+        (typeof params.recordId !== 'string' || !/^[a-f0-9]{24}$/.test(params.recordId))
+      )
+        throw new Error('Invalid data record reference.');
+      if (
+        params.recordIdField &&
+        (typeof params.recordIdField !== 'string' ||
+          !/^[a-z][a-z0-9-]{0,39}$/.test(params.recordIdField))
+      )
+        throw new Error('Invalid record form field.');
+      return {
+        id: step.id,
+        action: step.action,
+        params: {
+          tableId: params.tableId,
+          fields: [...params.fields],
+          ...(params.recordId ? { recordId: params.recordId } : {}),
+          ...(params.recordIdField ? { recordIdField: params.recordIdField } : {}),
+        },
+      };
+    }
     if (step.action === 'approval') {
       const rejectionComment = step.requireRejectionComment ?? step.params.requireRejectionComment;
       if (
@@ -115,6 +167,27 @@ export function defineWorkflow(input) {
   if (new Set(steps.map((step) => step.id)).size !== steps.length)
     throw new Error('Step IDs must be unique.');
   const form = input.form === undefined ? undefined : defineRequestForm(input.form);
+  for (const [index, step] of steps.entries()) {
+    if (
+      step.action === 'task.wait' &&
+      !steps
+        .slice(0, index)
+        .some((item) => item.id === step.params.taskStepId && item.action === 'task.create')
+    )
+      throw new Error('Wait for a task created earlier in this workflow.');
+    if (
+      step.action.startsWith('data.') &&
+      step.params.recordIdField &&
+      !form?.fields.some(
+        (field) =>
+          field.id === step.params.recordIdField &&
+          field.type === 'reference' &&
+          field.referenceTable === step.params.tableId,
+      )
+    )
+      throw new Error('Data actions must use a matching reference field.');
+  }
+
   for (const step of steps.filter((step) => step.action === 'approval' && step.when)) {
     object(step.when, ['departmentIds', 'fieldId', 'values']);
     if (
@@ -391,8 +464,12 @@ export function toTypeScript(input) {
       return `await ctx.${step.action}(${literal(step.id)}, ${literal(step.params.queueName)});`;
     if (step.action === 'slack.postMessage')
       return `await ctx.slack.postMessage(${literal(step.id)}, ${literal(step.params)});`;
+    if (step.action === 'task.wait')
+      return `await ctx.tasks.wait(${literal(step.id)}, { taskId: task${workflow.steps.findIndex((item) => item.id === step.params.taskStepId)}.id });`;
+    if (step.action.startsWith('data.'))
+      throw new Error('Data actions require explicit executable workflow code with field values.');
     if (step.action === 'task.create')
-      return `await ctx.tasks.create(${literal(step.id)}, ${literal(step.params)});`;
+      return `const task${workflow.steps.indexOf(step)} = await ctx.tasks.create(${literal(step.id)}, ${literal(step.params)});`;
     if (step.action === 'approval')
       return `if (!(await ctx.approval(${literal(step.id)}, ${literal(step.params.target ? step.params : { ...step.params, userId: 'SELECT_APPROVER_USER_ID' })})).approved) return;`;
     return `throw new Error("This action is not supported by the runtime.");`;

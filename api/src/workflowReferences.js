@@ -1,3 +1,4 @@
+import { validateWorkflowDataGrants } from './workflowDataActions.js';
 import { ObjectId } from 'mongodb';
 import { createAdminData } from './adminData.js';
 import { helpdeskScope, requestScope, deny } from './helpdeskRoles.js';
@@ -5,6 +6,7 @@ import { canUseWorkflow } from '../sdk/workflows/index.js';
 import { matchesWorkflowDepartment } from './workflowDepartments.js';
 
 export async function validateWorkflowReferences(store, user, definition) {
+  await validateWorkflowDataGrants(store, user, definition);
   const fields = (definition?.form?.fields || []).filter((field) => field.type === 'reference');
   if (!fields.length) return;
   const tables = await createAdminData(store).tables(user);

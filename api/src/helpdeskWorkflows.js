@@ -84,9 +84,18 @@ function validate(input) {
       input.enabled &&
       definition.steps.some(
         (step) =>
-          !['route', 'handoff', 'approval', 'slack.postMessage', 'task.create'].includes(
-            step.action,
-          ),
+          ![
+            'route',
+            'handoff',
+            'approval',
+            'slack.postMessage',
+            'task.create',
+            'task.wait',
+            'data.read',
+            'data.create',
+            'data.update',
+            'data.delete',
+          ].includes(step.action),
       )
     )
       fail('This action is not implemented by the runtime.', 422);
@@ -187,6 +196,7 @@ export function createHelpdeskWorkflows(store, chats) {
     if (!value.definition) value.definition = await inspectWorkflowSource(value.source);
     await validateWorkflowDepartment(store, user, value.definition);
     await validateWorkflowReferences(store, user, value.definition);
+    if (value.enabled) value.publishedBy = user.id;
     const presentation = value.definition.settings || {};
     if (presentation.catalogIcon && !catalogIcons.includes(presentation.catalogIcon))
       fail('Choose an available catalog icon.', 422);

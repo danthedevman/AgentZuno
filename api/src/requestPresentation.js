@@ -21,4 +21,3 @@ export function safeRequest(record, user) {
     },
   };
 }
-

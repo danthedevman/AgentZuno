@@ -6,6 +6,11 @@ import { api } from '../services/api.js';
 
 const actionNames = {
   'task.create': 'Create fulfillment task',
+  'task.wait': 'Wait for fulfillment',
+  'data.read': 'Read data record',
+  'data.create': 'Create data record',
+  'data.update': 'Update data record',
+  'data.delete': 'Review record deletion',
   route: 'Route request',
   handoff: 'Hand off to support',
   approval: 'Request approval',
@@ -105,15 +110,19 @@ export default function WorkflowVisual(props) {
                   <li class="workflow-node">
                     <span>{actionNames[step.action]}</span>
                     <strong>
-                      {['route', 'handoff'].includes(step.action)
-                        ? step.params.queueName
-                        : step.action === 'task.create'
-                          ? `${step.params.title} · ${step.params.queueName}`
-                          : step.action === 'approval'
-                            ? step.params.reason
-                            : step.action === 'slack.postMessage'
-                              ? 'Send a message to the support channel'
-                              : 'Complete the next step'}
+                      {step.action.startsWith('data.')
+                        ? `${step.params.fields.length} permitted fields`
+                        : step.action === 'task.wait'
+                          ? 'Continue after the fulfillment task is complete'
+                          : ['route', 'handoff'].includes(step.action)
+                            ? step.params.queueName
+                            : step.action === 'task.create'
+                              ? `${step.params.title} · ${step.params.queueName}`
+                              : step.action === 'approval'
+                                ? step.params.reason
+                                : step.action === 'slack.postMessage'
+                                  ? 'Send a message to the support channel'
+                                  : 'Complete the next step'}
                     </strong>
                     <Show when={step.action === 'approval'}>
                       <div class="workflow-approver-list">

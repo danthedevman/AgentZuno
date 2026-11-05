@@ -32,6 +32,18 @@ export default function PageMetadata() {
     meta('property', 'og:title', page.title);
     meta('property', 'og:description', page.description);
     meta('property', 'og:url', url);
+    meta('property', 'og:type', 'website');
+    meta('property', 'og:site_name', 'AgentZuno');
+    meta('property', 'og:image', new URL('agentzuno-social.png', site).href);
+    meta('property', 'og:image:type', 'image/png');
+    meta('property', 'og:image:width', '1200');
+    meta('property', 'og:image:height', '630');
+    meta('property', 'og:image:alt', 'AgentZuno logo — Open source AI help desk');
+    meta('name', 'twitter:card', 'summary_large_image');
+    meta('name', 'twitter:title', page.title);
+    meta('name', 'twitter:description', page.description);
+    meta('name', 'twitter:image', new URL('agentzuno-social.png', site).href);
+    meta('name', 'twitter:image:alt', 'AgentZuno logo — Open source AI help desk');
     if (!canonical) {
       canonical = document.createElement('link');
       canonical.rel = 'canonical';

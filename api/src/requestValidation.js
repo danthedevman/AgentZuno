@@ -15,4 +15,3 @@ export function requestFields(input, allowed) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) requestError('Invalid request.');
   if (Object.keys(input).some((key) => !allowed.includes(key))) requestError('Unsupported field.');
 }
-

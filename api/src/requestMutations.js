@@ -2,9 +2,17 @@ import { randomUUID } from 'node:crypto';
 import { queryString, queryVersion } from './queryValues.js';
 import { requestScope, requireRequestOperator, deny } from './helpdeskRoles.js';
 import { prepareMentions } from './mentions.js';
-import { requestFields as fields, requestText as text, requestChoice as choice, requestError as fail } from './requestValidation.js';
+import {
+  requestFields as fields,
+  requestText as text,
+  requestChoice as choice,
+  requestError as fail,
+} from './requestValidation.js';
 
-export function createRequestMutations(store, { get, settings, canRead, safeRequest, departments, statuses }) {
+export function createRequestMutations(
+  store,
+  { get, settings, canRead, safeRequest, departments, statuses },
+) {
   const requests = () => store.collection('helpdeskRequests');
   async function update(user, id, input, action) {
     if (!input || typeof input !== 'object' || Array.isArray(input)) fail('Invalid request.');

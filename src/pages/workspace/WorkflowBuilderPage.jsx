@@ -979,6 +979,16 @@ export default function WorkflowBuilderPage() {
                           {(step) => (
                             <div>
                               <strong>{step.action}</strong> · {step.status.replaceAll('-', ' ')}
+                              <Show
+                                when={
+                                  step.status === 'awaiting-record-confirmation' &&
+                                  step.result?.href
+                                }
+                              >
+                                <A class="workspace-button secondary small" href={step.result.href}>
+                                  Review Record Deletion
+                                </A>
+                              </Show>
                               <Show when={step.status === 'awaiting-approval'}>
                                 <p>{step.input.reason}</p>
                                 <For each={[true, false]}>

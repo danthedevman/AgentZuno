@@ -312,6 +312,10 @@ export function createApi(options = {}) {
       ['/api/helpdesk/recent-views', '/api/helpdesk/inbox/viewed'].includes(request.path);
     const helpdeskWrite =
       (request.method === 'POST' &&
+        /^\/api\/helpdesk\/data\/(?:deletions\/[a-f0-9]{24}\/confirm|tables\/(?:ref-[a-z-]+|[a-f0-9]{24})\/records\/[a-f0-9]{24}\/deletion-review)$/.test(
+          request.path,
+        )) ||
+      (request.method === 'POST' &&
         /^\/api\/helpdesk\/record-activity\/(?:task|group|data)\/[a-f0-9]{24}$/.test(
           request.path,
         )) ||

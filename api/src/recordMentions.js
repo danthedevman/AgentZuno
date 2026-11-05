@@ -6,9 +6,10 @@ import { smtpConfiguration, smtpTransport } from './smtpSettings.js';
 import { isEmailAddress } from './emailAddress.js';
 
 async function recipient(store, entry, id) {
+  if (typeof id !== 'string' || !/^[a-f0-9]{24}$/.test(id)) return null;
   const member = await store
     .collection('helpdeskMembers')
-    .findOne({ ownerId: entry.ownerId, workspaceId: entry.workspaceId, userId: id, active: true });
+    .findOne({ ownerId: queryString(entry.ownerId, 24), workspaceId: queryString(entry.workspaceId, 24), userId: queryString(id, 24), active: true });
   if (!member) return null;
   const user = {
     id,
@@ -22,7 +23,7 @@ async function recipient(store, entry, id) {
   try {
     const access = await authorizeRecord(store, user, entry.kind, entry.recordId, entry.tableId);
     if (entry.type === 'note' && !access.canReadNotes) return null;
-    const account = await store.collection('users').findOne({ id });
+    const account = await store.collection('users').findOne({ id: queryString(id, 24) });
     return account
       ? {
           ...user,

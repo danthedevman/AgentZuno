@@ -1,3 +1,4 @@
+import { createDataRecordOperations, dataRecordValues } from './dataRecordOperations.js';
 import { auditOperation } from './audit.js';
 import { createAdminGroup } from './adminGroupActions.js';
 import { validateArticleDraft, articleCandidate } from './articleDesigner.js';
@@ -86,6 +87,64 @@ const tools = [
         .map(({ id, name }) => ({ id, name }))
         .slice(0, 200),
     }),
+  ),
+  definition(
+    'getDataTable',
+    'Read a table schema before selecting field IDs for a data operation or workflow grant.',
+    object({ tableId: text(80) }),
+    'admin',
+    async ({ store, actor }, input) => createAdminData(store).table(actor, input.tableId),
+  ),
+  definition(
+    'dataRecord',
+    'Read, create, update, or propose deletion of a record in an authorized Data Table. Use exact table/record/field IDs and the current version. Deletion returns a human review link; this tool cannot confirm deletion. Managed system records use dedicated services.',
+    object({
+      operation: { type: 'string', enum: ['read', 'create', 'update', 'delete'] },
+      tableId: text(80),
+      recordId: nullable(text(24)),
+      version: nullable({ type: 'integer', minimum: 0 }),
+      fields: {
+        type: 'array',
+        maxItems: 20,
+        items: object({
+          fieldId: text(40),
+          value: {
+            anyOf: [{ type: 'string', maxLength: 2000 }, { type: 'number' }, { type: 'boolean' }],
+          },
+        }),
+      },
+    }),
+    'admin',
+    async ({ store, actor, chat, call }, input) => {
+      const service = createDataRecordOperations(store),
+        key = `agent:${chat._id}:${chat.responseId}:${call.id}`;
+      if (input.operation === 'read')
+        return {
+          action: 'dataRecord',
+          record: await service.read(actor, input.tableId, input.recordId),
+        };
+      if (input.operation === 'delete')
+        return {
+          action: 'dataRecord',
+          ...(await service.prepareDelete(
+            actor,
+            input.tableId,
+            input.recordId,
+            input.version,
+            key,
+          )),
+        };
+      const result = await service.mutate(
+        actor,
+        input.tableId,
+        input.operation,
+        input.recordId,
+        dataRecordValues(input.fields),
+        input.version,
+        key,
+      );
+      return { action: 'dataRecord', status: 'saved', ...result };
+    },
   ),
   definition(
     'createGroup',
@@ -307,7 +366,7 @@ export async function executeAgentTool(store, chat, call) {
         tool.parameters.required.some((key) => !Object.hasOwn(input, key))
       )
         deny('Invalid tool arguments.', 400);
-      return tool.execute({ store, chat, actor }, input);
+      return tool.execute({ store, chat, actor, call }, input);
     },
     {
       triggerType: chat.assistantType === 'admin' ? 'admin-chat' : 'support-chat',

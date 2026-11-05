@@ -1,3 +1,4 @@
+import { executeWorkflowDataAction } from './workflowDataActions.js';
 import { authorizeWorkflowRun } from './workflowAccess.js';
 import { validateWorkflowAction as validateAction } from './workflowActionPolicy.js';
 import { workflowAuditDetails } from './auditDetails.js';
@@ -15,10 +16,7 @@ import { requireExistingQueues } from './helpdeskQueues.js';
 import { ObjectId } from 'mongodb';
 import { createHash, randomUUID } from 'node:crypto';
 import { runSandbox } from './workflowRuntime.js';
-import {
-  validateFormAnswers,
-  approvalConditionMatches,
-} from '../sdk/workflows/index.js';
+import { validateFormAnswers, approvalConditionMatches } from '../sdk/workflows/index.js';
 import { helpdeskScope, requireRole, deny } from './helpdeskRoles.js';
 import { auditOperation } from './audit.js';
 import { decryptSecret } from './secrets.js';
@@ -38,7 +36,7 @@ const publicRun = ({
 }) => ({ id: String(_id), ...record });
 export function createWorkflowExecution(store, fetcher = fetch) {
   const runs = () => store.collection('workflowRuns');
-  const authorize = run => authorizeWorkflowRun(store, run);
+  const authorize = (run) => authorizeWorkflowRun(store, run);
   async function ensureRun(request) {
     if (!request.workflowId || !ObjectId.isValid(request.workflowId)) return null;
     const workflow = await store.collection('helpdeskWorkflows').findOne({
@@ -74,6 +72,7 @@ export function createWorkflowExecution(store, fetcher = fetch) {
           revision: request.workflowVersion,
           requestId: String(request._id),
           source: published.source,
+          publishedBy: published.publishedBy,
           definition: published.definition,
           sourceHash: hash(published.source),
           input: {
@@ -196,7 +195,7 @@ export function createWorkflowExecution(store, fetcher = fetch) {
     const filter = { _id: id, lease };
     const scope = { ownerId: run.ownerId, workspaceId: run.workspaceId };
     try {
-      if (run.attempts > 5) throw new Error('Retry limit reached.');
+      if (run.attempts > 50) throw new Error('Retry limit reached.');
       const request = await store.collection('helpdeskRequests').findOne({
         ...scope,
         _id: new ObjectId(run.requestId),
@@ -246,6 +245,47 @@ export function createWorkflowExecution(store, fetcher = fetch) {
             startedAt: new Date(),
           };
           if (!previous) await runs().updateOne(filter, { $push: { steps: step } });
+          if (action === 'task.wait') {
+            const declared = run.definition.steps.find((item) => item.id === stepId);
+            const origin = active.steps.find(
+              (item) =>
+                item.id === declared.params.taskStepId &&
+                item.action === 'task.create' &&
+                item.status === 'complete',
+            );
+            if (!origin || origin.result.id !== input.taskId)
+              deny('Only this workflow’s created task can be awaited.');
+            const task = await store
+              .collection('helpdeskTasks')
+              .findOne({ ...scope, _id: new ObjectId(input.taskId), requestId: run.requestId });
+            if (!task) deny('Task no longer exists.', 404);
+            if (task.status !== 'closed') {
+              await runs().updateOne(
+                { ...filter, 'steps.id': stepId },
+                {
+                  $set: {
+                    status: 'waiting-for-task',
+                    'steps.$.status': 'waiting-for-task',
+                    'steps.$.result': { id: input.taskId },
+                    updatedAt: new Date(),
+                  },
+                },
+              );
+              throw paused();
+            }
+            const result = { id: input.taskId, completed: true };
+            await runs().updateOne(
+              { ...filter, 'steps.id': stepId },
+              {
+                $set: {
+                  'steps.$.status': 'complete',
+                  'steps.$.result': result,
+                  'steps.$.completedAt': new Date(),
+                },
+              },
+            );
+            return result;
+          }
           if (action === 'approval') {
             const declared = run.definition.steps.find((item) => item.id === stepId);
             if (!approvalConditionMatches(declared.when, run.input)) {
@@ -332,6 +372,25 @@ export function createWorkflowExecution(store, fetcher = fetch) {
                   },
                 );
                 return { queueName: input.queueName };
+              }
+              if (action.startsWith('data.')) {
+                const declared = run.definition.steps.find((item) => item.id === stepId);
+                const result = await executeWorkflowDataAction(store, run, declared, input);
+                if (action === 'data.delete') {
+                  await runs().updateOne(
+                    { ...filter, 'steps.id': stepId },
+                    {
+                      $set: {
+                        status: 'awaiting-record-confirmation',
+                        'steps.$.status': 'awaiting-record-confirmation',
+                        'steps.$.result': result,
+                        updatedAt: new Date(),
+                      },
+                    },
+                  );
+                  throw paused();
+                }
+                return result;
               }
               if (action === 'task.create') {
                 const task = await createRequestTasks(store).createForWorkflow(
@@ -542,6 +601,26 @@ export function createWorkflowExecution(store, fetcher = fetch) {
       await store
         .collection('helpdeskRequests')
         .updateOne({ _id: request._id }, { $set: { workflowRunScheduled: true } });
+    }
+    const waiting = await runs().find({ status: 'waiting-for-task' }).limit(50).toArray();
+    for (const run of waiting) {
+      const step = run.steps.find(
+        (item) => item.action === 'task.wait' && item.status === 'waiting-for-task',
+      );
+      const taskId = step?.input.taskId;
+      if (!ObjectId.isValid(taskId)) continue;
+      const task = await store.collection('helpdeskTasks').findOne({
+        ownerId: run.ownerId,
+        workspaceId: run.workspaceId,
+        _id: new ObjectId(taskId),
+        requestId: run.requestId,
+        status: 'closed',
+      });
+      if (task)
+        await runs().updateOne(
+          { _id: run._id, status: 'waiting-for-task' },
+          { $set: { status: 'queued', updatedAt: new Date() } },
+        );
     }
     const queued = await runs()
       .find({ $or: [{ status: 'queued' }, { status: 'running', leaseUntil: { $lt: new Date() } }] })

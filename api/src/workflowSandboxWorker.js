@@ -168,7 +168,8 @@ try {
           route: (id, queueName) => invoke('route', id, { queueName }),
           handoff: (id, queueName) => invoke('handoff', id, { queueName }),
           approval: (id, options) => invoke('approval', id, options),
-          tasks: Object.freeze({ create: (id, options) => invoke('task.create', id, options) }),
+          tasks: Object.freeze({ create: (id, options) => invoke('task.create', id, options), wait: (id, options) => invoke('task.wait', id, options) }),
+          data: Object.freeze({ read: (id, options) => invoke('data.read', id, options), create: (id, options) => invoke('data.create', id, options), update: (id, options) => invoke('data.update', id, options), delete: (id, options) => invoke('data.delete', id, options) }),
           slack: Object.freeze({ postMessage: (id, options) => invoke('slack.postMessage', id, options) })
         });
         return exports.default.run(ctx);

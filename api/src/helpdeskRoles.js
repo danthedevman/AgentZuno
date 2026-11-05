@@ -41,8 +41,7 @@ export function requestScope(user) {
 
 export function requireRequestOperator(user, record) {
   requireRole(user, ['admin', 'agent']);
-  if (!canWorkRequest(user, record))
-    deny('This request is outside your assigned queues.');
+  if (!canWorkRequest(user, record)) deny('This request is outside your assigned queues.');
 }
 
 export async function resolveHelpdeskUser(store, user, workspaceId = user?.workspaceId) {

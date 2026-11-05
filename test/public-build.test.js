@@ -32,7 +32,13 @@ test('production public pages contain readable HTML, unique metadata and valid s
       JSON.parse(document.querySelector('script[type="application/ld+json"]').textContent).name,
       'AgentZuno',
     );
-    assert.ok(document.querySelector('meta[property="og:image"]').content.endsWith('.png'));
+    assert.ok(
+      document.querySelector('meta[property="og:image"]').content.endsWith('/agentzuno-social.png'),
+    );
+    assert.equal(
+      document.querySelector('meta[name="twitter:image"]').content,
+      document.querySelector('meta[property="og:image"]').content,
+    );
     dom.window.close();
   }
 });

@@ -1,3 +1,4 @@
+import DataRecordDeletion from '../../components/DataRecordDeletion.jsx';
 import RecordActivity from '../../components/RecordActivity.jsx';
 import BackLink from '../../components/BackLink.jsx';
 import Skeleton from '../../components/Skeleton.jsx';
@@ -105,6 +106,23 @@ export default function DataRecordPage() {
             >
               Edit
             </button>
+          </Show>
+          <Show
+            when={
+              !isNew() &&
+              !isEditing() &&
+              !table.error &&
+              table() &&
+              !table().sourceManaged &&
+              !record.error &&
+              record()
+            }
+          >
+            <DataRecordDeletion
+              tableId={params.id}
+              recordId={params.recordId}
+              version={record().version}
+            />
           </Show>
         </RecordHeader>
         <Show when={table.error || record.error}>

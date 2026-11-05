@@ -6,6 +6,12 @@ export type WorkflowStep =
       action: 'task.create';
       params: { queueName: string; title: string; description: string };
     }
+  | { id: string; action: 'task.wait'; params: { taskStepId: string } }
+  | {
+      id: string;
+      action: 'data.read' | 'data.create' | 'data.update' | 'data.delete';
+      params: { tableId: string; fields: string[]; recordId?: string; recordIdField?: string };
+    }
   | { id: string; action: 'route' | 'handoff'; params: { queueName: string } }
   | {
       id: string;
@@ -172,7 +178,31 @@ export interface ExecutionContext {
       options: { channel: string; text: string },
     ): Promise<{ messageId: string }>;
   };
+  readonly data: {
+    read(
+      id: string,
+      options: { tableId: string; recordId: string },
+    ): Promise<{ id: string; version: number; values: Record<string, string | number | boolean> }>;
+    create(
+      id: string,
+      options: { tableId: string; values: Record<string, string | number | boolean> },
+    ): Promise<{ id: string; version: number }>;
+    update(
+      id: string,
+      options: {
+        tableId: string;
+        recordId: string;
+        version: number;
+        values: Record<string, string | number | boolean>;
+      },
+    ): Promise<{ id: string; version: number }>;
+    delete(
+      id: string,
+      options: { tableId: string; recordId: string; version: number },
+    ): Promise<{ deleted: boolean; id: string }>;
+  };
   readonly tasks: {
+    wait(id: string, options: { taskId: string }): Promise<{ id: string; completed: boolean }>;
     create(
       id: string,
       options: { queueName: string; title: string; description: string },

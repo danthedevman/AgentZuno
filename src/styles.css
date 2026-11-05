@@ -3531,4 +3531,6 @@ html:not(.app-ready)
   }
 }
 
-.docs-page > .marketing-release-banner { position: static; }
+.docs-page > .marketing-release-banner {
+  position: static;
+}
