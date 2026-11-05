@@ -10,6 +10,22 @@ import { For, Show, createSignal, onMount } from 'solid-js';
 import HeroWorkflowBackground from '../components/HeroWorkflowBackground.jsx';
 import { A, useNavigate } from '@solidjs/router';
 
+const helpDeskPlatforms = [
+  { name: 'Zendesk', href: 'https://www.zendesk.com/', icon: 'zendesk-mark.svg' },
+  {
+    name: 'JSM',
+    href: 'https://www.atlassian.com/software/jira/service-management',
+    icon: 'jsm.ico',
+  },
+  {
+    name: 'Freshservice',
+    href: 'https://www.freshworks.com/freshservice/',
+    icon: 'freshservice.png',
+  },
+  { name: 'Serval', href: 'https://www.serval.com/', icon: 'serval.png' },
+  { name: 'Flow', href: 'https://www.letsflow.ai/', icon: 'flow-mark.svg' },
+];
+
 export default function HomePage() {
   const { session } = useSession();
   const user = () => (session.error ? null : session()?.user);
@@ -292,24 +308,48 @@ export default function HomePage() {
         class="marketing-section marketing-split marketing-ownership"
         aria-labelledby="ownership-title"
       >
-        <div
-          class="marketing-copy ownership-graphic"
-          aria-label="An open source alternative to Zendesk, JSM, Freshservice, and Serval"
-        >
-          <div class="ownership-vendors" aria-hidden="true">
-            <span>Zendesk</span>
-            <span>JSM</span>
-            <span>Freshservice</span>
-            <span>Serval</span>
-          </div>
-          <div class="ownership-brand">
-            <img
-              src={publicAsset('/agentzuno-wordmark.svg')}
-              width="192"
-              height="48"
-              alt="AgentZuno"
-            />
-            <p>Build on your own terms</p>
+        <div class="marketing-copy ownership-graphic">
+          <div class="ownership-alternative">
+            <h3>Considering your next help desk?</h3>
+            <ul class="ownership-product-links" aria-label="Explore help desk platforms">
+              <For each={helpDeskPlatforms}>
+                {(platform) => (
+                  <li>
+                    <a
+                      href={platform.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`Visit ${platform.name} (opens in a new tab)`}
+                    >
+                      <span class="ownership-product-icon" aria-hidden="true">
+                        <Show when={platform.icon} fallback={platform.initial}>
+                          <img
+                            src={publicAsset(`/product-icons/${platform.icon}`)}
+                            width="24"
+                            height="24"
+                            alt=""
+                            loading="lazy"
+                          />
+                        </Show>
+                      </span>
+                      <span>
+                        <Show when={platform.name === 'Freshservice'} fallback={platform.name}>
+                          Fresh
+                          <wbr />
+                          service
+                        </Show>
+                      </span>
+                    </a>
+                  </li>
+                )}
+              </For>
+            </ul>
+            <p>There’s another way to build</p>
+            <div class="ownership-benefits">
+              <span>No expensive platform contracts</span>
+              <span>No vendor lock-in</span>
+              <span>No drama</span>
+            </div>
           </div>
         </div>
         <div class="marketing-copy">
@@ -327,11 +367,6 @@ export default function HomePage() {
             Keep control of your code, your data, and your choice of AI provider. Hosting, AI usage,
             and any third-party services are yours to choose and budget for.
           </p>
-          <div class="ownership-benefits">
-            <span>No expensive platform contracts</span>
-            <span>No vendor lock-in</span>
-            <span>No drama</span>
-          </div>
         </div>
       </MarketingSection>
       <MarketingSection
