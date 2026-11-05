@@ -9399,3 +9399,48 @@ button.catalog-item-card {
     padding-right: 16px;
   }
 }
+
+.workspace-shell input[type='checkbox'],
+.workspace-shell .record-list input[type='checkbox'] {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid #9398ac;
+  border-radius: 4px;
+  background-color: var(--workspace-panel);
+  background-position: center;
+  background-size: 16px 16px;
+  background-repeat: no-repeat;
+}
+.workspace-shell[data-theme='dark'] input[type='checkbox'] {
+  background-color: #0b1017;
+  border-color: #676d80;
+}
+.workspace-shell input[type='checkbox']:checked,
+.workspace-shell input[type='checkbox']:indeterminate {
+  background-color: #818cf8;
+  border-color: #818cf8;
+}
+.workspace-shell input[type='checkbox']:checked {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='m4 8 2.5 2.5L12 5' fill='none' stroke='%23101225' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+.workspace-shell input[type='checkbox']:indeterminate {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8h8' fill='none' stroke='%23101225' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+.workspace-shell input[type='checkbox']:focus-visible {
+  outline: 2px solid #818cf8;
+  outline-offset: 3px;
+}
+.workspace-shell input[type='checkbox']:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+@media (forced-colors: active) {
+  .workspace-shell input[type='checkbox'],
+  .workspace-shell .record-list input[type='checkbox'] {
+    appearance: auto;
+    -webkit-appearance: auto;
+    accent-color: auto;
+    background: Canvas;
+    border-color: ButtonText;
+  }
+}
