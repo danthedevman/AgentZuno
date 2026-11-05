@@ -33,7 +33,7 @@
 - Keep the workspace sidebar a 45px icon rail with right-side hover and keyboard-focus tooltips, a primary create button above Search, a small separator, and a bottom account popup.
 - Keep all modal backdrops and other overlays within the main content area, excluding the sidebar. Center dialogs within that area and use the shared sidebar-width variable.
 - The workspace is also the public product tour and help center. Keep examples and unfinished capabilities clearly labeled.
-- Update the README when setup or behavior changes. Keep both Docker and local Node development working.
+- Put detailed setup, deployment, configuration, and feature instructions in the relevant docs/ guide and in-app Docs when useful. Do not append app setup or behavior notes to README.md; keep it a concise project overview and documentation index unless the user explicitly requests a README edit. Keep both Docker and local Node development working.
 - After every change, rebuild and restart the affected Docker services before finishing. Use `docker compose up --build -d --force-recreate <services>` so the running containers include the latest changes, and verify the affected services are running and healthy where health checks exist.
 - Keep all code formatted and easy to read in VS Code. Honor `.editorconfig` and `.vscode/settings.json`: two-space indentation, LF line endings, final newlines, and Prettier format-on-save. Recommend the Prettier VS Code extension through `.vscode/extensions.json`.
 - Format all code consistently with Prettier. Run `npm run format` after edits and `npm run format:check` before finishing.

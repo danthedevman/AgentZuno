@@ -19,9 +19,13 @@ Put the generated value in `CREDENTIAL_ENCRYPTION_KEY` in `.env`. Keep this key 
 docker compose up --build -d
 ```
 
-Open [localhost:3000](http://localhost:3000) and register an account. MongoDB persists accounts and workspace records. Redis coordinates background work; the API, worker, and web run as separate services. Compose also starts Qdrant and Ollama for semantic lookup of Published authored articles and retained source imports and downloads `nomic-embed-text`.
+Open [localhost:3000](http://localhost:3000). On a new installation, the app opens **Choose Your Database** automatically. Choose bundled MongoDB or PostgreSQL, or enter your own connection. Retrieve the setup token with `docker compose exec api cat /app/installation/setup.token`, enter it in the wizard, and select **Connect and Continue**. After the connection is tested and saved, register your first account and continue through the skippable workspace setup wizard. See [Database setup](databases.md) for connection and recovery details.
 
-Configure an AI provider in workspace Settings before using AI chat. Connector application credentials are entered through Connectors; SMTP and identity-provider configuration belong in Settings. Credentials are encrypted in MongoDB rather than stored as connector-specific environment variables.
+Downloaded and self-hosted builds open Login after database setup, or the workspace when already signed in. They do not display the marketing homepage. Public website builds use `VITE_STATIC_SITE=true` and retain the marketing page with Docker setup and GitHub links. An unavailable backend shows a connection error; it never triggers a reset or falls back to the marketing page.
+
+Your selected database persists accounts and workspace records. Redis coordinates background work; the API, worker, and web run as separate services. Compose also starts Qdrant and Ollama for semantic lookup of Published authored articles and retained source imports and downloads `nomic-embed-text`.
+
+Configure an AI provider in workspace Settings before using AI chat. Connector application credentials are entered through Connectors; SMTP and identity-provider configuration belong in Settings. Credentials are encrypted in the selected database rather than stored as connector-specific environment variables.
 
 Admins and Agents land on My Work. Other roles land on Chat. New workspaces start without other users' records; demo login is disabled.
 

@@ -152,10 +152,11 @@ export default function DocsPage() {
           <section id="getting-started">
             <h2>Getting Started</h2>
             <p>
-              Run the web app, API, worker, and infrastructure with Docker Compose. Choose MongoDB
-              or PostgreSQL before registering the first account. Configure an AI provider in
-              workspace Settings, create queues, then build a workflow conversationally or edit its
-              TypeScript. Review and publish the workflow before employees can use it.
+              Run the web app, API, worker, and infrastructure with Docker Compose. On first launch,
+              the app opens the database wizard. Choose MongoDB or PostgreSQL, then register the
+              first account. Future visits open Login or your signed-in workspace. Configure an AI
+              provider in workspace Settings, create queues, then build a workflow conversationally
+              or edit its TypeScript. Review and publish the workflow before employees can use it.
             </p>
             <CodeBlock
               language="bash"
