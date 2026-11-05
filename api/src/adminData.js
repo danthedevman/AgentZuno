@@ -1,3 +1,4 @@
+import { queryVersion } from './queryValues.js';
 import { isEmailAddress } from './emailAddress.js';
 import { requireCompatibleDemoReferences } from './demoReferences.js';
 import { workspaceGroups } from './groups.js';
@@ -449,7 +450,7 @@ export function createAdminData(store) {
         const result = await store
           .collection('adminDataTables')
           .updateOne(
-            { ...filter, version: input.version },
+            { ...filter, version: queryVersion(input.version) },
             { $set: { ...definition, updatedAt: new Date() }, $inc: { version: 1 } },
           );
         if (!result.matchedCount) deny('Table changed. Reload before saving.', 409);
@@ -459,7 +460,7 @@ export function createAdminData(store) {
     const result = await store
       .collection('adminDataTables')
       .findOneAndUpdate(
-        { ...helpdeskScope(user), _id: new ObjectId(id), version: input.version },
+        { ...helpdeskScope(user), _id: new ObjectId(id), version: queryVersion(input.version) },
         { $set: { ...definition, updatedAt: new Date() }, $inc: { version: 1 } },
         { returnDocument: 'after' },
       );
@@ -675,7 +676,7 @@ export function createAdminData(store) {
         const result = await store
           .collection('adminDataRecords')
           .updateOne(
-            { ...filter, version: input.version },
+            { ...filter, version: queryVersion(input.version) },
             { $set: { values: customValues, updatedAt: new Date() }, $inc: { version: 1 } },
           );
         if (!result.matchedCount) deny('Record changed. Reload before saving.', 409);
@@ -714,7 +715,7 @@ export function createAdminData(store) {
       if (
         typeof id !== 'string' ||
         !/^[a-f0-9]{24}$/.test(id) ||
-        !Number.isInteger(input.version) ||
+        !Number.isSafeInteger(input.version) ||
         input.version < 0
       )
         deny('Invalid record.', 400);
@@ -723,7 +724,9 @@ export function createAdminData(store) {
           _id: id,
           ...helpdeskScope(user),
           type,
-          ...(input.version ? { version: input.version } : { version: { $exists: false } }),
+          ...(input.version
+            ? { version: queryVersion(input.version) }
+            : { version: { $exists: false } }),
         },
         {
           $set: {
@@ -748,11 +751,11 @@ export function createAdminData(store) {
         .insertOne({ ...filter, values, version: 1, createdAt: new Date(), updatedAt: new Date() });
       return { id: result.insertedId.toHexString() };
     }
-    if (!ObjectId.isValid(id) || !Number.isInteger(input.version)) deny('Invalid record.', 400);
+    if (!ObjectId.isValid(id) || !Number.isSafeInteger(input.version)) deny('Invalid record.', 400);
     const updated = await store
       .collection('adminDataRecords')
       .findOneAndUpdate(
-        { ...filter, _id: new ObjectId(id), version: input.version },
+        { ...filter, _id: new ObjectId(id), version: queryVersion(input.version) },
         { $set: { values, updatedAt: new Date() }, $inc: { version: 1 } },
         { returnDocument: 'after' },
       );

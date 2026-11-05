@@ -1,3 +1,5 @@
+import { queryString, queryStrings, queryVersion } from '../src/queryValues.js';
+import { helpdeskScope, requestScope, resolveHelpdeskUser } from '../src/helpdeskRoles.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import express from 'express';
@@ -84,6 +86,22 @@ test('SMTP attempts are throttled before further authorization or database work 
     assert.equal(blocked.status, 429);
     assert.ok(blocked.headers.get('retry-after'));
     assert.equal(reads, 10);
+    for (const version of [{ $ne: 0 }, [0], '0', -1, Number.MAX_SAFE_INTEGER + 1]) {
+      const response = await fetch(root + '/api/helpdesk/smtp', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          host: 'smtp.example.test',
+          port: 587,
+          from: 'support@example.test',
+          username: '',
+          password: '',
+          version,
+        }),
+      });
+      assert.equal(response.status, 400);
+    }
+    assert.equal(reads, 10);
     for (const body of [{ length: 1 }, ['content']]) {
       const result = await fetch(root + '/api/helpdesk/chat-attachments', {
         method: 'POST',
@@ -97,4 +115,34 @@ test('SMTP attempts are throttled before further authorization or database work 
     server.closeAllConnections();
     await new Promise((resolve) => server.close(resolve));
   }
+});
+
+test('query scalars reject operators, malformed identities and unsafe versions before database access', async () => {
+  for (const value of [{ $ne: null }, { $gt: 0 }, [], ['owner'], null, undefined, 42]) {
+    assert.throws(() => queryString(value), { status: 400 });
+    assert.throws(() => helpdeskScope({ id: value, workspaceId: 'workspace' }), { status: 400 });
+  }
+  for (const value of [{ $ne: 0 }, [1], '1', -1, 1.5, Infinity, NaN, Number.MAX_SAFE_INTEGER + 1])
+    assert.throws(() => queryVersion(value), { status: 400 });
+  for (const value of [{ $in: ['Support'] }, [{ $ne: '' }], ['x'.repeat(81)]])
+    assert.throws(() => queryStrings(value, 30, 80), { status: 400 });
+  assert.equal(queryString('owner'), 'owner');
+  assert.equal(queryVersion(2), 2);
+  assert.deepEqual(queryStrings(['Support']), ['Support']);
+  assert.throws(
+    () =>
+      requestScope({ role: 'agent', id: 'owner', workspaceId: 'workspace', queues: [{ $ne: '' }] }),
+    { status: 400 },
+  );
+  let reads = 0;
+  const store = {
+    ready: async () => {},
+    collection: () => ({
+      findOne: async () => {
+        reads++;
+      },
+    }),
+  };
+  await assert.rejects(resolveHelpdeskUser(store, { id: 'owner' }, { $ne: null }), { status: 400 });
+  assert.equal(reads, 0);
 });

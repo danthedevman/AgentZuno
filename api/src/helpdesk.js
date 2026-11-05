@@ -1,3 +1,4 @@
+import { queryString, queryVersion } from './queryValues.js';
 import { prepareMentions, installMentionRoutes, inboxMatches } from './mentions.js';
 import { validateWorkflowReferenceAnswers } from './workflowReferences.js';
 import { installGlobalSearch } from './globalSearch.js';
@@ -94,15 +95,15 @@ export function createHelpdeskService(store, chats) {
     const receipt = requestReceipt(record, user.workspaceId);
     await store.collection('chats').updateOne(
       {
-        ownerId: user.id,
-        workspaceId: user.workspaceId,
+        ownerId: queryString(user.id),
+        workspaceId: queryString(user.workspaceId),
         requestId: reviewRequestId(user.workspaceId, user.id, record._id.toHexString()),
       },
       {
         $setOnInsert: {
           _id: chatId,
-          ownerId: user.id,
-          workspaceId: user.workspaceId,
+          ownerId: queryString(user.id),
+          workspaceId: queryString(user.workspaceId),
           requestId: reviewRequestId(user.workspaceId, user.id, record._id.toHexString()),
           ...(context.demoTag || {}),
           providerOwnerId: user.helpdeskOwnerId || user.id,
@@ -136,8 +137,8 @@ export function createHelpdeskService(store, chats) {
     );
     const origin = await store.collection('chats').findOne(
       {
-        ownerId: user.id,
-        workspaceId: user.workspaceId,
+        ownerId: queryString(user.id),
+        workspaceId: queryString(user.workspaceId),
         requestId: reviewRequestId(user.workspaceId, user.id, record._id.toHexString()),
       },
       { projection: { _id: 1 } },
@@ -153,8 +154,8 @@ export function createHelpdeskService(store, chats) {
     if (record.submissionState) return record.submissionState === 'submitted';
     if (record.channel !== 'web') return true;
     const legacyConversation = await store.collection('chats').findOne({
-      ownerId: record.requesterId,
-      workspaceId: record.workspaceId,
+      ownerId: queryString(record.requesterId),
+      workspaceId: queryString(record.workspaceId),
       helpdeskPurpose: 'support',
       helpdeskRequestId: record._id.toHexString(),
       requestId: record.requestId,
@@ -236,12 +237,12 @@ export function createHelpdeskService(store, chats) {
     const existing = await requests().findOne({
       ...scope(user),
       requestId: input.requestId,
-      requesterId: user.id,
+      requesterId: queryString(user.id),
     });
     if (existing) {
       if (context.submittedVia === 'zuno' && existing.submissionState !== 'submitted') {
         const promoted = await requests().findOneAndUpdate(
-          { _id: existing._id, ...scope(user), requesterId: user.id },
+          { _id: existing._id, ...scope(user), requesterId: queryString(user.id) },
           {
             $set: {
               submissionState: 'submitted',
@@ -285,7 +286,7 @@ export function createHelpdeskService(store, chats) {
       ...scope(user),
       requestId: input.requestId,
       ...(context.chatId ? { chatId: context.chatId } : {}),
-      requesterId: user.id,
+      requesterId: queryString(user.id),
       channel: 'web',
       number: `REQ-${String(counter.sequence).padStart(6, '0')}`,
       submissionState: 'submitted',
@@ -323,7 +324,7 @@ export function createHelpdeskService(store, chats) {
       const existing = await requests().findOne({
         ...scope(user),
         requestId: input.requestId,
-        requesterId: user.id,
+        requesterId: queryString(user.id),
       });
       if (!existing) fail('Request ID is already used. Choose a new request ID.', 409);
       return safeRequest(existing, user);
@@ -355,7 +356,7 @@ export function createHelpdeskService(store, chats) {
         fail('This request is already assigned.', 409);
       changes.assignedToId = user.id;
       changes.assignedToName = user.name || user.email || 'Agent';
-      event = { type: 'assigned', assignedToId: user.id };
+      event = { type: 'assigned', assignedToId: queryString(user.id) };
     } else if (action === 'work-note') {
       fields(input, ['version', 'text', 'mentionIds']);
       const body = text(input.text, 'Work note', 8000);
@@ -484,7 +485,7 @@ export function createHelpdeskService(store, chats) {
       pendingNotifications = prepared.notifications;
     }
     const updated = await requests().findOneAndUpdate(
-      { ...requestScope(user), _id: record._id, version: input.version },
+      { ...requestScope(user), _id: record._id, version: queryVersion(input.version) },
       {
         $set: { ...changes, updatedAt: now },
         $inc: { version: 1 },
@@ -642,7 +643,7 @@ export function createHelpdeskService(store, chats) {
     if (!ObjectId.isValid(id)) fail('Support conversation not found.', 404);
     const origin = await store.collection('chats').findOne({
       _id: new ObjectId(id),
-      workspaceId: user.workspaceId,
+      workspaceId: queryString(user.workspaceId),
       providerOwnerId: user.helpdeskOwnerId || user.id,
       helpdeskPurpose: 'support',
     });
@@ -754,7 +755,7 @@ export function createHelpdeskService(store, chats) {
     if (chat.requestForm) chat.requestForm.offerId = chat.responseId;
     chat.requests = (
       await requests()
-        .find({ ...scope(user), requesterId: user.id, chatId: id })
+        .find({ ...scope(user), requesterId: queryString(user.id), chatId: id })
         .sort({ createdAt: 1 })
         .toArray()
     ).map((record) => safeRequest(record, user));
@@ -762,7 +763,7 @@ export function createHelpdeskService(store, chats) {
       const request = await requests().findOne({
         ...scope(user),
         _id: new ObjectId(chat.helpdeskRequestId),
-        requesterId: user.id,
+        requesterId: queryString(user.id),
       });
       if (request && !chat.ticketReview && request.submittedVia === 'zuno')
         chat.messages = insertRequestReceipt(
@@ -796,24 +797,28 @@ export function createHelpdeskService(store, chats) {
     if (input.activeRequestId && !current.operatorRequestId) {
       const selected = await requests().findOne({
         ...scope(user),
-        requesterId: user.id,
+        requesterId: queryString(user.id),
         chatId: id,
         _id: ObjectId.isValid(input.activeRequestId) ? new ObjectId(input.activeRequestId) : null,
       });
       if (!selected) fail('Request not found.', 404);
-      await store
-        .collection('chats')
-        .updateOne(
-          { _id: current._id, ownerId: user.id, workspaceId: user.workspaceId },
-          { $set: { helpdeskRequestId: input.activeRequestId } },
-        );
-    }
-    await store
-      .collection('chats')
-      .updateOne(
-        { _id: new ObjectId(id), ownerId: user.id, workspaceId: user.workspaceId },
-        { $unset: { requestForm: '' } },
+      await store.collection('chats').updateOne(
+        {
+          _id: current._id,
+          ownerId: queryString(user.id),
+          workspaceId: queryString(user.workspaceId),
+        },
+        { $set: { helpdeskRequestId: input.activeRequestId } },
       );
+    }
+    await store.collection('chats').updateOne(
+      {
+        _id: new ObjectId(id),
+        ownerId: queryString(user.id),
+        workspaceId: queryString(user.workspaceId),
+      },
+      { $unset: { requestForm: '' } },
+    );
     return chats.send(
       user,
       id,
@@ -844,8 +849,8 @@ export function createHelpdeskService(store, chats) {
     const claimed = await store.collection('chats').updateOne(
       {
         _id: chat._id,
-        ownerId: user.id,
-        workspaceId: user.workspaceId,
+        ownerId: queryString(user.id),
+        workspaceId: queryString(user.workspaceId),
         messages: { $elemMatch: { id: input.messageId, 'requestAction.state': 'pending' } },
       },
       { $set: { 'messages.$.requestAction.state': 'applying' } },
@@ -871,8 +876,8 @@ export function createHelpdeskService(store, chats) {
       await store.collection('chats').updateOne(
         {
           _id: chat._id,
-          ownerId: user.id,
-          workspaceId: user.workspaceId,
+          ownerId: queryString(user.id),
+          workspaceId: queryString(user.workspaceId),
           'messages.id': input.messageId,
         },
         {
@@ -888,8 +893,8 @@ export function createHelpdeskService(store, chats) {
       await store.collection('chats').updateOne(
         {
           _id: chat._id,
-          ownerId: user.id,
-          workspaceId: user.workspaceId,
+          ownerId: queryString(user.id),
+          workspaceId: queryString(user.workspaceId),
           'messages.id': input.messageId,
         },
         { $set: { 'messages.$.requestAction.state': 'failed' } },
@@ -902,8 +907,8 @@ export function createHelpdeskService(store, chats) {
     await store.collection('chats').updateOne(
       {
         _id: chat._id,
-        ownerId: user.id,
-        workspaceId: user.workspaceId,
+        ownerId: queryString(user.id),
+        workspaceId: queryString(user.workspaceId),
         'messages.id': { $ne: receipt.id },
       },
       {
@@ -929,7 +934,7 @@ export function createHelpdeskService(store, chats) {
       const existing = await requests().findOne({
         _id: new ObjectId(chat.helpdeskRequestId),
         ...scope(user),
-        requesterId: user.id,
+        requesterId: queryString(user.id),
       });
       if (existing && (await isSubmitted(existing))) {
         const result = safeRequest(existing, user);
@@ -961,7 +966,7 @@ export function createHelpdeskService(store, chats) {
       fail('Invalid form offer.');
     const prior = await requests().findOne({
       ...scope(user),
-      requesterId: user.id,
+      requesterId: queryString(user.id),
       chatId: id,
       requestId: offerId,
     });
@@ -1066,7 +1071,7 @@ export function createHelpdeskService(store, chats) {
     if (ticket.requesterId !== user.id) {
       const requester = {
         id: ticket.requesterId,
-        workspaceId: user.workspaceId,
+        workspaceId: queryString(user.workspaceId),
         helpdeskOwnerId: scope(user).ownerId,
       };
       await ensureOrigin(requester, ticket);
@@ -1151,8 +1156,8 @@ export function installHelpdeskRoutes(app, store, service) {
   });
   app.get('/api/helpdesk/ai-status', async (request, response) => {
     const scope = {
-      ownerId: request.helpdeskUser.helpdeskOwnerId || request.helpdeskUser.id,
-      workspaceId: request.helpdeskUser.workspaceId,
+      ownerId: queryString(request.helpdeskUser.helpdeskOwnerId || request.helpdeskUser.id),
+      workspaceId: queryString(request.helpdeskUser.workspaceId),
     };
     const preference = await store.collection('aiPreferences').findOne(scope);
     const provider =
@@ -1206,7 +1211,11 @@ export function installHelpdeskRoutes(app, store, service) {
   });
   app.get('/api/helpdesk/support/conversations', async (request, response) => {
     const user = request.helpdeskUser;
-    const filter = { ownerId: user.id, workspaceId: user.workspaceId, helpdeskPurpose: 'support' };
+    const filter = {
+      ownerId: queryString(user.id),
+      workspaceId: queryString(user.workspaceId),
+      helpdeskPurpose: 'support',
+    };
     if (request.query.cursor !== undefined) {
       let cursor;
       try {
@@ -1357,8 +1366,8 @@ export function installHelpdeskRoutes(app, store, service) {
             pipeline: [
               {
                 $match: {
-                  ownerId: user.id,
-                  workspaceId: user.workspaceId,
+                  ownerId: queryString(user.id),
+                  workspaceId: queryString(user.workspaceId),
                   archived: true,
                   $expr: { $eq: ['$requestId', '$$requestId'] },
                 },
@@ -1383,7 +1392,11 @@ export function installHelpdeskRoutes(app, store, service) {
     const taskRows = await taskInboxRecords(store, user);
     const taskStates = await store
       .collection('helpdeskInbox')
-      .find({ ownerId: user.id, workspaceId: user.workspaceId, archived: true })
+      .find({
+        ownerId: queryString(user.id),
+        workspaceId: queryString(user.workspaceId),
+        archived: true,
+      })
       .toArray();
     const rows = submitted.filter(Boolean).map((record) => ({
       ...service.safeRequest(record, user),
@@ -1414,8 +1427,8 @@ export function installHelpdeskRoutes(app, store, service) {
     let filter;
     if (task)
       filter = {
-        ownerId: user.id,
-        workspaceId: user.workspaceId,
+        ownerId: queryString(user.id),
+        workspaceId: queryString(user.workspaceId),
         taskId: new ObjectId(task.id),
         requestId: new ObjectId(task.id),
         kind: 'task',
@@ -1431,7 +1444,11 @@ export function installHelpdeskRoutes(app, store, service) {
         !(await canReviewWorkflowApproval(store, user, record._id))
       )
         deny('This item is outside your assignments.');
-      filter = { ownerId: user.id, workspaceId: user.workspaceId, requestId: record._id };
+      filter = {
+        ownerId: queryString(user.id),
+        workspaceId: queryString(user.workspaceId),
+        requestId: record._id,
+      };
     }
     await store
       .collection('helpdeskInbox')

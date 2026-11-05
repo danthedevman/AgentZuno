@@ -1,3 +1,4 @@
+import { queryString, queryStrings, queryVersion } from './queryValues.js';
 import { requireExistingQueues } from './helpdeskQueues.js';
 import { listResponse } from './listQuery.js';
 export const helpdeskRoles = ['admin', 'agent', 'user', 'read-only'];
@@ -13,17 +14,27 @@ export function requireRole(user, roles) {
     deny();
 }
 export function helpdeskScope(user) {
-  return { ownerId: user.helpdeskOwnerId || user.id, workspaceId: user.workspaceId };
+  return {
+    ownerId: queryString(user.helpdeskOwnerId || user.id),
+    workspaceId: queryString(user.workspaceId),
+  };
 }
 export function requestScope(user) {
   requireRole(user, helpdeskRoles);
   const filter = helpdeskScope(user);
   if (user.role === 'user') {
-    if (user.canApprove) filter.$or = [{ requesterId: user.id }, { approvalUserIds: user.id }];
-    else filter.requesterId = user.id;
+    if (user.canApprove)
+      filter.$or = [
+        { requesterId: queryString(user.id) },
+        { approvalUserIds: queryString(user.id) },
+      ];
+    else filter.requesterId = queryString(user.id);
   }
   if (user.role === 'agent')
-    filter.$or = [{ requesterId: user.id }, { queueName: { $in: user.queues || [] } }];
+    filter.$or = [
+      { requesterId: queryString(user.id) },
+      { queueName: { $in: queryStrings(user.queues || [], 30, 80) } },
+    ];
   return filter;
 }
 
@@ -38,17 +49,21 @@ export async function resolveHelpdeskUser(store, user, workspaceId = user?.works
   if (typeof workspaceId !== 'string' || !/^[a-f0-9]{24}$/.test(workspaceId))
     deny('Invalid workspace.', 400);
   await store.ready();
-  const owner = await store.collection('users').findOne({ workspaceId });
+  const owner = await store.collection('users').findOne({ workspaceId: queryString(workspaceId) });
   if (!owner) deny('You do not have access to this workspace.');
   try {
-    if (!(await store.collection('helpdeskMembers').findOne({ workspaceId, userId: owner.id })))
+    if (
+      !(await store
+        .collection('helpdeskMembers')
+        .findOne({ workspaceId: queryString(workspaceId), userId: queryString(owner.id) }))
+    )
       await store.collection('helpdeskMembers').updateOne(
-        { workspaceId, userId: owner.id },
+        { workspaceId: queryString(workspaceId), userId: queryString(owner.id) },
         {
           $setOnInsert: {
             workspaceId,
-            userId: owner.id,
-            ownerId: owner.id,
+            userId: queryString(owner.id),
+            ownerId: queryString(owner.id),
             email: owner.email,
             role: 'admin',
             active: true,
@@ -66,7 +81,7 @@ export async function resolveHelpdeskUser(store, user, workspaceId = user?.works
   }
   const member = await store
     .collection('helpdeskMembers')
-    .findOne({ workspaceId, userId: user.id });
+    .findOne({ workspaceId: queryString(workspaceId), userId: queryString(user.id) });
   const isOwner = owner.id === user.id;
   if (!isOwner && (!member?.active || !helpdeskRoles.includes(member.role)))
     deny('You do not have access to this workspace.');
@@ -128,7 +143,7 @@ export function validateMember(input) {
   };
 }
 const safeMember = (record) => ({
-  userId: record.userId,
+  userId: queryString(record.userId),
   email: record.email,
   role: record.role,
   queues: record.queues,
@@ -141,8 +156,8 @@ export function installHelpdeskMemberRoutes(app, store) {
   app.get('/api/helpdesk/access', (request, response) => {
     const user = request.helpdeskUser;
     response.json({
-      workspaceId: user.workspaceId,
-      ownerId: user.helpdeskOwnerId || user.id,
+      workspaceId: queryString(user.workspaceId),
+      ownerId: queryString(user.helpdeskOwnerId || user.id),
       role: user.role,
       actualRole: user.actualRole || user.role,
       canImpersonate: (user.actualRole || user.role) === 'admin',
@@ -155,13 +170,13 @@ export function installHelpdeskMemberRoutes(app, store) {
     const user = request.user;
     const memberships = await store
       .collection('helpdeskMembers')
-      .find({ userId: user.id, active: true, workspaceId: { $ne: user.workspaceId } })
+      .find({ userId: queryString(user.id), active: true, workspaceId: { $ne: user.workspaceId } })
       .limit(100)
       .toArray();
     response.json([
-      { workspaceId: user.workspaceId, role: 'admin', isPersonal: true },
+      { workspaceId: queryString(user.workspaceId), role: 'admin', isPersonal: true },
       ...memberships.map((member) => ({
-        workspaceId: member.workspaceId,
+        workspaceId: queryString(member.workspaceId),
         role: member.role,
         isPersonal: false,
       })),
@@ -173,13 +188,13 @@ export function installHelpdeskMemberRoutes(app, store) {
     const owner = await store.collection('users').findOne({ id: user.helpdeskOwnerId });
     const records = await store
       .collection('helpdeskMembers')
-      .find({ workspaceId: user.workspaceId })
+      .find({ workspaceId: queryString(user.workspaceId) })
       .sort({ email: 1 })
       .limit(200)
       .toArray();
     if (!records.some((record) => record.userId === owner.id))
       records.unshift({
-        userId: owner.id,
+        userId: queryString(owner.id),
         email: owner.email,
         role: 'admin',
         queues: [],
@@ -241,7 +256,7 @@ export function installHelpdeskMemberRoutes(app, store) {
       if (input.email !== undefined) deny('Member identity cannot be changed.', 400);
       target = await store.collection('users').findOne({ id: request.params.id });
       if (!target) deny('Member not found.', 404);
-      if (!Number.isInteger(input.version)) deny('Provide the current member version.', 400);
+      if (!Number.isSafeInteger(input.version)) deny('Provide the current member version.', 400);
     }
     if (target.id === user.id && !value.active)
       deny('You cannot deactivate your own account.', 409);
@@ -250,7 +265,7 @@ export function installHelpdeskMemberRoutes(app, store) {
     if (target.id === user.id && target.id !== user.helpdeskOwnerId)
       deny('Another Admin must change your own membership.');
     const collection = store.collection('helpdeskMembers');
-    const filter = { workspaceId: user.workspaceId, userId: target.id };
+    const filter = { workspaceId: queryString(user.workspaceId), userId: target.id };
     const now = new Date();
     let record;
     if (isNew) {
@@ -260,11 +275,11 @@ export function installHelpdeskMemberRoutes(app, store) {
           .findOne({ ...helpdeskScope(user), enabled: true })
       )
         deny('Users are managed by the identity provider.', 409);
-      if ((await collection.countDocuments({ workspaceId: user.workspaceId })) >= 200)
+      if ((await collection.countDocuments({ workspaceId: queryString(user.workspaceId) })) >= 200)
         deny('Workspace membership limit reached.', 422);
       record = {
         ...filter,
-        ownerId: user.helpdeskOwnerId,
+        ownerId: queryString(user.helpdeskOwnerId),
         email: target.email,
         ...value,
         version: 1,
@@ -281,15 +296,15 @@ export function installHelpdeskMemberRoutes(app, store) {
     } else {
       if (!(await collection.findOne(filter))) deny('Member not found.', 404);
       record = await collection.findOneAndUpdate(
-        { ...filter, version: input.version },
+        { ...filter, version: queryVersion(input.version) },
         { $set: { ...value, updatedAt: now, updatedBy: user.id }, $inc: { version: 1 } },
         { returnDocument: 'after' },
       );
       if (!record) deny('Membership changed. Reload before saving.', 409);
     }
     const event = {
-      workspaceId: user.workspaceId,
-      ownerId: user.helpdeskOwnerId,
+      workspaceId: queryString(user.workspaceId),
+      ownerId: queryString(user.helpdeskOwnerId),
       actorId: user.id,
       targetUserId: target.id,
       role: value.role,

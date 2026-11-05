@@ -1,3 +1,4 @@
+import { queryString, queryStrings } from './queryValues.js';
 import { taskInboxRecords } from './requestTasks.js';
 import { randomUUID } from 'node:crypto';
 import { helpdeskScope, deny } from './helpdeskRoles.js';
@@ -8,15 +9,15 @@ const canReadNotes = (user, record) =>
   user.role === 'admin' || (user.role === 'agent' && user.queues.includes(record.queueName));
 async function recipient(store, service, record, id, kind) {
   const member = await store.collection('helpdeskMembers').findOne({
-    ownerId: record.ownerId,
-    workspaceId: record.workspaceId,
+    ownerId: queryString(record.ownerId),
+    workspaceId: queryString(record.workspaceId),
     userId: id,
     active: true,
   });
   if (!member) return null;
   const user = {
     id,
-    workspaceId: record.workspaceId,
+    workspaceId: queryString(record.workspaceId),
     helpdeskOwnerId: record.ownerId,
     role: member.role,
     queues: member.queues || [],
@@ -72,7 +73,9 @@ export function inboxMatches(user) {
   return [
     {
       queueName: {
-        $in: ['admin', 'agent', 'read-only'].includes(user.role) ? user.queues || [] : [],
+        $in: ['admin', 'agent', 'read-only'].includes(user.role)
+          ? queryStrings(user.queues || [], 30, 80)
+          : [],
       },
     },
     ...(user.canApprove ? [{ approvalUserIds: user.id }] : []),
@@ -85,7 +88,12 @@ export function inboxMatches(user) {
       },
     },
     ...(user.role === 'agent'
-      ? [{ queueName: { $in: user.queues || [] }, 'notifications.recipientId': user.id }]
+      ? [
+          {
+            queueName: { $in: queryStrings(user.queues || [], 30, 80) },
+            'notifications.recipientId': user.id,
+          },
+        ]
       : []),
   ];
 }
@@ -135,11 +143,15 @@ export function installMentionRoutes(app, store, service) {
     const user = request.helpdeskUser;
     const state = await store
       .collection('inboxReadState')
-      .findOne({ userId: user.id, workspaceId: user.workspaceId });
+      .findOne({ userId: queryString(user.id), workspaceId: queryString(user.workspaceId) });
     const rows = await visibleInboxRecords(store, service, user);
     const archived = await store
       .collection('helpdeskInbox')
-      .find({ ownerId: user.id, workspaceId: user.workspaceId, archived: true })
+      .find({
+        ownerId: queryString(user.id),
+        workspaceId: queryString(user.workspaceId),
+        archived: true,
+      })
       .toArray();
     const primary = rows.filter(
       (row) => !archived.some((item) => String(item.requestId) === String(row._id)),
@@ -163,8 +175,8 @@ export function installMentionRoutes(app, store, service) {
     const user = request.helpdeskUser;
     const filter = {
       _id: `${user.workspaceId}:${user.id}`,
-      userId: user.id,
-      workspaceId: user.workspaceId,
+      userId: queryString(user.id),
+      workspaceId: queryString(user.workspaceId),
     };
     await store
       .collection('inboxReadState')

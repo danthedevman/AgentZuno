@@ -1,3 +1,4 @@
+import { queryString } from './queryValues.js';
 import { ObjectId } from 'mongodb';
 import { randomUUID, createHash } from 'node:crypto';
 import { createWorkflowExecution } from './workflowExecution.js';
@@ -13,13 +14,17 @@ export async function seedDemoConversation(store, scope, user, tag, workflowId, 
   const id = idFor(scope, tag.demoDatasetId, `chat:${workflowId}:${user.id}`),
     now = new Date();
   await store.collection('chats').updateOne(
-    { _id: new ObjectId(id), ownerId: user.id, workspaceId: scope.workspaceId },
+    {
+      _id: new ObjectId(id),
+      ownerId: queryString(user.id),
+      workspaceId: queryString(scope.workspaceId),
+    },
     {
       $setOnInsert: {
         ...tag,
-        ownerId: user.id,
+        ownerId: queryString(user.id),
         providerOwnerId: scope.ownerId,
-        workspaceId: scope.workspaceId,
+        workspaceId: queryString(scope.workspaceId),
         requestId: randomUUID(),
         assistantType: 'admin',
         helpdeskPurpose: 'workflow',
@@ -64,14 +69,14 @@ export async function seedDemoConversation(store, scope, user, tag, workflowId, 
   );
 }
 export async function prepareDemoMembership(store, scope, user, tag, groupName, enableApprovals) {
-  const filter = { ...scope, userId: user.id };
+  const filter = { ...scope, userId: queryString(user.id) };
   const member = await store.collection('helpdeskMembers').findOne(filter);
   if (!member) deny('Reload your membership before loading demo data.', 409);
   if (!member.canApprove && enableApprovals !== true)
     deny('Confirm enabling approval permission to load actionable demo approvals.', 400);
-  const key = { ...scope, ...tag, userId: user.id };
+  const key = { ...scope, ...tag, userId: queryString(user.id) };
   await store.collection('demoMembershipAdjustments').updateOne(
-    { ...scope, userId: user.id, demoDatasetId: tag.demoDatasetId },
+    { ...scope, userId: queryString(user.id), demoDatasetId: tag.demoDatasetId },
     {
       $setOnInsert: {
         ...key,
@@ -97,13 +102,17 @@ export async function seedDemoApproval(store, service, scope, user, tag, groupNa
   const now = new Date(),
     employeeId = idFor(scope, tag.demoDatasetId, 'employee');
   await store.collection('users').updateOne(
-    { id: employeeId, demoWorkspaceId: scope.workspaceId, ownerId: scope.ownerId },
+    {
+      id: employeeId,
+      demoWorkspaceId: queryString(scope.workspaceId),
+      ownerId: queryString(scope.ownerId),
+    },
     {
       $setOnInsert: {
         _id: new ObjectId(employeeId),
         id: employeeId,
-        ownerId: scope.ownerId,
-        demoWorkspaceId: scope.workspaceId,
+        ownerId: queryString(scope.ownerId),
+        demoWorkspaceId: queryString(scope.workspaceId),
         workspaceId: idFor(scope, tag.demoDatasetId, 'employee-private-workspace'),
         ...tag,
         name: 'Demo Employee',
@@ -145,7 +154,7 @@ export async function seedDemoApproval(store, service, scope, user, tag, groupNa
         action: 'approval',
         params: {
           target: 'user',
-          userId: user.id,
+          userId: queryString(user.id),
           reason: 'Review this fictional equipment request',
         },
         requireRejectionComment: true,
@@ -197,7 +206,7 @@ export async function seedDemoApproval(store, service, scope, user, tag, groupNa
       id: employeeId,
       name: 'Demo Employee',
       email: `demo-${employeeId}@identity.agentzuno.invalid`,
-      workspaceId: scope.workspaceId,
+      workspaceId: queryString(scope.workspaceId),
       helpdeskOwnerId: scope.ownerId,
       role: 'user',
       queues: [],

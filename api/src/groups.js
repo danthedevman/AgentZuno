@@ -1,3 +1,4 @@
+import { queryString, queryVersion } from './queryValues.js';
 import { requireCompatibleDemoReferences } from './demoReferences.js';
 import { ObjectId } from 'mongodb';
 import { createHash } from 'node:crypto';
@@ -192,9 +193,9 @@ export async function saveGroup(store, user, input, id, creationContext) {
   const collection = store.collection('approvalGroups');
   let record;
   if (previous) {
-    if (!Number.isInteger(input.version)) deny('Invalid group version.', 400);
+    if (!Number.isSafeInteger(input.version)) deny('Invalid group version.', 400);
     record = await collection.findOneAndUpdate(
-      { ...helpdeskScope(user), _id: previous._id, version: input.version },
+      { ...helpdeskScope(user), _id: previous._id, version: queryVersion(input.version) },
       { $set: values, $inc: { version: 1 } },
       { returnDocument: 'after' },
     );
@@ -231,7 +232,7 @@ export async function saveGroup(store, user, input, id, creationContext) {
       await store
         .collection('helpdeskMembers')
         .updateOne(
-          { ...helpdeskScope(user), userId: member.userId },
+          { ...helpdeskScope(user), userId: queryString(member.userId) },
           { $set: { queues }, $inc: { version: 1 } },
         );
   }

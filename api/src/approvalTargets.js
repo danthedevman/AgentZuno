@@ -1,3 +1,4 @@
+import { queryString, queryVersion } from './queryValues.js';
 import { requireCompatibleDemoReferences } from './demoReferences.js';
 import { workspaceGroups } from './groups.js';
 import { ObjectId } from 'mongodb';
@@ -6,10 +7,13 @@ import { canUseWorkflow } from '../sdk/workflows/index.js';
 import { listResponse } from './listQuery.js';
 
 export async function workflowRequesterContext(store, request) {
-  const scope = { ownerId: request.ownerId, workspaceId: request.workspaceId };
+  const scope = {
+    ownerId: queryString(request.ownerId),
+    workspaceId: queryString(request.workspaceId),
+  };
   const profile = await store
     .collection('workforceProfiles')
-    .findOne({ ...scope, userId: request.requesterId });
+    .findOne({ ...scope, userId: queryString(request.requesterId) });
   const department = profile?.department
     ? await store
         .collection('workforceReferences')
@@ -19,7 +23,7 @@ export async function workflowRequesterContext(store, request) {
   if (!managerId && profile?.managerDirectoryId && ObjectId.isValid(profile.managerDirectoryId)) {
     const manager = await store.collection('helpdeskDirectoryUsers').findOne({
       _id: new ObjectId(profile.managerDirectoryId),
-      workspaceId: request.workspaceId,
+      workspaceId: queryString(request.workspaceId),
       issuer: profile.issuer,
       active: true,
     });
@@ -230,13 +234,15 @@ export function installApprovalGroupRoutes(app, store) {
     if (request.params.id) {
       if (!ObjectId.isValid(request.params.id) || !Number.isInteger(input.version))
         deny('Invalid group version.', 400);
-      const updated = await store
-        .collection('approvalGroups')
-        .findOneAndUpdate(
-          { ...helpdeskScope(user), _id: new ObjectId(request.params.id), version: input.version },
-          { $set: values, $inc: { version: 1 } },
-          { returnDocument: 'after' },
-        );
+      const updated = await store.collection('approvalGroups').findOneAndUpdate(
+        {
+          ...helpdeskScope(user),
+          _id: new ObjectId(request.params.id),
+          version: queryVersion(input.version),
+        },
+        { $set: values, $inc: { version: 1 } },
+        { returnDocument: 'after' },
+      );
       if (!updated) deny('Group changed or is unavailable. Reload before saving.', 409);
       return response.json(present(updated));
     }

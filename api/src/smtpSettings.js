@@ -1,3 +1,4 @@
+import { queryVersion } from './queryValues.js';
 import { rateLimit } from 'express-rate-limit';
 import nodemailer from 'nodemailer';
 import { lookup } from 'node:dns/promises';
@@ -80,7 +81,7 @@ export function installSmtpRoutes(app, store) {
           input[key].length > 2000 ||
           /[\x00-\x1f\x7f]/.test(input[key]),
       ) ||
-      !Number.isInteger(input.version) ||
+      !Number.isSafeInteger(input.version) ||
       input.version < 0
     )
       deny('Provide a valid SMTP host, TLS port, sender, and credentials.', 400);
@@ -114,12 +115,12 @@ export function installSmtpRoutes(app, store) {
       const result = await store
         .collection('smtpSettings')
         .updateOne(
-          { ...filter, version: input.version },
+          { ...filter, version: queryVersion(input.version) },
           { $set: { credential, updatedAt: new Date() }, $inc: { version: 1 } },
         );
       if (!result.matchedCount) deny('SMTP settings changed. Reload before saving.', 409);
     }
-    response.json({ saved: true, version: input.version + 1 });
+    response.json({ saved: true, version: queryVersion(input.version) + 1 });
   });
   app.post('/api/helpdesk/smtp/test', async (request, response) => {
     requireRole(request.helpdeskUser, ['admin']);

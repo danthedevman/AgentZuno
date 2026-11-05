@@ -1,3 +1,4 @@
+import { queryString, queryStrings, queryVersion } from './queryValues.js';
 import { ObjectId } from 'mongodb';
 import { createHash, randomUUID } from 'node:crypto';
 import {
@@ -12,7 +13,10 @@ import { requireExistingQueues } from './helpdeskQueues.js';
 
 export function taskAssignmentMatches(user) {
   return ['admin', 'agent', 'read-only'].includes(user.role)
-    ? [{ queueName: { $in: user.queues || [] } }, { assignedToId: user.id }]
+    ? [
+        { queueName: { $in: queryStrings(user.queues || [], 30, 80) } },
+        { assignedToId: queryString(user.id) },
+      ]
     : [{ _id: null }];
 }
 export async function taskInboxRecords(store, user) {
@@ -180,12 +184,12 @@ export function createRequestTasks(store) {
         (k) => !['title', 'description', 'assignedToId', 'status', 'version'].includes(k),
       ) ||
       !['open', 'in-progress', 'closed'].includes(input.status) ||
-      !Number.isInteger(input.version)
+      !Number.isSafeInteger(input.version)
     )
       deny('Choose a valid task status and version.', 400);
     const current = await tasks().findOne({
       ...helpdeskScope(user),
-      requestId,
+      requestId: queryString(requestId),
       _id: new ObjectId(id),
     });
     if (!current) deny('Task not found.', 404);
@@ -208,7 +212,7 @@ export function createRequestTasks(store) {
         input.assignedToId &&
         (await store.collection('helpdeskMembers').findOne({
           ...helpdeskScope(user),
-          userId: input.assignedToId,
+          userId: queryString(input.assignedToId),
           active: true,
           role: { $in: ['admin', 'agent'] },
           queues: current.queueName,
@@ -220,7 +224,12 @@ export function createRequestTasks(store) {
       changes.assignedToName = account?.name || member?.email || '';
     }
     const result = await tasks().findOneAndUpdate(
-      { ...helpdeskScope(user), requestId, _id: new ObjectId(id), version: input.version },
+      {
+        ...helpdeskScope(user),
+        requestId: queryString(requestId),
+        _id: new ObjectId(id),
+        version: queryVersion(input.version),
+      },
       {
         $set: {
           ...changes,
@@ -260,7 +269,7 @@ export function createRequestTasks(store) {
     const request = await store.collection('helpdeskRequests').findOne({
       ...scope,
       _id: new ObjectId(run.requestId),
-      requesterId: actor.id,
+      requesterId: queryString(actor.id),
       submissionState: 'submitted',
       status: { $ne: 'resolved' },
     });

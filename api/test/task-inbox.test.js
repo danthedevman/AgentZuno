@@ -110,6 +110,16 @@ async function verify(database) {
         (await call(`/tasks/${first.id}`, user, 'PUT', { status: 'closed', version: 1 })).status,
         403,
       );
+    for (const payload of [
+      { status: 'closed', version: { $ne: 0 } },
+      { status: 'closed', version: [1] },
+      { status: 'closed', version: Number.MAX_SAFE_INTEGER + 1 },
+      { status: 'closed', version: 1, assignedToId: { $ne: null } },
+      { status: 'closed', version: 1, assignedToId: ['Support'] },
+    ]) {
+      assert.equal((await call(`/tasks/${second.id}`, 'Admin', 'PUT', payload)).status, 400);
+      assert.equal((await call(`/tasks/${second.id}`, 'Admin')).body.version, 1);
+    }
     const updated = await call(`/tasks/${second.id}`, 'Desktop', 'PUT', {
       title: 'Screen setup',
       description: 'Connect the screen',

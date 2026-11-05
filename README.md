@@ -87,3 +87,5 @@ GitHub Pages builds automatically use the configured repository or custom-domain
 Fulfillment tasks have editable records and appear in their assignment group’s Inbox. Add tasks from a request or Data Tables → Tasks. Phone layouts use a navigation drawer and a Chat/Details switch; marketing chat illustrations allow page scrolling on touch devices. See the [roles and features guide](docs/roles-and-features.md#fulfillment-tasks).
 
 The production build prerenders the marketing site and public Docs with search metadata and a sitemap. Configure `PUBLIC_SITE_URL` for your public hostname; application routes remain authenticated and excluded from indexing. See [public-page SEO](docs/deployment.md#prerendered-public-pages-and-seo).
+
+The public marketing page links to Docker setup and the GitHub repository. Sign-in and registration links appear only after the backend confirms database setup is complete, including on self-hosted domains. Static website builds do not show these account actions or a Try It button.

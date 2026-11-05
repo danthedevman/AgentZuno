@@ -1,3 +1,4 @@
+import { queryString } from './queryValues.js';
 import { randomUUID } from 'node:crypto';
 import { ObjectId } from 'mongodb';
 import { deny, helpdeskScope, requireRole } from './helpdeskRoles.js';
@@ -18,7 +19,7 @@ export async function bulkDeleteRecords(store, user, kind, input) {
     deny('Confirm a selection of 1–100 records.', 400);
   const scope = helpdeskScope(user);
   const filter = {
-    ...(kind === 'articles' ? { ownerId: scope.ownerId } : scope),
+    ...(kind === 'articles' ? { ownerId: queryString(scope.ownerId) } : scope),
     _id: { $in: input.ids.map((id) => new ObjectId(id)) },
   };
   const collection = store.collection(kind === 'requests' ? 'helpdeskRequests' : 'articles');
@@ -77,10 +78,15 @@ export async function bulkDeleteRecords(store, user, kind, input) {
       // Attachments may be shared by another article; remove only unreferenced uploads.
       for (const id of record.attachmentIds || []) {
         if (!ObjectId.isValid(id)) continue;
-        if (!(await collection.findOne({ ownerId: scope.ownerId, attachmentIds: id })))
+        if (
+          !(await collection.findOne({
+            ownerId: queryString(scope.ownerId),
+            attachmentIds: queryString(id),
+          }))
+        )
           await store.collection('articleAttachments').deleteOne({
-            ownerId: scope.ownerId,
-            workspaceId: scope.workspaceId,
+            ownerId: queryString(scope.ownerId),
+            workspaceId: queryString(scope.workspaceId),
             _id: new ObjectId(id),
           });
       }

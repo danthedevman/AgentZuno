@@ -16,6 +16,7 @@ export default function HomePage() {
   const workspaceUrl = () =>
     `/workspace/${user()?.impersonation?.workspaceId || user()?.workspaceId}`;
   const navigate = useNavigate();
+  const [hasConfiguredBackend, setHasConfiguredBackend] = createSignal(false);
   const [name, setName] = createSignal('AgentZuno');
   const [tagline, setTagline] = createSignal([
     'AgentZuno is an open source conversational AI help desk',
@@ -25,6 +26,15 @@ export default function HomePage() {
 
   onMount(async () => {
     if (import.meta.env.VITE_STATIC_SITE === 'true') return;
+    try {
+      const installationResponse = await fetch('/api/installation/database', { cache: 'no-store' });
+      if (installationResponse.ok) {
+        const installation = await installationResponse.json();
+        setHasConfiguredBackend(installation.configured === true);
+      }
+    } catch {
+      setHasConfiguredBackend(false);
+    }
     try {
       const portalResponse = await fetch('/api/portal');
       if (portalResponse.ok) {
@@ -71,16 +81,29 @@ export default function HomePage() {
           />
         </A>
         <A href="/docs">Docs</A>
-        <Show when={user()} fallback={<A href="/login">Sign in</A>}>
-          <A class="marketing-open-workspace" href={workspaceUrl()}>
-            <ProfileAvatar
-              userId={user()?.id}
-              name={user()?.name}
-              version={user()?.profilePictureVersion}
-            />
-            <span>Open Workspace</span>
-          </A>
+        <Show when={hasConfiguredBackend()}>
+          <Show when={user()} fallback={<A href="/login">Sign in</A>}>
+            <A class="marketing-open-workspace" href={workspaceUrl()}>
+              <ProfileAvatar
+                userId={user()?.id}
+                name={user()?.name}
+                version={user()?.profilePictureVersion}
+              />
+              <span>Open Workspace</span>
+            </A>
+          </Show>
         </Show>
+        <a
+          class="marketing-github-link"
+          href="https://github.com/danthedevman/agentzuno"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="View AgentZuno on GitHub"
+        >
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true">
+            <path d="M12 .75a11.25 11.25 0 0 0-3.558 21.923c.563.104.77-.244.77-.542 0-.267-.01-1.155-.015-2.096-3.13.68-3.79-1.327-3.79-1.327-.512-1.3-1.25-1.646-1.25-1.646-1.022-.7.078-.686.078-.686 1.13.08 1.725 1.16 1.725 1.16 1.005 1.722 2.636 1.224 3.278.936.103-.728.394-1.224.716-1.506-2.498-.284-5.124-1.249-5.124-5.562 0-1.229.44-2.232 1.16-3.02-.116-.284-.503-1.429.111-2.978 0 0 .945-.302 3.094 1.153a10.79 10.79 0 0 1 5.626 0c2.148-1.455 3.09-1.153 3.09-1.153.616 1.549.23 2.694.113 2.978.723.788 1.159 1.791 1.159 3.02 0 4.324-2.63 5.275-5.136 5.553.404.35.766 1.035.766 2.087 0 1.507-.014 2.722-.014 3.092 0 .3.203.651.773.54A11.252 11.252 0 0 0 12 .75Z" />
+          </svg>
+        </a>
       </nav>
       <MarketingSection class="homepage" aria-labelledby="app-name">
         <div class="landing-hero-copy">
@@ -97,12 +120,26 @@ export default function HomePage() {
           </p>
 
           <div class="landing-actions">
-            <A class="start-button" href="/register">
-              Get access
-            </A>
-            <A class="start-button demo-button" href="/demo">
-              Try It
-            </A>
+            <Show
+              when={hasConfiguredBackend()}
+              fallback={
+                <A class="start-button" href="/docs#getting-started">
+                  Get started with Docker <span aria-hidden="true">→</span>
+                </A>
+              }
+            >
+              <A class="start-button" href="/register">
+                Get access
+              </A>
+            </Show>
+            <a
+              class="start-button demo-button"
+              href="https://github.com/danthedevman/agentzuno"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              View on GitHub <span aria-hidden="true">→</span>
+            </a>
           </div>
         </div>
         <HeroWorkflowBackground />
@@ -220,8 +257,11 @@ export default function HomePage() {
             Run the open source platform in your environment and choose your AI provider.
           </p>
           <div class="marketing-section-actions">
-            <A class="start-button" href="/register">
-              Get Access
+            <A
+              class="start-button"
+              href={hasConfiguredBackend() ? '/register' : '/docs#getting-started'}
+            >
+              {hasConfiguredBackend() ? 'Get Access' : 'Get started with Docker'}
             </A>
             <A href="/docs">
               Read the Docs <span aria-hidden="true">→</span>
@@ -383,8 +423,17 @@ export default function HomePage() {
         <nav aria-label="Footer navigation">
           <A href="/docs">Documentation</A>
           <A href="/docs/workflows">Workflow SDK</A>
-          <A href="/login">Sign In</A>
-          <A href="/register">Get Access</A>
+          <Show when={hasConfiguredBackend()}>
+            <A href="/login">Sign In</A>
+            <A href="/register">Get Access</A>
+          </Show>
+          <a
+            href="https://github.com/danthedevman/agentzuno"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            GitHub
+          </a>
         </nav>
         <small>© {new Date().getFullYear()} AgentZuno</small>
       </footer>
