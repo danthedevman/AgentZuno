@@ -12,7 +12,7 @@
     "test": "npm run build && npm run test:ui && npm --prefix api test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "build": "vite build",
+    "build": "node scripts/build.mjs",
     "dev:api": "npm --prefix api run dev",
     "start:api": "npm --prefix api start",
     "test:ui": "node --test test/*.test.js"

@@ -1,3 +1,4 @@
+import PageMetadata from '../components/PageMetadata.jsx';
 import UnsavedChangesGuard from '../components/UnsavedChangesGuard.jsx';
 import ConfirmationDialog from '../components/ConfirmationDialog.jsx';
 import { ToastProvider } from '../context/ToastContext.jsx';
@@ -7,6 +8,7 @@ import { SessionProvider } from '../context/SessionContext.jsx';
 export default function AppLayout(props) {
   return (
     <ToastProvider>
+      <PageMetadata />
       <SessionProvider>
         <ErrorBoundary
           fallback={(error, reset) => (

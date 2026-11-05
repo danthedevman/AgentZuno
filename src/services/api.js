@@ -54,7 +54,7 @@ export async function api(path, options = {}) {
   if (
     !options.deferSavedEvent &&
     !['GET', 'HEAD'].includes(options.method || 'GET') &&
-    !/uploads|attachments|article-proposals$|preferences|permissions|oauth|test|recent-views/.test(
+    !/uploads|attachments|article-proposals$|preferences|permissions|oauth|test|recent-views|inbox\/viewed/.test(
       path,
     )
   )

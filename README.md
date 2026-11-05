@@ -83,3 +83,7 @@ Database setup now precedes registration. Choose bundled MongoDB/PostgreSQL or a
 The public [Try It demo](/demo) uses the exact admin workspace routes, layouts and components, backed by isolated, short-lived in-memory API sessions seeded from fictional fixtures. Visitors can explore predefined conversations, forms, workflows, requests, approvals, knowledge, groups and connectors without registering or invoking an AI provider. Reset Demo discards changes; sessions expire after 30 minutes; real workspace records and integration credentials are never loaded into the demo.
 
 GitHub Pages builds automatically use the configured repository or custom-domain base path. See the [deployment guide](docs/deployment.md#publish-the-website-on-github-pages) for static-site limits and verification.
+
+Fulfillment tasks have editable records and appear in their assignment group’s Inbox. Add tasks from a request or Data Tables → Tasks. Phone layouts use a navigation drawer and a Chat/Details switch; marketing chat illustrations allow page scrolling on touch devices. See the [roles and features guide](docs/roles-and-features.md#fulfillment-tasks).
+
+The production build prerenders the marketing site and public Docs with search metadata and a sitemap. Configure `PUBLIC_SITE_URL` for your public hostname; application routes remain authenticated and excluded from indexing. See [public-page SEO](docs/deployment.md#prerendered-public-pages-and-seo).

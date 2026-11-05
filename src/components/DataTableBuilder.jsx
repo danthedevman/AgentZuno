@@ -75,7 +75,7 @@ export default function DataTableBuilder(props) {
         </div>
       </header>
       <div class="workflow-builder resizable-split">
-        <SplitResizeHandle storageKey="builder" />
+        <SplitResizeHandle storageKey="builder" rightLabel="Table" />
         <section class="workflow-chat" aria-label="Table design conversation">
           <ChatPanelToolbar
             disabled={props.processing || props.sending}

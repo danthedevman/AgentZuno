@@ -1,7 +1,7 @@
 import { prepareMentions, installMentionRoutes, inboxMatches } from './mentions.js';
 import { validateWorkflowReferenceAnswers } from './workflowReferences.js';
 import { installGlobalSearch } from './globalSearch.js';
-import { createRequestTasks, installRequestTaskRoutes } from './requestTasks.js';
+import { createRequestTasks, installRequestTaskRoutes, taskInboxRecords } from './requestTasks.js';
 import { installRequestAttachmentRoutes } from './requestAttachments.js';
 import { installDemoRoutes } from './demoMode.js';
 import { validateRequestAction, ownChatRequest } from './requestChatActions.js';
@@ -1380,42 +1380,59 @@ export function installHelpdeskRoutes(app, store, service) {
           : null,
       ),
     );
-    response.json(
-      listResponse(
-        request,
-        submitted
-          .filter(Boolean)
-          .slice(0, request.query.list === '1' ? undefined : 50)
-          .map((record) => ({
-            ...service.safeRequest(record, user),
-            inboxNotice: record.notifications?.some(
-              (item) =>
-                item.recipientId === user.id &&
-                (item.kind !== 'work-note' || canWork(user, record)),
-            )
-              ? 'Mentioned You'
-              : undefined,
-          })),
-        requestListColumns,
-        { sort: 'Updated', direction: 'desc' },
+    const taskRows = await taskInboxRecords(store, user);
+    const taskStates = await store
+      .collection('helpdeskInbox')
+      .find({ ownerId: user.id, workspaceId: user.workspaceId, archived: true })
+      .toArray();
+    const rows = submitted.filter(Boolean).map((record) => ({
+      ...service.safeRequest(record, user),
+      inboxNotice: record.notifications?.some(
+        (item) =>
+          item.recipientId === user.id && (item.kind !== 'work-note' || canWork(user, record)),
+      )
+        ? 'Mentioned You'
+        : undefined,
+    }));
+    rows.push(
+      ...taskRows.filter(
+        (task) =>
+          taskStates.some((state) => String(state.taskId) === task.id) === (tab === 'archive'),
       ),
+    );
+    response.json(
+      listResponse(request, rows, requestListColumns, { sort: 'Updated', direction: 'desc' }),
     );
   });
   app.put('/api/helpdesk/inbox/:id', async (request, response) => {
     const user = request.helpdeskUser;
     fields(request.body, ['archived']);
     if (typeof request.body.archived !== 'boolean') fail('Choose whether to archive this item.');
-    const record = await service.get(user, request.params.id);
-    if (
-      !(user.queues || []).includes(record.queueName) &&
-      !(record.notifications || []).some(
-        (item) =>
-          item.recipientId === user.id && (item.kind !== 'work-note' || canWork(user, record)),
-      ) &&
-      !(await canReviewWorkflowApproval(store, user, record._id))
-    )
-      deny('This item is outside your assigned queues.');
-    const filter = { ownerId: user.id, workspaceId: user.workspaceId, requestId: record._id };
+    const task = (await taskInboxRecords(store, user)).find(
+      (task) => task.id === request.params.id,
+    );
+    let filter;
+    if (task)
+      filter = {
+        ownerId: user.id,
+        workspaceId: user.workspaceId,
+        taskId: new ObjectId(task.id),
+        requestId: new ObjectId(task.id),
+        kind: 'task',
+      };
+    else {
+      const record = await service.get(user, request.params.id);
+      if (
+        !(user.queues || []).includes(record.queueName) &&
+        !(record.notifications || []).some(
+          (item) =>
+            item.recipientId === user.id && (item.kind !== 'work-note' || canWork(user, record)),
+        ) &&
+        !(await canReviewWorkflowApproval(store, user, record._id))
+      )
+        deny('This item is outside your assignments.');
+      filter = { ownerId: user.id, workspaceId: user.workspaceId, requestId: record._id };
+    }
     await store
       .collection('helpdeskInbox')
       .updateOne(
@@ -1423,7 +1440,7 @@ export function installHelpdeskRoutes(app, store, service) {
         { $set: { archived: request.body.archived, updatedAt: new Date() }, $setOnInsert: filter },
         { upsert: true },
       );
-    response.json({ id: record._id.toHexString(), archived: request.body.archived });
+    response.json({ id: request.params.id, archived: request.body.archived });
   });
   app.get('/api/helpdesk/requests', async (request, response) => {
     const filter = requestScope(request.helpdeskUser);

@@ -1,22 +1,21 @@
+import A from './WorkspaceLink.jsx';
+import ProfileAvatar from './ProfileAvatar.jsx';
 import { Show, createSignal } from 'solid-js';
 import { useNavigate } from '@solidjs/router';
 import { api } from '../services/api.js';
 import { useToasts } from '../context/ToastContext.jsx';
 import RecordTable from './RecordTable.jsx';
 import ValidatedForm from './ValidatedForm.jsx';
-import Dropdown from './Dropdown.jsx';
 
 export default function RequestTasks(props) {
   const navigate = useNavigate();
   const { notify } = useToasts();
   const [adding, setAdding] = createSignal(false);
-  const [selected, setSelected] = createSignal(null);
-  const [status, setStatus] = createSignal('open');
   const [busy, setBusy] = createSignal(false);
   const [revision, setRevision] = createSignal(0);
   const endpoint = () => `/api/helpdesk/requests/${props.requestId}/tasks`;
   const statusLabel = (value) =>
-    ({ open: 'Open', 'in-progress': 'In Progress', closed: 'Closed' })[value];
+    ({ open: 'Open', 'in-progress': 'In Progress', closed: 'Closed Complete' })[value];
   async function perform(action) {
     setBusy(true);
     try {
@@ -38,7 +37,6 @@ export default function RequestTasks(props) {
             class="workspace-button small"
             onClick={() => {
               setAdding(true);
-              setSelected(null);
             }}
           >
             Add Task
@@ -90,60 +88,42 @@ export default function RequestTasks(props) {
         label="Request Tasks"
         source={endpoint()}
         refreshKey={`${revision()}:${props.refreshKey || 0}`}
+        renderCard={(task) => (
+          <A class="request-task-card" href={`/workspace/tasks/${task.id}`}>
+            <div class="request-task-card-heading">
+              <strong>{task.title}</strong>
+              <span class="inbox-status-badge" data-status={task.status}>
+                {statusLabel(task.status)}
+              </span>
+            </div>
+            <Show when={task.description}>
+              <p>{task.description}</p>
+            </Show>
+            <div class="request-task-card-meta">
+              <span>{task.queueName || 'Unassigned'}</span>
+              <span>
+                <ProfileAvatar
+                  userId={task.assignedToId}
+                  name={task.assignedToName || 'Unassigned'}
+                />
+                {task.assignedToName || 'Unassigned'}
+              </span>
+            </div>
+            <time datetime={task.updatedAt}>
+              Updated {new Date(task.updatedAt).toLocaleString()}
+            </time>
+          </A>
+        )}
         columns={[
           { label: 'Task', render: (record) => <strong>{record.title}</strong> },
           { label: 'Status', render: (record) => statusLabel(record.status) },
           { label: 'Updated', render: (record) => new Date(record.updatedAt).toLocaleString() },
         ]}
-        onRowClick={(record) => {
-          setSelected(record);
-          setStatus(record.status);
-          setAdding(false);
-        }}
         emptyText="No tasks associated with this request."
         emptyAction={
           props.canManage ? { label: 'Add Task', onClick: () => setAdding(true) } : undefined
         }
       />
-      <Show when={selected()}>
-        {(task) => (
-          <section class="create-form request-task-details" aria-label="Task details">
-            <h3>{task().title}</h3>
-            <p>{task().description}</p>
-            <p>Assignment Group: {task().queueName}</p>
-            <Show when={props.canManage} fallback={<p>Status: {statusLabel(task().status)}</p>}>
-              <label>
-                Status
-                <Dropdown
-                  ariaLabel="Task status"
-                  value={status()}
-                  options={['open', 'in-progress', 'closed'].map((value) => ({
-                    value,
-                    label: statusLabel(value),
-                  }))}
-                  onChange={setStatus}
-                />
-              </label>
-              <button
-                class="workspace-button small"
-                disabled={busy() || status() === task().status}
-                onClick={() =>
-                  perform(async () => {
-                    const result = await api(`${endpoint()}/${task().id}`, {
-                      method: 'PUT',
-                      body: JSON.stringify({ status: status(), version: task().version }),
-                    });
-                    setSelected(result);
-                    notify({ tone: 'success', message: 'Task updated.' });
-                  })
-                }
-              >
-                Save Changes
-              </button>
-            </Show>
-          </section>
-        )}
-      </Show>
       <Show when={props.canManage}>
         <ValidatedForm
           class="create-form request-task-assistant"

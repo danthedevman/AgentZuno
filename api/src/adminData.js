@@ -496,7 +496,7 @@ export function createAdminData(store) {
           sourceHref:
             type === 'request'
               ? `/workspace/chat/${record.chatId}?request=${record._id}`
-              : `/workspace/chat/${parents.find((parent) => String(parent._id) === record.requestId)?.chatId}?request=${record.requestId}&tab=tasks`,
+              : `/workspace/tasks/${record._id}`,
         }));
       } else if (type === 'user') {
         const members = await store

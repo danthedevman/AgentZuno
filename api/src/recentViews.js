@@ -1,3 +1,4 @@
+import { createRequestTasks } from './requestTasks.js';
 import { ObjectId } from 'mongodb';
 import { createHash } from 'node:crypto';
 import { helpdeskScope, requireRole, deny } from './helpdeskRoles.js';
@@ -9,7 +10,7 @@ export function installRecentViewRoutes(app, store, helpdesk) {
   async function resolve(user, href) {
     const path = href.replace(`/workspace/${user.workspaceId}/`, '/workspace/');
     const match = path.match(
-      /^\/workspace\/(articles|workflows|chat|requests|users|data)\/([a-zA-Z0-9-]{1,80})(?:\/(edit|records)\/?([a-zA-Z0-9-]{1,80})?)?$/,
+      /^\/workspace\/(articles|workflows|chat|requests|tasks|users|data)\/([a-zA-Z0-9-]{1,80})(?:\/(edit|records)\/?([a-zA-Z0-9-]{1,80})?)?$/,
     );
     if (!match || ['new', 'queues', 'groups'].includes(match[2])) return null;
     const [, kind, id, action, recordId] = match;
@@ -23,6 +24,11 @@ export function installRecentViewRoutes(app, store, helpdesk) {
       title = article.title;
       type = 'Article';
       icon = 'book';
+    } else if (kind === 'tasks') {
+      const task = await createRequestTasks(store).get(user, id);
+      title = task.title;
+      type = 'Task';
+      icon = 'task';
     } else if (kind === 'chat' || kind === 'requests') {
       const record =
         kind === 'chat' ? await helpdesk.getSupport(user, id) : await helpdesk.get(user, id);

@@ -1,3 +1,4 @@
+import { Portal } from 'solid-js/web';
 import { publicAsset } from '../services/publicAsset.js';
 import { confirmAction } from '../services/confirmations.js';
 import AIProviderBanner from '../components/AIProviderBanner.jsx';
@@ -45,6 +46,7 @@ function WorkspaceShell(props) {
   const [isNavigationExpanded, setIsNavigationExpanded] = createSignal(
     (() => {
       try {
+        if (window.matchMedia('(max-width: 700px)').matches) return false;
         const saved = localStorage.getItem('agentzuno-sidebar-expanded');
         return saved === null ? !window.matchMedia('(max-width: 700px)').matches : saved === 'true';
       } catch {
@@ -61,11 +63,45 @@ function WorkspaceShell(props) {
   }
   onMount(() => {
     const query = window.matchMedia('(max-width: 700px)');
-    const update = () => setIsNarrow(query.matches);
+    const update = () => {
+      setIsNarrow(query.matches);
+      if (query.matches) setIsNavigationExpanded(false);
+    };
     query.addEventListener('change', update);
+    const escape = (event) => {
+      if (event.key === 'Escape' && query.matches && isNavigationExpanded()) {
+        setIsNavigationExpanded(false);
+        document.querySelector('.rail-drawer-toggle')?.focus();
+      }
+    };
+    document.addEventListener('keydown', escape);
+    onCleanup(() => document.removeEventListener('keydown', escape));
     onCleanup(() => query.removeEventListener('change', update));
   });
 
+  const [sidebarTooltip, setSidebarTooltip] = createSignal(null);
+  function showSidebarTooltip(event) {
+    if (isNavigationExpanded() || event.pointerType === 'touch') return;
+    const anchor = event.target.closest('.rail-link');
+    if (!anchor) return;
+    const rect = anchor.getBoundingClientRect();
+    const sidebar = anchor.closest('.workspace-sidebar').getBoundingClientRect();
+    setSidebarTooltip({
+      label:
+        anchor.querySelector('.rail-tooltip')?.textContent.trim() ||
+        anchor.getAttribute('aria-label'),
+      left: sidebar.right + 8,
+      top: Math.max(24, Math.min(window.innerHeight - 24, rect.top + rect.height / 2)),
+    });
+  }
+  function hideSidebarTooltip(event) {
+    const anchor = event?.target?.closest?.('.rail-link');
+    if (anchor && event.relatedTarget && anchor.contains(event.relatedTarget)) return;
+    setSidebarTooltip(null);
+  }
+  createEffect(() => {
+    if (isNavigationExpanded()) setSidebarTooltip(null);
+  });
   let createDialog;
   let searchDialog;
   const [activeDialog, setActiveDialog] = createSignal(null);
@@ -103,19 +139,24 @@ function WorkspaceShell(props) {
     () => api('/api/helpdesk/inbox/unread'),
   );
   let markingInbox = false;
+  const inboxScope = () => `${params.workspaceId}:${!access.error && access()?.role}`;
+  async function markInboxViewed() {
+    setInboxState((value) => ({ ...value, unread: false }));
+    if (markingInbox) return;
+    markingInbox = true;
+    const currentScope = inboxScope();
+    try {
+      await api('/api/helpdesk/inbox/viewed', { method: 'POST', body: '{}' });
+      await refreshInbox();
+      if (currentScope === inboxScope()) setInboxState((value) => ({ ...value, unread: false }));
+    } finally {
+      markingInbox = false;
+    }
+  }
   async function updateInbox() {
     if (document.visibilityState !== 'visible') return;
-    const state = await refreshInbox();
-    if (route.pathname.endsWith('/inbox') && state?.unread && !markingInbox) {
-      markingInbox = true;
-      try {
-        await api('/api/helpdesk/inbox/viewed', { method: 'POST', body: '{}' });
-        await refreshInbox();
-        setInboxState((value) => ({ ...value, unread: false }));
-      } finally {
-        markingInbox = false;
-      }
-    }
+    if (route.pathname.endsWith('/inbox')) await markInboxViewed();
+    else await refreshInbox();
   }
   createEffect(() => {
     if (!access.error && access()) {
@@ -125,7 +166,7 @@ function WorkspaceShell(props) {
   });
   createEffect(() => {
     if (route.pathname.endsWith('/inbox') && !access.error && access())
-      updateInbox().catch(() => {});
+      markInboxViewed().catch(() => {});
   });
   const visibleNavigation = () =>
     navigation.filter(([path]) => {
@@ -158,6 +199,10 @@ function WorkspaceShell(props) {
       return isPersonal() && (!session()?.user || session().user.isDemo || isAdmin());
     });
   const location = useLocation();
+  createEffect(() => {
+    location.pathname;
+    if (isNarrow()) setIsNavigationExpanded(false);
+  });
   const isConnections = () => location.pathname.endsWith('/integrations');
   const navigate = useNavigate();
   const [theme, setTheme] = createSignal(
@@ -207,10 +252,32 @@ function WorkspaceShell(props) {
       classList={{ 'is-nav-expanded': isNavigationExpanded() }}
       data-theme={theme()}
     >
+      <Show when={sidebarTooltip()}>
+        {(item) => (
+          <Portal>
+            <span
+              class="sidebar-floating-tooltip"
+              role="tooltip"
+              data-theme={theme()}
+              style={{ left: `${item().left}px`, top: `${item().top}px` }}
+            >
+              {item().label}
+            </span>
+          </Portal>
+        )}
+      </Show>
       <a class="skip-link" href="#workspace-main">
         Skip to content
       </a>
-      <aside class="workspace-sidebar" aria-label="Workspace sidebar">
+      <aside
+        class="workspace-sidebar"
+        aria-label="Workspace sidebar"
+        onPointerOver={showSidebarTooltip}
+        onPointerOut={hideSidebarTooltip}
+        onFocusIn={showSidebarTooltip}
+        onFocusOut={hideSidebarTooltip}
+        onClick={() => setSidebarTooltip(null)}
+      >
         <div class="rail-actions">
           <div class="sidebar-brand-row">
             <A class="sidebar-wordmark" href="/workspace" aria-label="AgentZuno home">
@@ -285,7 +352,11 @@ function WorkspaceShell(props) {
           </Show>
         </div>
         <div class="rail-separator" aria-hidden="true" />
-        <nav id="workspace-navigation" aria-label="Workspace navigation">
+        <nav
+          id="workspace-navigation"
+          aria-label="Workspace navigation"
+          onScroll={() => setSidebarTooltip(null)}
+        >
           <For each={visibleNavigation()}>
             {([path, icon, label]) => (
               <A
@@ -301,7 +372,12 @@ function WorkspaceShell(props) {
               >
                 <Icon name={icon} />
                 <Show
-                  when={path === '/workspace/inbox' && !inboxState.error && inboxState()?.unread}
+                  when={
+                    path === '/workspace/inbox' &&
+                    !route.pathname.endsWith('/inbox') &&
+                    !inboxState.error &&
+                    inboxState()?.unread
+                  }
                 >
                   <span class="inbox-unread-dot" role="img" aria-label="Unread inbox items" />
                 </Show>

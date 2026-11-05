@@ -124,7 +124,7 @@ export default function SearchOverlay(props) {
       }}
     >
       <div class="create-picker-heading">
-        <h2 id="search-overlay-title">Search workspace</h2>
+        <h2 id="search-overlay-title">Search</h2>
         <button aria-label="Close search" onClick={() => dialog.close()}>
           <Icon name="close" />
         </button>
@@ -135,8 +135,8 @@ export default function SearchOverlay(props) {
           autofocus
           type="search"
           maxlength="200"
-          aria-label="Search workspace content"
-          placeholder="Search workspace…"
+          aria-label="Search"
+          placeholder="Search…"
           value={query()}
           onInput={(event) => setQuery(event.currentTarget.value)}
         />

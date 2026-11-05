@@ -601,7 +601,7 @@ export default function WorkflowBuilderPage() {
           <ToastMessage tone="success" message={message()} />
         </Show>
         <div class="workflow-builder resizable-split">
-          <SplitResizeHandle storageKey="builder" />
+          <SplitResizeHandle storageKey="builder" rightLabel="Workflow" />
           <section class="workflow-chat" aria-label="Workflow conversation">
             <ChatPanelToolbar
               disabled={processing()}

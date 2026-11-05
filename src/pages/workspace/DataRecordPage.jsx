@@ -28,6 +28,10 @@ export default function DataRecordPage() {
     () => isAdmin() && !isNew() && `${params.id}/records/${params.recordId}`,
     (id) => api(`/api/helpdesk/data/tables/${id}`),
   );
+  createEffect(() => {
+    if (params.id === 'ref-task')
+      navigate(path(`/workspace/tasks/${params.recordId}`), { replace: true });
+  });
   const [values, setValues] = createSignal({});
   const [saving, setSaving] = createSignal(false);
   createEffect(() => {

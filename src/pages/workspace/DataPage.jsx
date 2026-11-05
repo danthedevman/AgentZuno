@@ -1,3 +1,4 @@
+import TaskListPage from './TaskListPage.jsx';
 import { pollConversation } from '../../services/conversationPolling.js';
 import ReferenceArrow from '../../components/ReferenceArrow.jsx';
 import BackLink from '../../components/BackLink.jsx';
@@ -24,7 +25,7 @@ const emptyDefinition = () => ({
   description: '',
   fields: [{ id: 'name', label: 'Name', type: 'text', required: true }],
 });
-export default function DataPage() {
+function DataTablePage() {
   const params = useParams();
   const [query, setQuery] = useSearchParams();
   const navigate = useNavigate();
@@ -155,6 +156,10 @@ export default function DataPage() {
     }
   }
   function openRecord(item = null) {
+    if (params.id === 'ref-task') {
+      navigate(path(`/workspace/tasks/${item?.id || 'new'}`));
+      return;
+    }
     navigate(path(`/workspace/data/${params.id}/records/${item?.id || 'new'}`));
   }
   return (
@@ -220,10 +225,10 @@ export default function DataPage() {
                       </button>
                       <button
                         class="workspace-button small"
-                        disabled={table()?.sourceManaged}
+                        disabled={table()?.sourceManaged && params.id !== 'ref-task'}
                         onClick={() => openRecord()}
                       >
-                        Add Record
+                        {params.id === 'ref-task' ? 'Add Task' : 'Add Record'}
                       </button>
                     </div>
                   </Show>
@@ -240,7 +245,7 @@ export default function DataPage() {
                       <RecordTable
                         label={`${value().name} Records`}
                         emptyAction={
-                          value().sourceManaged
+                          value().sourceManaged && params.id !== 'ref-task'
                             ? undefined
                             : { label: 'Add Record', onClick: () => openRecord() }
                         }
@@ -366,5 +371,14 @@ export default function DataPage() {
         </Show>
       </Show>
     </section>
+  );
+}
+
+export default function DataPage() {
+  const params = useParams();
+  return (
+    <Show when={params.id === 'ref-task'} fallback={<DataTablePage />}>
+      <TaskListPage />
+    </Show>
   );
 }

@@ -170,9 +170,11 @@ export default function MultiSelectLookup(props) {
             props.readOnly
               ? selected().length
                 ? ''
-                : 'No knowledge bases available'
+                : props.placeholder || 'None selected'
               : selected().length
-                ? 'Add more…'
+                ? props.single
+                  ? 'Change selection…'
+                  : 'Add more…'
                 : props.placeholder || 'Search and select…'
           }
           value={query()}

@@ -2,10 +2,13 @@ FROM node:22-alpine AS build
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
+ARG PUBLIC_SITE_URL=https://agentzuno.com/
 COPY index.html vite.config.js jsconfig.json ./
 COPY src ./src
 COPY public ./public
 COPY api/sdk ./api/sdk
+COPY docs ./docs
+COPY scripts ./scripts
 RUN npm run build
 
 FROM nginxinc/nginx-unprivileged:alpine

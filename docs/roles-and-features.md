@@ -94,3 +94,9 @@ Loading demo data through Settings in a registered workspace is different: those
 Open Profile from the account menu. Your name is required; it appears beside your photo when the sidebar is expanded. Choose a PNG, JPEG, or WebP photo up to 5 MB using Change Photo. The image is saved immediately, separately from the profile form.
 
 New accounts use the browser's timezone when available, with UTC as the fallback. The profile's Time Zone dropdown offers common zones and preserves a saved zone outside that list. Administrators can update editable workforce fields; identity-managed fields remain subject to directory controls.
+
+### Fulfillment tasks
+
+Admins and authorized Agents can add tasks from a request’s Tasks tab or from Data Tables → Tasks → Add Task. Choose the originating request, enter a title and details, and save. The Tasks tab displays linked cards. Open a task to edit and save its details, status, or assigned support person, or select Close Complete. The originating request is a read-only reference, with a link when you have permission to open it. Users can read tasks for their own accessible requests but cannot create or complete them; Read Only users cannot modify tasks.
+
+Tasks appear as separate Inbox items for current members of their assignment group and their assigned support person. Membership is checked when the inbox is loaded, so removing group access removes the task from that person’s inbox. Archiving a task is personal and does not archive its parent request. A task assignment does not grant access to the parent’s private conversation or work notes.

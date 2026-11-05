@@ -122,7 +122,10 @@ services:
     depends_on: [ollama]
     restart: on-failure
   web:
-    build: .
+    build:
+      context: .
+      args:
+        PUBLIC_SITE_URL: ${PUBLIC_SITE_URL:-https://agentzuno.com/}
     ports:
       - '${PORT:-3000}:8080'
     depends_on:

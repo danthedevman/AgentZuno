@@ -1,3 +1,4 @@
+import { taskInboxRecords } from './requestTasks.js';
 import { randomUUID } from 'node:crypto';
 import { helpdeskScope, deny } from './helpdeskRoles.js';
 import { smtpConfiguration, smtpTransport } from './smtpSettings.js';
@@ -143,8 +144,13 @@ export function installMentionRoutes(app, store, service) {
     const primary = rows.filter(
       (row) => !archived.some((item) => String(item.requestId) === String(row._id)),
     );
+    const tasks = (await taskInboxRecords(store, user)).filter(
+      (task) => !archived.some((item) => String(item.taskId) === task.id),
+    );
     response.json({
-      unread: primary.some((row) => !state || new Date(row.updatedAt) > new Date(state.viewedAt)),
+      unread:
+        tasks.some((task) => !state || new Date(task.updatedAt) > new Date(state.viewedAt)) ||
+        primary.some((row) => !state || new Date(row.updatedAt) > new Date(state.viewedAt)),
       hasMentions: rows.some((row) =>
         row.notifications?.some(
           (item) =>

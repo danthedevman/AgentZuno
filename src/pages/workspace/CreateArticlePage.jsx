@@ -304,7 +304,7 @@ export default function CreateArticlePage(props) {
         <ToastMessage tone="error">{error() || conversation.error?.message}</ToastMessage>
       </Show>
       <div class="workflow-builder resizable-split">
-        <SplitResizeHandle storageKey="builder" />
+        <SplitResizeHandle storageKey="builder" rightLabel="Article" />
         <section class="workflow-chat" aria-label="Article conversation">
           <ChatPanelToolbar
             disabled={isGeneratingArticle()}

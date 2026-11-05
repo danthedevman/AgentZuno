@@ -11,8 +11,8 @@ export default function SearchPage() {
         <input
           type="search"
           autofocus
-          aria-label="Search workspace"
-          placeholder="Search workspace…"
+          aria-label="Search"
+          placeholder="Search…"
           value={params.q || ''}
           onInput={(event) =>
             setParams({ q: event.currentTarget.value || undefined }, { replace: true })

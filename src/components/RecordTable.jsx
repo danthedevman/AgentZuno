@@ -383,79 +383,95 @@ export default function RecordTable(props) {
           classList={{ 'is-ready': !!activeResult() || !props.source }}
           aria-busy={result.loading}
         >
-          <table class="record-table">
-            <caption class="sr-only">{props.label}</caption>
-            <thead>
-              <tr>
-                <For each={columns()}>
-                  {(column) => (
-                    <th
-                      scope="col"
-                      class={column.className}
-                      aria-sort={
-                        column.sortable === false || !props.source
-                          ? undefined
-                          : sort().key === key(column)
-                            ? sort().direction === 'asc'
-                              ? 'ascending'
-                              : 'descending'
-                            : 'none'
-                      }
-                    >
-                      <div class="record-table-heading">
-                        {column.headerStart?.()}
-                        <Show
-                          when={column.sortable !== false && props.source}
-                          fallback={column.label}
+          <Show
+            when={props.renderCard}
+            fallback={
+              <table class="record-table">
+                <caption class="sr-only">{props.label}</caption>
+                <thead>
+                  <tr>
+                    <For each={columns()}>
+                      {(column) => (
+                        <th
+                          scope="col"
+                          class={column.className}
+                          aria-sort={
+                            column.sortable === false || !props.source
+                              ? undefined
+                              : sort().key === key(column)
+                                ? sort().direction === 'asc'
+                                  ? 'ascending'
+                                  : 'descending'
+                                : 'none'
+                          }
                         >
-                          <button
-                            type="button"
-                            class="record-sort-button"
-                            onClick={() => changeSort(column)}
-                          >
-                            {column.label}
-                            <Icon
-                              name={
-                                sort().key === key(column)
-                                  ? sort().direction === 'asc'
-                                    ? 'sort-up'
-                                    : 'sort-down'
-                                  : 'sort'
-                              }
-                            />
-                          </button>
-                        </Show>
-                      </div>
-                    </th>
-                  )}
-                </For>
-              </tr>
-            </thead>
-            <tbody>
-              <Show when={!isPendingView()}>
+                          <div class="record-table-heading">
+                            {column.headerStart?.()}
+                            <Show
+                              when={column.sortable !== false && props.source}
+                              fallback={column.label}
+                            >
+                              <button
+                                type="button"
+                                class="record-sort-button"
+                                onClick={() => changeSort(column)}
+                              >
+                                {column.label}
+                                <Icon
+                                  name={
+                                    sort().key === key(column)
+                                      ? sort().direction === 'asc'
+                                        ? 'sort-up'
+                                        : 'sort-down'
+                                      : 'sort'
+                                  }
+                                />
+                              </button>
+                            </Show>
+                          </div>
+                        </th>
+                      )}
+                    </For>
+                  </tr>
+                </thead>
+                <tbody>
+                  <Show when={!isPendingView()}>
+                    <For each={rows()}>
+                      {(row) => (
+                        <RecordRow record={row} columns={columns()} onOpen={props.onRowClick} />
+                      )}
+                    </For>
+                  </Show>
+                  <Show when={isPendingView()}>
+                    <For each={[0, 1, 2, 3, 4]}>
+                      {() => (
+                        <tr aria-hidden="true">
+                          <For each={columns()}>
+                            {() => (
+                              <td>
+                                <Skeleton lines={1} />
+                              </td>
+                            )}
+                          </For>
+                        </tr>
+                      )}
+                    </For>
+                  </Show>
+                </tbody>
+              </table>
+            }
+          >
+            <div class="record-card-list" role="list" aria-label={props.label}>
+              <Show
+                when={!isPendingView()}
+                fallback={<For each={[0, 1, 2]}>{() => <Skeleton lines={3} />}</For>}
+              >
                 <For each={rows()}>
-                  {(row) => (
-                    <RecordRow record={row} columns={columns()} onOpen={props.onRowClick} />
-                  )}
+                  {(record) => <div role="listitem">{props.renderCard(record)}</div>}
                 </For>
               </Show>
-              <Show when={isPendingView()}>
-                <For each={[0, 1, 2, 3, 4]}>
-                  {() => (
-                    <tr aria-hidden="true">
-                      <For each={columns()}>
-                        {() => (
-                          <td>
-                            <Skeleton lines={1} />
-                          </td>
-                        )}
-                      </For>
-                    </tr>
-                  )}
-                </For>
-              </Show>
-            </tbody>
-          </table>
+            </div>
+          </Show>
         </div>
       </Show>
       <Show when={isEmpty()}>

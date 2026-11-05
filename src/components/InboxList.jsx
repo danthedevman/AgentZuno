@@ -84,9 +84,10 @@ export default function InboxList(props) {
                 <A
                   class="article-table-title"
                   href={
-                    item.chatId
+                    item.href ||
+                    (item.chatId
                       ? `/workspace/chat/${item.chatId}?request=${item.id}`
-                      : `/workspace/requests/${item.id}`
+                      : `/workspace/requests/${item.id}`)
                   }
                 >
                   <span class="inbox-item-content">
@@ -106,9 +107,13 @@ export default function InboxList(props) {
                     </Show>
                     <span class="inbox-item-details">
                       <span class="inbox-detail-field">
-                        <span class="inbox-detail-label">Requested By</span>
+                        <span class="inbox-detail-label">
+                          {item.kind === 'task' ? 'Type' : 'Requested By'}
+                        </span>
                         <span class="inbox-detail-value">
-                          {item.requesterName || item.requesterEmail || 'Requester'}
+                          {item.kind === 'task'
+                            ? 'Fulfillment Task'
+                            : item.requesterName || item.requesterEmail || 'Requester'}
                         </span>
                       </span>
                       <span class="inbox-detail-field">

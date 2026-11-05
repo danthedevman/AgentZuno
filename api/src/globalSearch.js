@@ -1,3 +1,4 @@
+import { createRequestTasks } from './requestTasks.js';
 import { helpdeskScope, requestScope, deny } from './helpdeskRoles.js';
 import { canReadAuthoredArticle, knowledgeAllowed } from './knowledgeAccess.js';
 import { canUseWorkflow } from '../sdk/workflows/index.js';
@@ -81,16 +82,9 @@ export async function searchWorkspace(store, user, term, helpdesk) {
         record.number || '',
       );
   for (const task of tasks) {
-    const parent = await permitted(() => helpdesk.get(user, task.requestId));
-    if (parent)
-      push(
-        task,
-        'Task',
-        'task',
-        task.title,
-        `/workspace/chat/${parent.chatId}?request=${task.requestId}&tab=tasks`,
-        parent.number || '',
-      );
+    const authorized = await permitted(() => createRequestTasks(store).get(user, String(task._id)));
+    if (authorized)
+      push(task, 'Task', 'task', task.title, `/workspace/tasks/${task._id}`, 'Fulfillment Task');
   }
   for (const article of articles)
     if (await canReadAuthoredArticle(store, user, article))

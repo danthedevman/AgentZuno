@@ -50,7 +50,7 @@ export default function HomePage() {
       if (Array.isArray(site.tagline) && site.tagline.every((line) => typeof line === 'string')) {
         setTagline(site.tagline);
       }
-      document.title = site.name;
+      document.title = `${site.name} | Open Source AI Help Desk`;
     } catch (error) {
       console.error('Could not load homepage mock data.', error);
     }
@@ -87,7 +87,9 @@ export default function HomePage() {
           <h1 id="app-name" aria-label={name()}>
             <Show when={name().endsWith('o')} fallback={name()}>
               <span aria-hidden="true">{name().slice(0, -1)}</span>
-              <span class="brand-heading-ring" aria-hidden="true" />
+              <span class="brand-heading-ring" aria-hidden="true">
+                <span class="sr-only">o</span>
+              </span>
             </Show>
           </h1>
           <p class="tagline">
@@ -150,13 +152,12 @@ export default function HomePage() {
         <div class="marketing-copy">
           <h2 id="knowledge-feature-title">Put answers within reach</h2>
           <p>
-            Organize articles into knowledge bases and topics. Let employees browse the Knowledge
-            Center, or have the agents reference permitted published articles in conversation.
-            Readers can open an article alongside the chat without losing their place.
+            Give employees trusted answers wherever they work. Bring your organization’s knowledge
+            into one place, ready to explore or find through conversation.
           </p>
           <p>
-            Set access at the base, topic, and article level. Proposed article changes get a preview
-            and require approval before they are saved.
+            Keep teams in control of who can access information and how it evolves, with review and
+            approval built in.
           </p>
           <A href="/docs#knowledge">
             Explore the Knowledge guide <span aria-hidden="true">→</span>
@@ -305,9 +306,10 @@ export default function HomePage() {
             Download the code, run it in your environment, and test it with your team. Change the
             experience, extend a workflow, or build something entirely your own.
           </p>
+          <h3 class="marketing-ai-subtitle">No million-dollar dev team required</h3>
           <p>
-            Bring your favorite AI provider to help you understand the code and make the updates you
-            want. You have the source and the freedom to keep building.
+            Use your favorite AI tools to understand the code, explore ideas, and build the changes
+            your team needs. You have the source, and you decide where it goes next.
           </p>
           <div class="marketing-provider-links">
             <a

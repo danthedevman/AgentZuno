@@ -64,3 +64,11 @@ export function SessionProvider(props) {
 export function useSession() {
   return useContext(SessionContext);
 }
+
+export function PublicSessionProvider(props) {
+  return (
+    <SessionContext.Provider value={{ session: () => ({ user: null }) }}>
+      {props.children}
+    </SessionContext.Provider>
+  );
+}

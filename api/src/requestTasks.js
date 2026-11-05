@@ -1,6 +1,12 @@
 import { ObjectId } from 'mongodb';
 import { createHash, randomUUID } from 'node:crypto';
-import { helpdeskScope, requestScope, requireRequestOperator, requireRole, deny } from './helpdeskRoles.js';
+import {
+  helpdeskScope,
+  requestScope,
+  requireRequestOperator,
+  requireRole,
+  deny,
+} from './helpdeskRoles.js';
 import { listResponse } from './listQuery.js';
 import { requireExistingQueues } from './helpdeskQueues.js';
 
@@ -10,21 +16,45 @@ export function taskAssignmentMatches(user) {
     : [{ _id: null }];
 }
 export async function taskInboxRecords(store, user) {
-  const tasks = await store.collection('helpdeskTasks').find({
-    ...helpdeskScope(user), $or: taskAssignmentMatches(user),
-  }).toArray();
-  const parents = await store.collection('helpdeskRequests').find({
-    ...helpdeskScope(user), _id: { $in: tasks.map(task => new ObjectId(task.requestId)) },
-    submissionState: { $ne: 'draft' },
-  }, { projection: { _id: 1 } }).toArray();
-  const parentIds = new Set(parents.map(parent => String(parent._id)));
-  return tasks.filter(task => parentIds.has(task.requestId)).map(task => ({
-    id: String(task._id), kind: 'task', taskId: String(task._id), requestId: task.requestId,
-    title: task.title, description: task.description, status: task.status, queueName: task.queueName,
-    assignedToId: task.assignedToId, assignedToName: task.assignedToName,
-    number: 'Task', updatedAt: task.updatedAt, inboxNotice: 'Fulfillment Task',
-    href: `/workspace/tasks/${task._id}`,
-  }));
+  const tasks = (
+    await store
+      .collection('helpdeskTasks')
+      .find({
+        ...helpdeskScope(user),
+        $or: taskAssignmentMatches(user),
+      })
+      .toArray()
+  ).filter((task) => typeof task.requestId === 'string' && ObjectId.isValid(task.requestId));
+  const parents = await store
+    .collection('helpdeskRequests')
+    .find(
+      {
+        ...helpdeskScope(user),
+        _id: { $in: tasks.map((task) => new ObjectId(task.requestId)) },
+        $or: [{ submissionState: 'submitted' }, { submissionState: { $exists: false } }],
+      },
+      { projection: { _id: 1 } },
+    )
+    .toArray();
+  const parentIds = new Set(parents.map((parent) => String(parent._id)));
+  return tasks
+    .filter((task) => parentIds.has(task.requestId))
+    .map((task) => ({
+      id: String(task._id),
+      kind: 'task',
+      taskId: String(task._id),
+      requestId: task.requestId,
+      title: task.title,
+      description: task.description,
+      status: task.status,
+      queueName: task.queueName,
+      assignedToId: task.assignedToId,
+      assignedToName: task.assignedToName,
+      number: 'Task',
+      updatedAt: task.updatedAt,
+      inboxNotice: 'Fulfillment Task',
+      href: `/workspace/tasks/${task._id}`,
+    }));
 }
 export function createRequestTasks(store) {
   const tasks = () => store.collection('helpdeskTasks');
@@ -34,7 +64,8 @@ export function createRequestTasks(store) {
       ...requestScope(user),
       _id: new ObjectId(id),
     });
-    if (!record) deny('Request not found.', 404);
+    if (!record || (record.submissionState && record.submissionState !== 'submitted'))
+      deny('Request not found.', 404);
     if (writing) {
       requireRequestOperator(user, record);
       if (record.status === 'resolved') deny('Reopen the request before changing tasks.', 409);
@@ -101,8 +132,11 @@ export function createRequestTasks(store) {
     return safe(await tasks().findOne({ _id: id, ...scope }));
   }
   function canManage(user, task) {
-    return user.role === 'admin' || (user.role === 'agent' &&
-      ((user.queues || []).includes(task.queueName) || task.assignedToId === user.id));
+    return (
+      user.role === 'admin' ||
+      (user.role === 'agent' &&
+        ((user.queues || []).includes(task.queueName) || task.assignedToId === user.id))
+    );
   }
   async function get(user, id) {
     if (!ObjectId.isValid(id)) deny('Task not found.', 404);
@@ -110,16 +144,29 @@ export function createRequestTasks(store) {
     if (!task) deny('Task not found.', 404);
     if (!canManage(user, task) && user.role !== 'read-only') await parent(user, task.requestId);
     const request = await store.collection('helpdeskRequests').findOne({
-      ...helpdeskScope(user), _id: new ObjectId(task.requestId),
+      ...helpdeskScope(user),
+      _id: new ObjectId(task.requestId),
     });
-    if (!request) deny('Task not found.', 404);
+    if (!request || (request.submissionState && request.submissionState !== 'submitted'))
+      deny('Task not found.', 404);
     let requestHref;
     try {
       await parent(user, task.requestId);
       requestHref = `/workspace/requests/${task.requestId}`;
-    } catch (error) { if (![403, 404].includes(error.status)) throw error; }
-    return { ...safe(task), permissions: { canEdit: canManage(user, task) && request.status !== 'resolved' },
-      requestReference: { id: task.requestId, label: requestHref ? `${request.number || 'Request'} · ${request.title}` : 'Originating Request', href: requestHref } };
+    } catch (error) {
+      if (![403, 404].includes(error.status)) throw error;
+    }
+    return {
+      ...safe(task),
+      permissions: { canEdit: canManage(user, task) && request.status !== 'resolved' },
+      requestReference: {
+        id: task.requestId,
+        label: requestHref
+          ? `${request.number || 'Request'} · ${request.title}`
+          : 'Originating Request',
+        href: requestHref,
+      },
+    };
   }
   async function update(user, requestId, id, input) {
     requireRole(user, ['admin', 'agent']);
@@ -129,7 +176,9 @@ export function createRequestTasks(store) {
     if (!ObjectId.isValid(id)) deny('Task not found.', 404);
     if (
       !input ||
-      Object.keys(input).some((k) => !['title', 'description', 'assignedToId', 'status', 'version'].includes(k)) ||
+      Object.keys(input).some(
+        (k) => !['title', 'description', 'assignedToId', 'status', 'version'].includes(k),
+      ) ||
       !['open', 'in-progress', 'closed'].includes(input.status) ||
       !Number.isInteger(input.version)
     )
@@ -140,24 +189,33 @@ export function createRequestTasks(store) {
       _id: new ObjectId(id),
     });
     if (!current) deny('Task not found.', 404);
-    if (!canManage(user, current))
-      deny('This task is outside your assignment groups.');
+    if (!canManage(user, current)) deny('This task is outside your assignment groups.');
     const changes = {};
     if (input.title !== undefined) {
-      if (typeof input.title !== 'string' || !input.title.trim() || input.title.length > 160) deny('Enter a task title up to 160 characters.', 400);
+      if (typeof input.title !== 'string' || !input.title.trim() || input.title.length > 160)
+        deny('Enter a task title up to 160 characters.', 400);
       changes.title = input.title.trim();
     }
     if (input.description !== undefined) {
-      if (typeof input.description !== 'string' || input.description.length > 7000) deny('Enter details up to 7,000 characters.', 400);
+      if (typeof input.description !== 'string' || input.description.length > 7000)
+        deny('Enter details up to 7,000 characters.', 400);
       changes.description = input.description.trim();
     }
     if (input.assignedToId !== undefined) {
-      if (typeof input.assignedToId !== 'string') deny('Choose an active support team member.', 400);
-      const member = input.assignedToId && await store.collection('helpdeskMembers').findOne({
-        ...helpdeskScope(user), userId: input.assignedToId, active: true, role: { $in: ['admin', 'agent'] }, queues: current.queueName,
-      });
-      if (input.assignedToId && !member) deny('Choose an active member of the assignment group.', 400);
-      const account = member && await store.collection('users').findOne({ id: member.userId });
+      if (typeof input.assignedToId !== 'string')
+        deny('Choose an active support team member.', 400);
+      const member =
+        input.assignedToId &&
+        (await store.collection('helpdeskMembers').findOne({
+          ...helpdeskScope(user),
+          userId: input.assignedToId,
+          active: true,
+          role: { $in: ['admin', 'agent'] },
+          queues: current.queueName,
+        }));
+      if (input.assignedToId && !member)
+        deny('Choose an active member of the assignment group.', 400);
+      const account = member && (await store.collection('users').findOne({ id: member.userId }));
       changes.assignedToId = input.assignedToId;
       changes.assignedToName = account?.name || member?.email || '';
     }
@@ -220,8 +278,60 @@ export function createRequestTasks(store) {
 }
 export function installRequestTaskRoutes(app, store) {
   const service = createRequestTasks(store);
+  app.get('/api/helpdesk/tasks', async (request, response) => {
+    const user = request.helpdeskUser;
+    requireRole(user, ['admin', 'agent', 'read-only']);
+    const filter = {
+      ...helpdeskScope(user),
+      ...(user.role === 'agent' ? { $or: taskAssignmentMatches(user) } : {}),
+    };
+    const records = await store.collection('helpdeskTasks').find(filter).toArray();
+    response.json(
+      listResponse(
+        request,
+        records.map(({ _id, ownerId, workspaceId, ...record }) => ({ id: String(_id), ...record })),
+        {
+          Task: 'title',
+          Status: 'status',
+          'Assignment Group': 'queueName',
+          'Assigned To': 'assignedToName',
+          Updated: (record) => Date.parse(record.updatedAt),
+        },
+        { sort: 'Updated', direction: 'desc' },
+      ),
+    );
+  });
   app.get('/api/helpdesk/tasks/:taskId', async (request, response) =>
-    response.json(await service.get(request.helpdeskUser, request.params.taskId)));
+    response.json(await service.get(request.helpdeskUser, request.params.taskId)),
+  );
+  app.get('/api/helpdesk/tasks/:taskId/assignees', async (request, response) => {
+    const user = request.helpdeskUser,
+      task = await service.get(user, request.params.taskId);
+    if (!task.permissions.canEdit) deny();
+    const members = await store
+      .collection('helpdeskMembers')
+      .find({
+        ...helpdeskScope(user),
+        active: true,
+        role: { $in: ['admin', 'agent'] },
+        queues: task.queueName,
+      })
+      .toArray();
+    const users = await store
+      .collection('users')
+      .find(
+        { id: { $in: members.map((member) => member.userId) } },
+        { projection: { id: 1, name: 1 } },
+      )
+      .toArray();
+    response.json(
+      members.map((member) => ({
+        value: member.userId,
+        label: users.find((person) => person.id === member.userId)?.name || member.email,
+        href: `/workspace/users/${member.userId}`,
+      })),
+    );
+  });
   app.put('/api/helpdesk/tasks/:taskId', async (request, response) => {
     const task = await service.get(request.helpdeskUser, request.params.taskId);
     await service.update(request.helpdeskUser, task.requestId, task.id, request.body);

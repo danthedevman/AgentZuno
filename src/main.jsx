@@ -6,4 +6,8 @@ import '@fontsource/shippori-mincho/latin-500.css';
 import './styles.css';
 import './workspace.css';
 
-render(() => <App />, document.querySelector('#root'));
+document.documentElement.classList.add('app-ready');
+const root = document.querySelector('#root');
+// Public pages include build-time HTML; replace it with the interactive Solid app.
+root.replaceChildren();
+render(() => <App />, root);

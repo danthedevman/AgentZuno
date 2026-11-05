@@ -1,3 +1,4 @@
+import TaskPage from './pages/workspace/TaskPage.jsx';
 import DatabaseSetupPage from './pages/DatabaseSetupPage.jsx';
 import SetupPage from './pages/workspace/SetupPage.jsx';
 import AuditRecordPage from './pages/workspace/AuditRecordPage.jsx';
@@ -42,7 +43,7 @@ import HelpPage from './pages/workspace/HelpPage.jsx';
 import SearchPage from './pages/workspace/SearchPage.jsx';
 import ConnectionPage from './pages/workspace/ConnectionPage.jsx';
 import ConnectionsPage from './pages/workspace/ConnectionsPage.jsx';
-import TasksPage from './pages/workspace/TasksPage.jsx';
+import TaskListPage from './pages/workspace/TaskListPage.jsx';
 import AccountPage from './pages/workspace/AccountPage.jsx';
 import SourceDocumentPage from './pages/workspace/SourceDocumentPage.jsx';
 import EditArticlePage from './pages/workspace/EditArticlePage.jsx';
@@ -102,7 +103,8 @@ export default function App() {
         <Route path="/profile" component={AccountPage} />
         <Route path="/settings" component={AccountPage} />
         <Route path="/create/:type" component={CreatePage} />
-        <Route path="/tasks" component={TasksPage} />
+        <Route path="/tasks" component={TaskListPage} />
+        <Route path="/tasks/:taskId" component={TaskPage} />
         <Route path="/help" component={HelpPage} />
         <Route path="/help/:id" component={ArticlePage} />
         <Route path="/articles/:id" component={ArticlePage} />

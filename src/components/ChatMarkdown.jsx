@@ -1,3 +1,4 @@
+import { publicAsset } from '../services/publicAsset.js';
 import { createMemo } from 'solid-js';
 import { useParams } from '@solidjs/router';
 import { renderChatMarkdown, normalizeChatLinks } from '../services/chatMarkdown.js';
@@ -20,6 +21,11 @@ export default function ChatMarkdown(props) {
     root.innerHTML = rendered;
     for (const link of root.querySelectorAll('a[href]')) {
       const url = new URL(link.getAttribute('href'), window.location.origin);
+      if (
+        url.origin === window.location.origin &&
+        (url.pathname === '/docs' || url.pathname.startsWith('/docs/'))
+      )
+        link.setAttribute('href', publicAsset(url.pathname + url.search + url.hash));
       if (isDemo && url.origin === window.location.origin)
         link.setAttribute('href', workspacePath(url.pathname + url.search + url.hash));
       if (

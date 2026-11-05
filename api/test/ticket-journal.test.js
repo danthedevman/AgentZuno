@@ -258,7 +258,10 @@ test(
 
       assert.equal(submitted.body.description, 'Please configure my office phone');
       assert.ok((await call(admin, '/helpdesk/inbox')).body.some((item) => item.id === id));
-      assert.equal((await call(employee, '/helpdesk/inbox')).status, 403);
+      const employeeInbox = await call(employee, '/helpdesk/inbox');
+      assert.equal(employeeInbox.status, 200);
+      assert.deepEqual(employeeInbox.body, []);
+      assert.equal((await call(employee, '/helpdesk/inbox/viewed', 'POST', {})).status, 200); // Employees receive only authorized mentions, never queue assignments.
       const outside = await call(admin, '/helpdesk/requests', 'POST', {
         requestId: randomUUID(),
         title: 'Outside queue',

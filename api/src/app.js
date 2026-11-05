@@ -315,8 +315,10 @@ export function createApi(options = {}) {
         request.path,
       );
     const personalViewWrite =
-      request.method === 'POST' && request.path === '/api/helpdesk/recent-views';
+      request.method === 'POST' &&
+      ['/api/helpdesk/recent-views', '/api/helpdesk/inbox/viewed'].includes(request.path);
     const helpdeskWrite =
+      (request.method === 'PUT' && /^\/api\/helpdesk\/tasks\/[a-f0-9]{24}$/.test(request.path)) ||
       (['POST', 'PUT'].includes(request.method) &&
         /^\/api\/helpdesk\/requests\/[a-f0-9]{24}\/tasks(?:\/[a-f0-9]{24})?$/.test(request.path)) ||
       (request.method === 'PUT' &&
