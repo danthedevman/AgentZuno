@@ -75,7 +75,7 @@ export default function CreateArticlePage(props) {
     if (!base() && !query.base && workspace()?.knowledgeBases?.length)
       setBase(
         workspace().knowledgeBases.find(
-          (item) => props.article.demoDatasetId || !item.demoDatasetId,
+          (item) => props.article?.demoDatasetId || !item.demoDatasetId,
         )?.id || '',
       );
   });
@@ -478,7 +478,7 @@ export default function CreateArticlePage(props) {
                   required
                   value={base()}
                   options={(workspace()?.knowledgeBases || [])
-                    .filter((item) => props.article.demoDatasetId || !item.demoDatasetId)
+                    .filter((item) => props.article?.demoDatasetId || !item.demoDatasetId)
                     .map((item) => ({
                       value: item.id,
                       href: `/workspace/knowledge/bases/${item.id}`,
@@ -495,7 +495,7 @@ export default function CreateArticlePage(props) {
                   name="topicIds"
                   value={topics()}
                   options={(workspace()?.topics || [])
-                    .filter((item) => props.article.demoDatasetId || !item.demoDatasetId)
+                    .filter((item) => props.article?.demoDatasetId || !item.demoDatasetId)
                     .map((item) => ({
                       value: item.id,
                       href: `/workspace/records/topic/${item.id}/edit`,

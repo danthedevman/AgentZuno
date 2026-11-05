@@ -448,6 +448,8 @@ export function createChatService(store, enqueue, fetcher = fetch) {
         ...settings,
         instructions: `${assistant.instructions}\n\nWorkspace response guidance:\n${originalInstructions}`,
       };
+      if (preparedGroup)
+        settings.instructions += `\nServer-confirmed group result: ${preparedGroup}. The group already exists in saved workspace configuration. Continue the requested workflow using it and describe its saved state accurately. Workflow draft changes are separate from publication.`;
       if (
         ['support', 'email-support'].includes(chat.helpdeskPurpose) &&
         ObjectId.isValid(chat.helpdeskRequestId)

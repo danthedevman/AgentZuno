@@ -307,3 +307,6 @@
 - First launch of a self-hosted installation opens the database setup wizard when the backend explicitly reports configured:false. Proceed to registration after setup; never redirect static marketing builds or infer setup state from API errors. Marketing account actions appear only after backend confirmation that the database is configured.
 
 - Self-hosted application builds never display the marketing homepage: root routes to the database wizard before setup, Login after setup, or the current signed-in workspace. Keep the initial application HTML empty/noindex to prevent a marketing flash. Only VITE_STATIC_SITE=true builds render the public marketing homepage; Docs remain available in both builds.
+
+- Admin group creation must handle ticket/request/task routing language and either order of “create the group if it does not exist.” Resolve explicit follow-ups such as “add the group” from bounded user conversation context, reject ambiguous or cancelled requests, persist and reauthorize before generation, and return the server-confirmed link without duplicate writes. A model proposal or missing code fence must not substitute for the requested action.
+- Shared create/edit screens must support an absent existing record. Guard record-only metadata in defaults and reference filters so New Article works with and without base/topic query context.

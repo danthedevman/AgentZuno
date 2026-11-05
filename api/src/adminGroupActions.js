@@ -2,38 +2,58 @@ import { saveGroup, workspaceGroups, presentGroup } from './groups.js';
 import { resolveHelpdeskUser, helpdeskScope, deny } from './helpdeskRoles.js';
 import { auditOperation } from './audit.js';
 
+const creationIntent = (text) =>
+  /\b(?:create|add|make|build|generate)\b[\s\S]{0,160}\b(?:group|queue|team)\b|\b(?:group|queue|team)\b[\s\S]{0,80}\b(?:create|add|make|build|generate)\b/i.test(
+    text,
+  );
+const declined = (text) => /\b(?:do not|don't|don’t|dont|never|cancel|stop)\b/i.test(text);
+function namedGroup(text) {
+  const direct = text.match(
+    /(?:^|[.!?]\s*)(?:(?:can|could|would)\s+you\s+)?(?:please\s+)?(?:create|add|make|build|generate)(?:\s+me)?\s+(?:a\s+|an\s+|the\s+)?(?:(assignment|approval)\s+)?(?:group|queue|team)\s*(?::|called|named)?\s+["“]?([^"”\n.!?]+)["”]?/i,
+  );
+  const name = direct?.[2].split(/\s+(?:for|with|and|that|if)\b/i)[0].trim();
+  if (name && !/^(?:if|it|this|that)\b/i.test(name))
+    return { name, approval: direct[1]?.toLowerCase() === 'approval' };
+  const destinations = [
+    ...text.matchAll(
+      /\b(?:route|assign|send)\s+(?:a\s+|an\s+|the\s+)?(?:task|ticket|request|item)\s+to\s+["“]?([^"”\n.,;!?]+)/gi,
+    ),
+  ].map((match) => match[1].split(/\s+(?:as well|and|if|then|once|when)\b/i)[0].trim());
+  const unique = [...new Set(destinations.map((name) => name.toLowerCase()))];
+  if (unique.length !== 1) return null;
+  return {
+    name: destinations[0].replace(/\b[a-z]/g, (letter) => letter.toUpperCase()),
+    approval: false,
+  };
+}
+function requestedGroup(chat) {
+  const prompts = chat.messages.filter((item) => item.role === 'user').slice(-6);
+  const latest = prompts.at(-1)?.text || '';
+  if (
+    !creationIntent(latest) ||
+    declined(latest) ||
+    /^(?:how|explain|describe|what)\b/i.test(latest.trim())
+  )
+    return null;
+  const current = namedGroup(latest);
+  if (current) return current;
+  if (!/\b(?:the|that|this|it)\b/i.test(latest)) return null;
+  for (const prompt of prompts.slice(0, -1).reverse()) {
+    if (declined(prompt.text)) continue;
+    const prior = namedGroup(prompt.text);
+    if (prior) return prior;
+  }
+  return null;
+}
+
 export async function applyAdminGroupAction(store, chat, responseText) {
   if (chat.helpdeskPurpose !== 'workflow' || chat.assistantType !== 'admin') return responseText;
-  let block = responseText.match(/```(?:group|queue)\s*([\s\S]*?)```/i);
-  const latestPrompt = chat.messages.filter((item) => item.role === 'user').at(-1)?.text || '';
-  if (!block) {
-    const match = latestPrompt.match(
-      /^(?:please\s+)?(?:create|add|make|build|generate)(?:\s+me)?\s+(?:a\s+|an\s+|the\s+)?(?:(assignment|approval)\s+)?(?:group|queue|team)\s*(?::|called|named)?\s+["“]?([^"”\n.!?]+)["”]?/i,
-    );
-    const conditional =
-      /\bif\b[\s\S]{0,80}\b(?:group|queue|team)\b[\s\S]{0,40}\b(?:doesn['’]?t|does not|isn['’]?t|is not)\b[\s\S]{0,30}\bexist\b[\s\S]{0,50}\bcreate\b/i.test(
-        latestPrompt,
-      );
-    const destination =
-      conditional &&
-      latestPrompt.match(
-        /\b(?:route|assign|send)\s+(?:a\s+|the\s+)?(?:task|request|item)\s+to\s+["“]?([^"”\n.,;]+)/i,
-      );
-    if (!match && !destination) return responseText;
-    const name = match
-      ? match[2].split(/\s+(?:for|with|and|that)\s+/i)[0].trim()
-      : destination[1]
-          .split(/\s+(?:as well|and|if|then)\b/i)[0]
-          .trim()
-          .replace(/\b[a-z]/g, (letter) => letter.toUpperCase());
-    block = [
-      '',
-      JSON.stringify({
-        name,
-        assignmentEnabled: match?.[1]?.toLowerCase() !== 'approval',
-        approvalEnabled: match?.[1]?.toLowerCase() === 'approval',
-      }),
-    ];
+  const requested = requestedGroup(chat);
+  const block = responseText.match(/```(?:group|queue)\s*([\s\S]*?)```/i);
+  if (!requested) {
+    return block
+      ? 'Tell me the name of the group you want me to create and whether it should handle assignments, approvals, or both.'
+      : responseText;
   }
   const user = await resolveHelpdeskUser(
     store,
@@ -48,8 +68,13 @@ export async function applyAdminGroupAction(store, chat, responseText) {
     deny('Administrator access is required to create a group.');
   const messages = chat.messages.filter((item) => item.role === 'user').slice(-6);
   const request = messages.map((item) => item.text).join('\n');
-  const latest = messages.at(-1)?.text || '';
-  const proposed = JSON.parse(block[1]);
+  const proposed = block
+    ? JSON.parse(block[1])
+    : {
+        name: requested.name,
+        assignmentEnabled: !requested.approval,
+        approvalEnabled: requested.approval,
+      };
   if (
     !proposed ||
     Object.keys(proposed).some(
@@ -67,11 +92,7 @@ export async function applyAdminGroupAction(store, chat, responseText) {
   if (
     typeof proposed.name !== 'string' ||
     !proposed.name.trim() ||
-    !request.toLowerCase().includes(proposed.name.trim().toLowerCase()) ||
-    !/\b(?:create|add|make|build|generate)\b[\s\S]{0,160}\b(?:group|queue|team)\b|\b(?:group|queue|team)\b[\s\S]{0,80}\b(?:create|add|make|build|generate)\b/i.test(
-      request,
-    ) ||
-    /\b(?:do not|don't|dont|never|cancel|stop)\b/i.test(latest)
+    proposed.name.trim().toLowerCase() !== requested.name.toLowerCase()
   )
     return 'Tell me the name of the group you want me to create and whether it should handle assignments, approvals, or both.';
   const input = {
