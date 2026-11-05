@@ -356,7 +356,8 @@ export function createApi(options = {}) {
       (request.method === 'PUT' && request.path === '/api/helpdesk/domain/enabled') ||
       (request.method === 'PUT' && /^\/api\/helpdesk\/inbox\/[a-f0-9]{24}$/.test(request.path)) ||
       (request.method === 'POST' && request.path === '/api/helpdesk/chat-attachments') ||
-      (request.method === 'PUT' && request.path === '/api/helpdesk/profile-picture') ||
+      (['PUT', 'DELETE'].includes(request.method) &&
+        request.path === '/api/helpdesk/profile-picture') ||
       (request.method === 'PUT' && request.path === '/api/helpdesk/chat-settings') ||
       (request.method === 'PUT' &&
         /^\/api\/helpdesk\/channels\/(slack|teams|gmail|outlook)\/(application|actions)$/.test(

@@ -1,3 +1,4 @@
+import PageError from '../components/PageError.jsx';
 import PageMetadata from '../components/PageMetadata.jsx';
 import UnsavedChangesGuard from '../components/UnsavedChangesGuard.jsx';
 import ConfirmationDialog from '../components/ConfirmationDialog.jsx';
@@ -10,16 +11,7 @@ export default function AppLayout(props) {
     <ToastProvider>
       <PageMetadata />
       <SessionProvider>
-        <ErrorBoundary
-          fallback={(error, reset) => (
-            <main class="empty-state">
-              <h1>Something went wrong.</h1>
-              <p>{error.message}</p>
-              <button onClick={reset}>Try again</button>
-              <a href="/workspace">Return to workspace</a>
-            </main>
-          )}
-        >
+        <ErrorBoundary fallback={(error, reset) => <PageError onRetry={reset} />}>
           {props.children}
         </ErrorBoundary>
         <UnsavedChangesGuard />

@@ -1,3 +1,4 @@
+import { readApiResponse } from './apiResponse.js';
 import { confirmAction, confirmRemovedFields } from './confirmations.js';
 export async function api(path, options = {}) {
   if (
@@ -29,7 +30,7 @@ export async function api(path, options = {}) {
     ...options,
     headers: { 'Content-Type': 'application/json', ...scope, ...options.headers },
   });
-  const body = await response.json();
+  const body = await readApiResponse(response);
   if (
     response.status === 409 &&
     Array.isArray(body.removedFields) &&
@@ -48,9 +49,12 @@ export async function api(path, options = {}) {
     });
   }
   if (!response.ok)
-    throw Object.assign(new Error(body.error || 'The request failed.'), {
-      status: response.status,
-    });
+    throw Object.assign(
+      new Error(typeof body?.error === 'string' ? body.error : 'The request failed.'),
+      {
+        status: response.status,
+      },
+    );
   if (
     !options.deferSavedEvent &&
     !['GET', 'HEAD'].includes(options.method || 'GET') &&

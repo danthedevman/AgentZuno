@@ -21,7 +21,9 @@ export default function AccountPage() {
   return (
     <section class="reading-page">
       <Show when={isSettings()}>
-        <PageHeading title="Settings" />
+        <div class="connections-heading">
+          <PageHeading title="Settings" />
+        </div>
       </Show>
       <Show
         when={isSettings()}

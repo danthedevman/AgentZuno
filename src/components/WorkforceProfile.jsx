@@ -1,3 +1,4 @@
+import { confirmAction } from '../services/confirmations.js';
 import Dropdown from './Dropdown.jsx';
 import { timeZoneOptions } from '../services/timezones.js';
 import ReferenceArrow from './ReferenceArrow.jsx';
@@ -5,7 +6,6 @@ import { useSession } from '../context/SessionContext.jsx';
 import ProfileAvatar from './ProfileAvatar.jsx';
 import Skeleton from './Skeleton.jsx';
 import Icon from './Icon.jsx';
-import PageHeading from './PageHeading.jsx';
 import { For, Show, createEffect, createResource, createSignal } from 'solid-js';
 import { api } from '../services/api.js';
 import { useToasts } from '../context/ToastContext.jsx';
@@ -41,6 +41,7 @@ export default function WorkforceProfile(props) {
   const { refreshSession } = useSession();
   const { session } = useSession();
   const [pictureVersion, setPictureVersion] = createSignal(0);
+  const [hasPicture, setHasPicture] = createSignal(false);
   let pictureInput;
   let palette;
   async function uploadPicture(file) {
@@ -64,6 +65,33 @@ export default function WorkforceProfile(props) {
     } finally {
       setBusy(false);
       if (pictureInput) pictureInput.value = '';
+    }
+  }
+  async function removePicture() {
+    if (
+      busy() ||
+      !(await confirmAction(
+        'Remove your profile photo? Your initial will appear instead.',
+        'Remove Photo',
+        'Remove Photo',
+      ))
+    )
+      return;
+    setBusy(true);
+    try {
+      await api('/api/helpdesk/profile-picture', {
+        method: 'DELETE',
+        confirmed: true,
+        body: JSON.stringify({ confirmed: true }),
+      });
+      setHasPicture(false);
+      setPictureVersion((value) => value + 1);
+      await refreshSession();
+      notify({ tone: 'success', message: 'Profile photo removed.' });
+    } catch (error) {
+      notify({ tone: 'error', message: error.message });
+    } finally {
+      setBusy(false);
     }
   }
   const [name, setName] = createSignal('');
@@ -196,6 +224,7 @@ export default function WorkforceProfile(props) {
             userId={props.userId}
             name={profile()?.name}
             refreshKey={pictureVersion()}
+            onImageChange={setHasPicture}
           />
           <div>
             <h2>
@@ -205,7 +234,7 @@ export default function WorkforceProfile(props) {
             </h2>
             <p>{profile()?.fields?.title || profile()?.email}</p>
           </div>
-          <Show when={session()?.user?.id === props.userId}>
+          <Show when={session()?.user?.id === props.userId && profile()?.canEdit}>
             <input
               ref={pictureInput}
               type="file"
@@ -214,21 +243,30 @@ export default function WorkforceProfile(props) {
               hidden
               onChange={(event) => uploadPicture(event.currentTarget.files?.[0])}
             />
-            <button
-              type="button"
-              class="workspace-button secondary small"
-              disabled={busy()}
-              onClick={() => pictureInput.click()}
-            >
-              Change Photo
-            </button>
+            <div class="profile-photo-actions">
+              <button
+                type="button"
+                class="workspace-button secondary small"
+                disabled={busy()}
+                onClick={() => pictureInput.click()}
+              >
+                {hasPicture() ? 'Change Photo' : 'Add Photo'}
+              </button>
+              <Show when={hasPicture()}>
+                <button
+                  type="button"
+                  class="workspace-button secondary small"
+                  disabled={busy()}
+                  onClick={removePicture}
+                >
+                  Remove Photo
+                </button>
+              </Show>
+            </div>
           </Show>
         </div>
       </Show>
-      <div class="connections-heading">
-        <Show when={props.showTitle}>
-          <PageHeading title="Profile" />
-        </Show>
+      <div class="connections-heading profile-form-actions">
         <Show when={!profile.error && profile()?.canEdit}>
           <div class="helpdesk-actions">
             <Show

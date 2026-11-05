@@ -2,7 +2,8 @@ import { Binary } from 'mongodb';
 import { storedBinaryBytes } from './storedBinary.js';
 import { uploadBytes } from './uploadBytes.js';
 import sharp from 'sharp';
-import { deny, helpdeskScope } from './helpdeskRoles.js';
+import { queryString } from './queryValues.js';
+import { deny, helpdeskScope, requireRole } from './helpdeskRoles.js';
 
 export function installProfilePictureRoutes(app, store) {
   app.put('/api/helpdesk/profile-picture', async (request, response) => {
@@ -38,6 +39,21 @@ export function installProfilePictureRoutes(app, store) {
       .collection('users')
       .updateOne({ id: user.id }, { $inc: { profilePictureVersion: 1 } });
     response.json({ saved: true });
+  });
+  app.delete('/api/helpdesk/profile-picture', async (request, response) => {
+    const user = request.helpdeskUser;
+    requireRole(user, ['admin', 'agent', 'user']);
+    if (
+      !request.body ||
+      request.body.confirmed !== true ||
+      Object.keys(request.body).some((key) => key !== 'confirmed')
+    )
+      deny('Confirm removal of your profile photo.', 400);
+    const id = queryString(user.id);
+    const result = await store.collection('profilePictures').deleteOne({ _id: id });
+    if (result.deletedCount)
+      await store.collection('users').updateOne({ id }, { $inc: { profilePictureVersion: 1 } });
+    response.json({ removed: result.deletedCount > 0 });
   });
   app.get('/api/helpdesk/profile-pictures/:id', async (request, response) => {
     const user = request.helpdeskUser;

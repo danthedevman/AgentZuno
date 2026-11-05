@@ -6297,6 +6297,8 @@ body:has(.article-layout) {
   background: linear-gradient(115deg, #152d47, #255a77 55%, #173149);
 }
 .profile-identity-header {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -6312,7 +6314,7 @@ body:has(.article-layout) {
   margin-top: -35px;
   border: 5px solid var(--workspace-panel);
 }
-.profile-identity-header > div {
+.profile-identity-header > div:not(.profile-photo-actions) {
   flex: 1;
   min-width: 160px;
 }
@@ -9443,4 +9445,33 @@ button.catalog-item-card {
     background: Canvas;
     border-color: ButtonText;
   }
+}
+
+.profile-photo-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-left: auto;
+}
+.profile-form-actions {
+  justify-content: flex-end;
+}
+@media (max-width: 600px) {
+  .profile-photo-actions {
+    justify-content: flex-start;
+    margin-left: 0;
+  }
+}
+
+.profile-avatar > .icon {
+  width: 18px;
+  height: 18px;
+  font-size: 18px;
+}
+.profile-avatar-large > .icon {
+  width: 48px;
+  height: 48px;
+  font-size: 48px;
 }

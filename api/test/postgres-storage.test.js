@@ -177,6 +177,27 @@ test(
       const image = Buffer.from(avatar.body.image.split(',')[1], 'base64');
       assert.equal((await sharp(image).metadata()).format, 'webp');
 
+      const removedPhoto = await call(
+        '/api/helpdesk/profile-picture',
+        { confirmed: true },
+        first.cookie,
+        'DELETE',
+      );
+      assert.equal(removedPhoto.status, 200, JSON.stringify(removedPhoto.body));
+      const afterRemoval = await call(
+        `/api/helpdesk/profile-pictures/${first.body.user.id}`,
+        null,
+        first.cookie,
+      );
+      assert.equal(afterRemoval.body.image, null);
+      const removalAudit = await database.collection('governanceAudit').findOne({
+        ownerId: first.body.user.id,
+        target: '/helpdesk/profile-picture',
+        method: 'DELETE',
+        outcome: 'completed',
+      });
+      assert.ok(removalAudit);
+
       const demo = await call(
         '/api/helpdesk/demo/settings',
         { action: 'load', industry: 'tech', enableApprovals: true },
