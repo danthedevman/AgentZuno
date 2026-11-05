@@ -3302,7 +3302,7 @@ html:not(.app-ready)
 }
 
 .docs-mobile-toolbar,
-.docs-mobile-sections {
+.docs-navigation .docs-mobile-sections {
   display: none;
 }
 .docs-skip-link {
@@ -3406,7 +3406,7 @@ html:not(.app-ready)
   font-size: 13px;
 }
 @media (max-width: 1150px) {
-  .docs-mobile-sections {
+  .docs-navigation .docs-mobile-sections {
     display: grid;
     margin-top: 24px;
   }

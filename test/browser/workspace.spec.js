@@ -356,6 +356,10 @@ test('public docs have focused routes, mobile navigation, legacy links and predi
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
   ).toBe(true);
+  if (!isMobile) {
+    await expect(page.locator('.docs-mobile-sections')).toBeHidden();
+    await expect(page.locator('.docs-page-index')).toBeVisible();
+  }
   if (isMobile) await page.getByRole('button', { name: 'Browse Docs' }).click();
   const index = page.getByRole('navigation', {
     name: isMobile ? 'Jump to a section' : 'On this section',

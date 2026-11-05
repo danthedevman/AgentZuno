@@ -7,9 +7,12 @@ import { isEmailAddress } from './emailAddress.js';
 
 async function recipient(store, entry, id) {
   if (typeof id !== 'string' || !/^[a-f0-9]{24}$/.test(id)) return null;
-  const member = await store
-    .collection('helpdeskMembers')
-    .findOne({ ownerId: queryString(entry.ownerId, 24), workspaceId: queryString(entry.workspaceId, 24), userId: queryString(id, 24), active: true });
+  const member = await store.collection('helpdeskMembers').findOne({
+    ownerId: queryString(entry.ownerId, 24),
+    workspaceId: queryString(entry.workspaceId, 24),
+    userId: queryString(id, 24),
+    active: true,
+  });
   if (!member) return null;
   const user = {
     id,

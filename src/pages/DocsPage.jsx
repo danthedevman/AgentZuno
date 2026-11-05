@@ -63,11 +63,13 @@ function DocsScreenshot(props) {
 export default function DocsPage() {
   const location = useLocation(),
     navigate = useNavigate();
-  const page = () =>
-    documentationPages.find(
-      (item) => documentationPath(item) === location.pathname.replace(/\/$/, ''),
-    );
-  const isOverview = () => location.pathname.replace(/\/$/, '') === '/docs';
+  const currentPath = () => {
+    const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+    const pathname = location.pathname.replace(/\/$/, '');
+    return base && pathname.startsWith(`${base}/`) ? pathname.slice(base.length) : pathname;
+  };
+  const page = () => documentationPages.find((item) => documentationPath(item) === currentPath());
+  const isOverview = () => currentPath() === '/docs';
   const [headings, setHeadings] = createSignal([]);
   const [activeHeading, setActiveHeading] = createSignal('');
   const [menuOpen, setMenuOpen] = createSignal(false);

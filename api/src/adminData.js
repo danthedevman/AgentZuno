@@ -590,7 +590,11 @@ export function createAdminData(store) {
     return (
       await store
         .collection('adminDataRecords')
-        .find({ ...helpdeskScope(user), tableId: queryString(tableId, 80), archived: { $ne: true } })
+        .find({
+          ...helpdeskScope(user),
+          tableId: queryString(tableId, 80),
+          archived: { $ne: true },
+        })
         .toArray()
     ).map(safe);
   }
@@ -622,7 +626,11 @@ export function createAdminData(store) {
       ? (await records(user, tableId)).find((record) => String(record.id) === id)
       : null;
     const operationKey = operation?.key;
-    if (operationKey !== undefined && (typeof operationKey !== 'string' || !operationKey || operationKey.length > 256)) deny('Invalid record operation key.', 400);
+    if (
+      operationKey !== undefined &&
+      (typeof operationKey !== 'string' || !operationKey || operationKey.length > 256)
+    )
+      deny('Invalid record operation key.', 400);
     const operationHash =
       operationKey &&
       createHash('sha256').update(JSON.stringify({ tableId, id, input })).digest('hex');

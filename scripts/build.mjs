@@ -31,16 +31,16 @@ function metadata(route) {
     <meta property="og:title" content="${escape(route.title)}" />
     <meta property="og:description" content="${escape(route.description)}" />
     <meta property="og:url" content="${escape(url)}" />
-    <meta property="og:image" content="${new URL('agentzuno-social.png', site).href}" />
-    <meta property="og:image:alt" content="AgentZuno logo — Open source AI help desk" />
+    <meta property="og:image" content="${new URL('agentzuno-logo-social.png', site).href}" />
+    <meta property="og:image:alt" content="AgentZuno logo" />
     <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="${escape(route.title)}" />
     <meta name="twitter:description" content="${escape(route.description)}" />
-    <meta name="twitter:image" content="${new URL('agentzuno-social.png', site).href}" />
-    <meta name="twitter:image:alt" content="AgentZuno logo — Open source AI help desk" />
+    <meta name="twitter:image" content="${new URL('agentzuno-logo-social.png', site).href}" />
+    <meta name="twitter:image:alt" content="AgentZuno logo" />
     <script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@type': 'SoftwareApplication', name: 'AgentZuno', url: site.href, applicationCategory: 'BusinessApplication', operatingSystem: 'Docker', description: routes[0].description, license: 'https://www.apache.org/licenses/LICENSE-2.0' }).replaceAll('<', '\\u003c')}</script>`;
 }
 await build();

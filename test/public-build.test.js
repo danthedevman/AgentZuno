@@ -33,8 +33,14 @@ test('production public pages contain readable HTML, unique metadata and valid s
       'AgentZuno',
     );
     assert.ok(
-      document.querySelector('meta[property="og:image"]').content.endsWith('/agentzuno-social.png'),
+      document
+        .querySelector('meta[property="og:image"]')
+        .content.endsWith('/agentzuno-logo-social.png'),
     );
+    assert.match(document.querySelector('meta[property="og:image"]').content, /^https:\/\//);
+    assert.equal(document.querySelector('meta[property="og:image:alt"]').content, 'AgentZuno logo');
+    assert.equal(document.querySelector('meta[property="og:image:width"]').content, '1200');
+    assert.equal(document.querySelector('meta[property="og:image:height"]').content, '630');
     assert.equal(
       document.querySelector('meta[name="twitter:image"]').content,
       document.querySelector('meta[property="og:image"]').content,
@@ -60,4 +66,11 @@ test('application shells are empty and noindex; sitemap includes only public rou
   assert.ok(!/workspace|login|demo|register/.test(sitemap));
   const robots = await readFile(new URL('../dist/robots.txt', import.meta.url), 'utf8');
   assert.match(robots, /Disallow: .*workspace/);
+});
+
+test('shared social logo is a public 1200 by 630 PNG', async () => {
+  const image = await readFile(new URL('../dist/agentzuno-logo-social.png', import.meta.url));
+  assert.equal(image.subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
+  assert.equal(image.readUInt32BE(16), 1200);
+  assert.equal(image.readUInt32BE(20), 630);
 });
