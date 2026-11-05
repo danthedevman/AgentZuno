@@ -7,6 +7,8 @@ import { resolve, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const base = process.env.VITE_BASE_PATH || '/';
+const isStaticSite = process.env.VITE_STATIC_SITE === 'true';
+const publicRoutes = isStaticSite ? routes : routes.filter((route) => route.path);
 const site = new URL(process.env.PUBLIC_SITE_URL || 'https://agentzuno.com/');
 site.protocol = 'https:';
 site.search = site.hash = '';
@@ -40,6 +42,7 @@ const privateShell = shell.replace(
   /<title>.*?<\/title>/,
   '<title>AgentZuno</title><meta name="robots" content="noindex,nofollow" />',
 );
+if (!isStaticSite) await writeFile('dist/index.html', privateShell);
 await writeFile('dist/app.html', privateShell);
 await writeFile('dist/404.html', privateShell);
 await mkdir('node_modules/.cache', { recursive: true });
@@ -61,7 +64,7 @@ try {
     logLevel: 'warn',
   });
   const { renderPublicPage } = await import(pathToFileURL(join(temporary, 'entry.mjs')).href);
-  for (const route of routes) {
+  for (const route of publicRoutes) {
     const html = await renderPublicPage(`${base}${route.path}`);
     if (!html.includes('<h1') || html.length < 1000)
       throw new Error(`Public route did not prerender: ${route.path || '/'}`);
@@ -91,7 +94,7 @@ try {
   );
   await writeFile(
     'dist/sitemap.xml',
-    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${routes.map((route) => `<url><loc>${escape(new URL(route.path ? `${route.path}/` : '', site).href)}</loc></url>`).join('')}</urlset>\n`,
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${publicRoutes.map((route) => `<url><loc>${escape(new URL(route.path ? `${route.path}/` : '', site).href)}</loc></url>`).join('')}</urlset>\n`,
   );
 } finally {
   dom.window.close();

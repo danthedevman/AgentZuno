@@ -49,8 +49,8 @@ function text(value, name, max) {
   return value.trim();
 }
 function choice(value, options, name) {
-  if (!options.includes(value)) fail(`Invalid ${name}.`);
-  return value;
+  if (typeof value !== 'string' || !options.includes(value)) fail(`Invalid ${name}.`);
+  return queryString(value);
 }
 function fields(input, allowed) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) fail('Invalid request.');

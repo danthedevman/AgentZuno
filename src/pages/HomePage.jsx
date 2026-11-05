@@ -30,6 +30,10 @@ export default function HomePage() {
       const installationResponse = await fetch('/api/installation/database', { cache: 'no-store' });
       if (installationResponse.ok) {
         const installation = await installationResponse.json();
+        if (installation.configured === false) {
+          navigate('/setup/database', { replace: true });
+          return;
+        }
         setHasConfiguredBackend(installation.configured === true);
       }
     } catch {

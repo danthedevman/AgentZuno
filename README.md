@@ -89,3 +89,5 @@ Fulfillment tasks have editable records and appear in their assignment group’s
 The production build prerenders the marketing site and public Docs with search metadata and a sitemap. Configure `PUBLIC_SITE_URL` for your public hostname; application routes remain authenticated and excluded from indexing. See [public-page SEO](docs/deployment.md#prerendered-public-pages-and-seo).
 
 The public marketing page links to Docker setup and the GitHub repository. Sign-in and registration links appear only after the backend confirms database setup is complete, including on self-hosted domains. Static website builds do not show these account actions or a Try It button.
+
+The self-hosted app never serves the marketing homepage. After setup, `/` opens Login or the signed-in workspace. On first launch, opening the self-hosted app automatically takes you to **Choose Your Database**. After the connection is tested and saved, continue to registration and the skippable workspace setup wizard. This redirect requires a responding backend that explicitly reports incomplete setup; the public static marketing/Docs build stays public.

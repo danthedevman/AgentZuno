@@ -3,9 +3,13 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { JSDOM } from 'jsdom';
 
+const isStaticSite = (
+  await readFile(new URL('../dist/index.html', import.meta.url), 'utf8')
+).includes('application/ld+json');
+
 test('production public pages contain readable HTML, unique metadata and valid structured data before JavaScript', async () => {
   for (const [path, title, heading] of [
-    ['index.html', 'AgentZuno | Open Source AI Help Desk', 'AgentZuno'],
+    ...(isStaticSite ? [['index.html', 'AgentZuno | Open Source AI Help Desk', 'AgentZuno']] : []),
     ['docs/index.html', 'Documentation | AgentZuno', 'Documentation'],
     ['docs/workflows/index.html', 'Workflow SDK Documentation | AgentZuno', 'Documentation'],
   ]) {
@@ -26,7 +30,7 @@ test('production public pages contain readable HTML, unique metadata and valid s
   }
 });
 test('application shells are empty and noindex; sitemap includes only public routes', async () => {
-  for (const path of ['app.html', '404.html']) {
+  for (const path of [...(isStaticSite ? [] : ['index.html']), 'app.html', '404.html']) {
     const dom = new JSDOM(await readFile(new URL(`../dist/${path}`, import.meta.url), 'utf8'));
     assert.equal(dom.window.document.querySelector('#root').textContent, '');
     assert.equal(
@@ -36,7 +40,7 @@ test('application shells are empty and noindex; sitemap includes only public rou
     dom.window.close();
   }
   const sitemap = await readFile(new URL('../dist/sitemap.xml', import.meta.url), 'utf8');
-  assert.equal((sitemap.match(/<url>/g) || []).length, 3);
+  assert.equal((sitemap.match(/<url>/g) || []).length, isStaticSite ? 3 : 2);
   assert.ok(!/workspace|login|demo|register/.test(sitemap));
   const robots = await readFile(new URL('../dist/robots.txt', import.meta.url), 'utf8');
   assert.match(robots, /Disallow: .*workspace/);
