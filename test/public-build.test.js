@@ -9,7 +9,9 @@ const isStaticSite = (
 
 test('production public pages contain readable HTML, unique metadata and valid structured data before JavaScript', async () => {
   for (const [path, title, heading] of [
-    ...(isStaticSite ? [['index.html', 'AgentZuno | Open Source AI Help Desk', 'AgentZuno']] : []),
+    ...(isStaticSite
+      ? [['index.html', 'AgentZuno | Open Source AI Help Desk', 'Your help deskFrom ask to done']]
+      : []),
     ['docs/index.html', 'Documentation | AgentZuno', 'Documentation'],
     ['docs/workflows/index.html', 'Workflow SDK Documentation | AgentZuno', 'Documentation'],
   ]) {

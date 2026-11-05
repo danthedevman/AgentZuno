@@ -17,7 +17,6 @@ export default function HomePage() {
     `/workspace/${user()?.impersonation?.workspaceId || user()?.workspaceId}`;
   const navigate = useNavigate();
   const [hasConfiguredBackend, setHasConfiguredBackend] = createSignal(false);
-  const [name, setName] = createSignal('AgentZuno');
   const [tagline, setTagline] = createSignal([
     'AgentZuno is an open source conversational AI help desk',
     'Answer and automate user requests in Slack, Microsoft Teams, and email',
@@ -60,7 +59,6 @@ export default function HomePage() {
         throw new Error('Site mock data must include a name.');
       }
 
-      setName(site.name);
       if (Array.isArray(site.tagline) && site.tagline.every((line) => typeof line === 'string')) {
         setTagline(site.tagline);
       }
@@ -111,13 +109,9 @@ export default function HomePage() {
       </nav>
       <MarketingSection class="homepage" aria-labelledby="app-name">
         <div class="landing-hero-copy">
-          <h1 id="app-name" aria-label={name()}>
-            <Show when={name().endsWith('o')} fallback={name()}>
-              <span aria-hidden="true">{name().slice(0, -1)}</span>
-              <span class="brand-heading-ring" aria-hidden="true">
-                <span class="sr-only">o</span>
-              </span>
-            </Show>
+          <h1 id="app-name" class="marketing-hero-heading">
+            <span>Your help desk</span>
+            <span>From ask to done</span>
           </h1>
           <p class="tagline">
             <For each={tagline()}>{(line) => <span>{line}</span>}</For>
