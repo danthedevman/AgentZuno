@@ -3530,3 +3530,5 @@ html:not(.app-ready)
     position: static;
   }
 }
+
+.docs-page > .marketing-release-banner { position: static; }

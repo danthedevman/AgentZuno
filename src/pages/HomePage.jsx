@@ -1,3 +1,4 @@
+import ReleaseBanner from '../components/ReleaseBanner.jsx';
 import { publicAsset } from '../services/publicAsset.js';
 import ProfileAvatar from '../components/ProfileAvatar.jsx';
 import Icon from '../components/Icon.jsx';
@@ -86,11 +87,7 @@ export default function HomePage() {
 
   return (
     <main class="landing-main">
-      <div class="marketing-release-banner" aria-label="Release status">
-        <span>Early Release</span>
-        <span aria-hidden="true">·</span>
-        <span>Under active development</span>
-      </div>
+      <ReleaseBanner />
       <nav class="landing-top-navigation" aria-label="Public navigation">
         <A class="marketing-brand-mark" href="/" aria-label="AgentZuno home">
           <img

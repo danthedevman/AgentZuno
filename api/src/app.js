@@ -1,3 +1,4 @@
+import { installDataRecordOperationRoutes } from './dataRecordOperations.js';
 import { installRecordActivityRoutes } from './recordActivity.js';
 import { requireRole } from './helpdeskRoles.js';
 import { createHelpdeskTeams } from './helpdeskTeams.js';
@@ -630,6 +631,7 @@ export function createApi(options = {}) {
   installWorkflowReferenceRoutes(app, integrations);
   installAuditRoutes(app, integrations);
   installRecordActivityRoutes(app, integrations);
+  installDataRecordOperationRoutes(app, integrations);
   installKnowledgeAnalyticsRoutes(app, integrations, analytics);
   installConnectionOAuthRoutes(app, integrations, integrationService);
   app.get('/health', (request, response) =>

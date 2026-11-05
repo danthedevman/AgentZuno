@@ -1,3 +1,4 @@
+import ReleaseBanner from '../components/ReleaseBanner.jsx';
 import { A, useLocation, useNavigate } from '@solidjs/router';
 import { For, Show, createEffect, createSignal, onMount, onCleanup } from 'solid-js';
 import {
@@ -180,6 +181,7 @@ export default function DocsPage() {
         }
       }}
     >
+      <ReleaseBanner />
       <a class="docs-skip-link" href="#docs-main">
         Skip to content
       </a>
@@ -193,9 +195,6 @@ export default function DocsPage() {
           />
         </A>
         <nav aria-label="Public navigation">
-          <A href="/docs" aria-current="page">
-            Docs
-          </A>
           <a
             href="https://github.com/danthedevman/agentzuno"
             target="_blank"

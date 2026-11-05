@@ -277,7 +277,7 @@ const builtin = (type) => ({
     ...builtinFields[type],
   ],
 });
-const safe = ({ _id, ownerId, workspaceId, ...record }) => ({ id: String(_id), ...record });
+const safe = ({ _id, ownerId, workspaceId, mutationReceipts, ...record }) => ({ id: String(_id), ...record });
 export function createAdminData(store) {
   async function table(user, id) {
     requireRole(user, ['admin']);
@@ -564,6 +564,7 @@ export function createAdminData(store) {
           .find({
             ...helpdeskScope(user),
             type: tableId.slice(4) === 'cost-center' ? 'costCenter' : tableId.slice(4),
+            archived: { $ne: true },
           })
           .toArray()
       ).map((record) => ({
@@ -602,7 +603,7 @@ export function createAdminData(store) {
         href: `/workspace/data/${tableId}/records/${record.id}`,
       }));
   }
-  async function saveRecord(user, tableId, id, input) {
+  async function saveRecord(user, tableId, id, input, operation) {
     const definition = await table(user, tableId);
     if (
       !input ||
@@ -616,6 +617,20 @@ export function createAdminData(store) {
     const source = id
       ? (await records(user, tableId)).find((record) => String(record.id) === id)
       : null;
+    const operationKey = operation?.key;
+    const operationHash = operationKey && createHash('sha256').update(JSON.stringify({ tableId, id, input })).digest('hex');
+    const customCreateId = operationKey && !id && !definition.system ? new ObjectId(createHash('sha256').update(operationKey).digest('hex').slice(0, 24)) : null;
+    let mutationTarget;
+    if (operationKey && !definition.sourceManaged) {
+      const keyId = definition.system ? (id || createHash('sha256').update(`${helpdeskScope(user).ownerId}:${helpdeskScope(user).workspaceId}:${tableId.slice(4) === 'cost-center' ? 'costCenter' : tableId.slice(4)}:${String(input.values.name).toLowerCase()}`).digest('hex').slice(0, 24)) : (id ? new ObjectId(id) : customCreateId);
+      mutationTarget = await store.collection(definition.system ? 'workforceReferences' : 'adminDataRecords').findOne({ ...helpdeskScope(user), _id: keyId });
+      const receipt = mutationTarget?.mutationReceipts?.find(item => item.key === operationKey);
+      if (receipt) {
+        if (receipt.hash !== operationHash) deny('The record operation changed during replay.', 409);
+        return receipt.result;
+      }
+    }
+    const mutationReceipt = operationKey ? { key: operationKey, hash: operationHash, result: { id: id || String(customCreateId || mutationTarget?._id || ''), version: (input.version || 0) + 1 } } : null;
     await requireCompatibleDemoReferences(store, user, source, input.values);
     const values = {};
     for (const field of definition.fields) {
@@ -699,6 +714,7 @@ export function createAdminData(store) {
           await store.collection('workforceReferences').insertOne({
             _id: referenceId,
             ...scope,
+            ...(mutationReceipt ? { mutationReceipts: [{ ...mutationReceipt, result: { id: referenceId, version: 1 } }] } : {}),
             type,
             name,
             description: description || '',
@@ -738,6 +754,7 @@ export function createAdminData(store) {
             updatedAt: new Date(),
           },
           $inc: { version: 1 },
+          ...(mutationReceipt ? { $push: { mutationReceipts: { $each: [mutationReceipt], $slice: -100 } } } : {}),
         },
         { returnDocument: 'after' },
       );
@@ -750,15 +767,15 @@ export function createAdminData(store) {
         deny('Record limit reached.', 422);
       const result = await store
         .collection('adminDataRecords')
-        .insertOne({ ...filter, values, version: 1, createdAt: new Date(), updatedAt: new Date() });
-      return { id: result.insertedId.toHexString() };
+        .insertOne({ ...filter, ...(customCreateId ? { _id: customCreateId } : {}), ...(mutationReceipt ? { mutationReceipts: [mutationReceipt] } : {}), values, version: 1, createdAt: new Date(), updatedAt: new Date() });
+      return { id: result.insertedId.toHexString(), version: 1 };
     }
     if (!ObjectId.isValid(id) || !Number.isSafeInteger(input.version)) deny('Invalid record.', 400);
     const updated = await store
       .collection('adminDataRecords')
       .findOneAndUpdate(
         { ...filter, _id: new ObjectId(id), version: queryVersion(input.version) },
-        { $set: { values, updatedAt: new Date() }, $inc: { version: 1 } },
+        { $set: { values, updatedAt: new Date() }, $inc: { version: 1 }, ...(mutationReceipt ? { $push: { mutationReceipts: { $each: [mutationReceipt], $slice: -100 } } } : {}) },
         { returnDocument: 'after' },
       );
     if (!updated) deny('Record changed. Reload before saving.', 409);
