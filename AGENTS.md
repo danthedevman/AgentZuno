@@ -291,3 +291,7 @@
 - Fulfillment tasks open editable, permission-checked task records rather than read-only Data projections. Use an originating-request reference field, and show tasks as cards within requests. Assigned tasks appear in Inbox using current group/person authorization, with personal archive state. Task access does not grant parent chat or work-note access.
 
 - Prerender only public marketing/Docs content at build time using a guest session. Never include authenticated records, prompts, credentials, or API responses in public HTML. Keep route-specific metadata/canonical URLs in sync after client navigation, sitemap entries limited to public pages, and application fallbacks noindex. Set PUBLIC_SITE_URL to the public build’s HTTPS origin/path. Keep collapsed sidebar controls square with fixed dimensions across viewport sizes.
+
+- On phones, replace the collapsed rail with a top bar: drawer toggle left, Inbox notification bell and profile right. Navigation opens as an overlay below the top bar. The Inbox dot clears on entering Inbox; acknowledge viewed state through the permitted API route and keep badges hidden while Inbox is open. Keep desktop collapsed controls 32px square with inset hover surfaces and unclipped hover/focus tooltips.
+
+- Shared record lists render stacked panels below 700px, retaining server-side search/sort/pagination, bulk selection, actions, and record navigation. Keep mobile page side padding compact (12px) and labels legible; do not force users to horizontally scroll a whole table on a phone.

@@ -1,4 +1,5 @@
-import { Portal } from 'solid-js/web';
+import { Portal, Dynamic } from 'solid-js/web';
+import Dropdown from './Dropdown.jsx';
 import ActionMenu from './ActionMenu.jsx';
 import { loadExportRows, downloadRecords } from '../services/tableExport.js';
 import { useWorkspace } from '../context/WorkspaceContext.jsx';
@@ -32,8 +33,10 @@ function RecordRow(props) {
     else row.querySelector('a[href], button.record-table-link')?.click();
   }
   return (
-    <tr
+    <Dynamic
+      component={props.card ? 'article' : 'tr'}
       ref={row}
+      class={props.card ? 'record-mobile-card' : undefined}
       classList={{ 'record-row-actionable': actionable() }}
       tabindex={actionable() ? 0 : undefined}
       onClick={(event) => {
@@ -48,15 +51,32 @@ function RecordRow(props) {
     >
       <For each={props.columns}>
         {(column) => (
-          <td class={column.className}>
+          <Dynamic
+            component={props.card ? 'div' : 'td'}
+            class={`${props.card ? 'record-mobile-field' : ''} ${column.className || ''}`}
+          >
+            <Show
+              when={
+                props.card && column.label && column !== props.columns.find((item) => item.label)
+              }
+            >
+              <span class="record-mobile-field-label">{column.label}</span>
+            </Show>
             {column.render ? column.render(props.record) : props.record[column.key]}
-          </td>
+          </Dynamic>
         )}
       </For>
-    </tr>
+    </Dynamic>
   );
 }
 export default function RecordTable(props) {
+  const [isMobile, setIsMobile] = createSignal(window.matchMedia('(max-width: 700px)').matches);
+  onMount(() => {
+    const query = window.matchMedia('(max-width: 700px)');
+    const update = () => setIsMobile(query.matches);
+    query.addEventListener('change', update);
+    onCleanup(() => query.removeEventListener('change', update));
+  });
   let root;
   const [menuTarget, setMenuTarget] = createSignal(null);
   onMount(() => {
@@ -384,7 +404,7 @@ export default function RecordTable(props) {
           aria-busy={result.loading}
         >
           <Show
-            when={props.renderCard}
+            when={props.renderCard || isMobile()}
             fallback={
               <table class="record-table">
                 <caption class="sr-only">{props.label}</caption>
@@ -461,13 +481,58 @@ export default function RecordTable(props) {
               </table>
             }
           >
+            <Show when={isMobile() && !props.renderCard}>
+              <div class="mobile-record-controls">
+                <For each={columns().filter((column) => column.headerStart)}>
+                  {(column) => column.headerStart()}
+                </For>
+                <Show when={props.source}>
+                  <Dropdown
+                    ariaLabel="Sort records by"
+                    value={sort().key || key(columns().find((column) => column.sortable !== false))}
+                    options={columns()
+                      .filter((column) => column.sortable !== false)
+                      .map((column) => ({ value: key(column), label: column.label }))}
+                    onChange={(value) =>
+                      changeSort(columns().find((column) => key(column) === value))
+                    }
+                  />
+                  <button
+                    type="button"
+                    class="workspace-button secondary small icon-only"
+                    aria-label={sort().direction === 'asc' ? 'Sort descending' : 'Sort ascending'}
+                    onClick={() =>
+                      changeSort(
+                        columns().find((column) => key(column) === sort().key) ||
+                          columns().find((column) => column.sortable !== false),
+                      )
+                    }
+                  >
+                    <Icon name={sort().direction === 'asc' ? 'sort-up' : 'sort-down'} />
+                  </button>
+                </Show>
+              </div>
+            </Show>
             <div class="record-card-list" role="list" aria-label={props.label}>
               <Show
                 when={!isPendingView()}
                 fallback={<For each={[0, 1, 2]}>{() => <Skeleton lines={3} />}</For>}
               >
                 <For each={rows()}>
-                  {(record) => <div role="listitem">{props.renderCard(record)}</div>}
+                  {(record) => (
+                    <div role="listitem">
+                      {props.renderCard ? (
+                        props.renderCard(record)
+                      ) : (
+                        <RecordRow
+                          card
+                          record={record}
+                          columns={columns()}
+                          onOpen={props.onRowClick}
+                        />
+                      )}
+                    </div>
+                  )}
                 </For>
               </Show>
             </div>

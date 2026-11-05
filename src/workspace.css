@@ -9147,3 +9147,207 @@ button.catalog-item-card {
     border-color: CanvasText;
   }
 }
+
+.mobile-workspace-topbar {
+  display: none;
+}
+@media (max-width: 700px) {
+  .workspace-shell,
+  .workspace-shell.is-nav-expanded {
+    --workspace-sidebar-width: 0px;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 56px minmax(0, 1fr);
+  }
+  .mobile-workspace-topbar {
+    grid-row: 1;
+    grid-column: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    height: 56px;
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--workspace-line);
+    background: var(--workspace-panel);
+    z-index: 60;
+  }
+  .mobile-topbar-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .mobile-topbar-button {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    padding: 0;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--workspace-ink);
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .mobile-topbar-button:hover {
+    background: var(--workspace-soft);
+  }
+  .mobile-topbar-button .icon {
+    width: 22px;
+    height: 22px;
+    font-size: 22px;
+  }
+  .mobile-profile-button .profile-avatar {
+    width: 30px;
+    height: 30px;
+    flex: 0 0 30px;
+  }
+  .mobile-notification-dot {
+    position: absolute;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #818cf8;
+    top: 7px;
+    right: 7px;
+    border: 2px solid var(--workspace-panel);
+    box-sizing: content-box;
+  }
+  .workspace-shell .workspace-body {
+    grid-row: 2;
+    grid-column: 1;
+  }
+  .workspace-shell:not(.is-nav-expanded) .workspace-sidebar {
+    display: none;
+  }
+  .workspace-shell.is-nav-expanded .workspace-sidebar {
+    position: fixed;
+    display: flex;
+    top: 56px;
+    left: 0;
+    width: min(260px, 85vw);
+    height: calc(100dvh - 56px);
+    z-index: 50;
+  }
+  .sidebar-mobile-backdrop {
+    top: 56px;
+    left: 0;
+  }
+  .workspace-shell .profile-popover {
+    top: 62px;
+    bottom: auto;
+    left: auto;
+    right: 12px;
+    width: min(320px, calc(100vw - 24px));
+    max-width: none;
+    margin: 0;
+    max-height: calc(100dvh - 76px);
+  }
+}
+
+@media (max-width: 700px) {
+  .workspace-sidebar .rail-drawer-toggle {
+    display: none;
+  }
+}
+
+.record-mobile-card {
+  position: relative;
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  min-width: 0;
+  border: 1px solid var(--workspace-line);
+  border-radius: 12px;
+  background: var(--workspace-panel);
+  overflow-wrap: anywhere;
+}
+.record-mobile-card.record-row-actionable {
+  cursor: pointer;
+}
+.record-mobile-card:focus-visible {
+  outline: 2px solid #818cf8;
+  outline-offset: 2px;
+}
+.record-mobile-field {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.record-mobile-field-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--workspace-muted);
+}
+.record-mobile-card .record-selection-column {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+}
+.record-mobile-card:has(.record-selection-column) {
+  padding-right: 40px;
+}
+.record-mobile-card .record-updated-column {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  font-size: 11px;
+  border-top: 1px solid var(--workspace-line);
+  padding-top: 10px;
+}
+.record-mobile-card :is(.article-table-title, .inbox-table-subject, .inbox-item-content) {
+  min-width: 0;
+  width: 100%;
+}
+.record-mobile-card :is(.inbox-item-heading, .inbox-item-details) {
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+.record-mobile-card .inbox-detail-field {
+  min-width: 0;
+}
+.mobile-record-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.mobile-record-controls .shared-dropdown {
+  margin-left: auto;
+  width: min(200px, 70%);
+}
+.mobile-record-controls .workspace-button {
+  flex-shrink: 0;
+}
+@media (max-width: 700px) {
+  .workspace-body > .workspace-main {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .workspace-main:has(.workflow-page.is-builder, .chat-page.is-conversation) {
+    padding-left: 0;
+    padding-right: 0;
+  }
+  .record-list .record-table-scroll {
+    border: 0;
+    background: transparent;
+  }
+  .record-mobile-card .inbox-table-subject {
+    align-items: flex-start;
+  }
+  .record-mobile-card .inbox-detail-field {
+    flex-basis: calc(50% - 14px);
+  }
+}
+
+.workspace-shell.is-nav-expanded .workspace-sidebar .rail-create {
+  height: 36px;
+  min-height: 36px;
+  max-height: 36px;
+  flex: 0 0 36px;
+}

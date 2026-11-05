@@ -71,7 +71,7 @@ function WorkspaceShell(props) {
     const escape = (event) => {
       if (event.key === 'Escape' && query.matches && isNavigationExpanded()) {
         setIsNavigationExpanded(false);
-        document.querySelector('.rail-drawer-toggle')?.focus();
+        document.querySelector('.mobile-workspace-topbar > button')?.focus();
       }
     };
     document.addEventListener('keydown', escape);
@@ -106,6 +106,7 @@ function WorkspaceShell(props) {
   let searchDialog;
   const [activeDialog, setActiveDialog] = createSignal(null);
   function showOverlay(dialog) {
+    if (isNarrow()) setIsNavigationExpanded(false);
     setActiveDialog(dialog);
     openDialog(dialog);
   }
@@ -269,6 +270,52 @@ function WorkspaceShell(props) {
       <a class="skip-link" href="#workspace-main">
         Skip to content
       </a>
+      <header class="mobile-workspace-topbar" aria-label="Mobile navigation">
+        <button
+          class="mobile-topbar-button"
+          type="button"
+          aria-label={isNavigationExpanded() ? 'Close navigation' : 'Open navigation'}
+          aria-expanded={isNavigationExpanded()}
+          aria-controls="workspace-navigation"
+          onClick={toggleNavigation}
+        >
+          <Icon name="drawer" />
+        </button>
+        <div class="mobile-topbar-actions">
+          <A
+            class="mobile-topbar-button mobile-inbox-link"
+            href="/workspace/inbox"
+            aria-label="Notifications and Inbox"
+            onClick={() => {
+              activeDialog()?.close();
+              setIsNavigationExpanded(false);
+            }}
+          >
+            <Icon name="notifications" />
+            <Show
+              when={!route.pathname.endsWith('/inbox') && !inboxState.error && inboxState()?.unread}
+            >
+              <span class="mobile-notification-dot" aria-label="Unread inbox items" />
+            </Show>
+          </A>
+          <button
+            class="mobile-topbar-button mobile-profile-button"
+            type="button"
+            aria-label="Open profile menu"
+            popovertarget="profile-popover"
+            onClick={() => {
+              activeDialog()?.close();
+              setIsNavigationExpanded(false);
+            }}
+          >
+            <ProfileAvatar
+              userId={session()?.user?.id}
+              name={session()?.user?.name || 'Profile'}
+              refreshKey={session()?.user?.profilePictureVersion}
+            />
+          </button>
+        </div>
+      </header>
       <aside
         class="workspace-sidebar"
         aria-label="Workspace sidebar"
@@ -406,111 +453,108 @@ function WorkspaceShell(props) {
               {isNavigationExpanded() ? session()?.user?.name || 'Profile' : 'Profile'}
             </span>
           </button>
-          <div id="profile-popover" class="profile-popover" popover="auto">
-            <Show when={!access.error && access()?.canImpersonate}>
-              <label class="profile-workspace profile-impersonate">
-                Impersonate
-                <Dropdown
-                  ariaLabel="Impersonate"
-                  value={access()?.role}
-                  options={['admin', 'agent', 'user', 'read-only'].map((value) => ({
-                    value,
-                    label:
-                      value === 'read-only' ? 'Read Only' : value[0].toUpperCase() + value.slice(1),
-                  }))}
-                  onChange={async (role) => {
-                    document.getElementById('profile-popover').hidePopover();
-                    try {
-                      await setRolePreview(params.workspaceId, role);
-                    } catch (error) {
-                      setError(error.message);
-                      return;
-                    }
-                    navigate(workspacePath('/workspace/chat', params.workspaceId));
-                  }}
-                />
-              </label>
-            </Show>
-            <A
-              href="/docs"
-              onClick={() => document.getElementById('profile-popover').hidePopover()}
-            >
-              <Icon name="book" /> Docs
-            </A>
-
-            <A
-              href="/workspace/profile"
-              onClick={() => document.getElementById('profile-popover').hidePopover()}
-            >
-              <Icon name="profile" />
-              Profile
-            </A>
-            <Show when={isAdmin()}>
-              <A
-                href="/workspace/users"
-                onClick={() => document.getElementById('profile-popover').hidePopover()}
-              >
-                <Icon name="users" />
-                Users
-              </A>
-            </Show>
-            <Show when={isPersonal() && isAdmin()}>
-              <A
-                href="/workspace/settings"
-                onClick={() => document.getElementById('profile-popover').hidePopover()}
-              >
-                <Icon name="settings" />
-                Settings
-              </A>
-            </Show>
-            <Show when={memberships()?.length > 1}>
-              <label class="profile-workspace">
-                Workspace
-                <Dropdown
-                  ariaLabel="Workspace"
-                  value={params.workspaceId || session()?.user?.workspaceId}
-                  options={memberships().map((item, index) => ({
-                    value: item.workspaceId,
-                    label: item.isPersonal ? 'Personal workspace' : `Help desk ${index}`,
-                  }))}
-                  onChange={(id) => {
-                    document.getElementById('profile-popover').hidePopover();
-                    navigate(`/workspace/${id}/requests`);
-                  }}
-                />
-              </label>
-            </Show>
-
-            <button
-              onClick={toggleTheme}
-              aria-label={theme() === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-              aria-pressed={theme() === 'dark'}
-            >
-              <Icon name={theme() === 'dark' ? 'sun' : 'moon'} />
-              {theme() === 'dark' ? 'Light mode' : 'Dark mode'}
-            </button>
-            <Show
-              when={session()?.user}
-              fallback={
-                <A href="/login">
-                  <Icon name="user" />
-                  Sign in
-                </A>
-              }
-            >
-              <button
-                onClick={() => {
-                  document.getElementById('profile-popover').hidePopover();
-                  handleSignOut();
-                }}
-              >
-                <Icon name="user" />
-                Sign out
-              </button>
-            </Show>
-          </div>
         </div>
       </aside>
+      <div id="profile-popover" class="profile-popover" popover="auto">
+        <Show when={!access.error && access()?.canImpersonate}>
+          <label class="profile-workspace profile-impersonate">
+            Impersonate
+            <Dropdown
+              ariaLabel="Impersonate"
+              value={access()?.role}
+              options={['admin', 'agent', 'user', 'read-only'].map((value) => ({
+                value,
+                label:
+                  value === 'read-only' ? 'Read Only' : value[0].toUpperCase() + value.slice(1),
+              }))}
+              onChange={async (role) => {
+                document.getElementById('profile-popover').hidePopover();
+                try {
+                  await setRolePreview(params.workspaceId, role);
+                } catch (error) {
+                  setError(error.message);
+                  return;
+                }
+                navigate(workspacePath('/workspace/chat', params.workspaceId));
+              }}
+            />
+          </label>
+        </Show>
+        <A href="/docs" onClick={() => document.getElementById('profile-popover').hidePopover()}>
+          <Icon name="book" /> Docs
+        </A>
+
+        <A
+          href="/workspace/profile"
+          onClick={() => document.getElementById('profile-popover').hidePopover()}
+        >
+          <Icon name="profile" />
+          Profile
+        </A>
+        <Show when={isAdmin()}>
+          <A
+            href="/workspace/users"
+            onClick={() => document.getElementById('profile-popover').hidePopover()}
+          >
+            <Icon name="users" />
+            Users
+          </A>
+        </Show>
+        <Show when={isPersonal() && isAdmin()}>
+          <A
+            href="/workspace/settings"
+            onClick={() => document.getElementById('profile-popover').hidePopover()}
+          >
+            <Icon name="settings" />
+            Settings
+          </A>
+        </Show>
+        <Show when={memberships()?.length > 1}>
+          <label class="profile-workspace">
+            Workspace
+            <Dropdown
+              ariaLabel="Workspace"
+              value={params.workspaceId || session()?.user?.workspaceId}
+              options={memberships().map((item, index) => ({
+                value: item.workspaceId,
+                label: item.isPersonal ? 'Personal workspace' : `Help desk ${index}`,
+              }))}
+              onChange={(id) => {
+                document.getElementById('profile-popover').hidePopover();
+                navigate(`/workspace/${id}/requests`);
+              }}
+            />
+          </label>
+        </Show>
+
+        <button
+          onClick={toggleTheme}
+          aria-label={theme() === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          aria-pressed={theme() === 'dark'}
+        >
+          <Icon name={theme() === 'dark' ? 'sun' : 'moon'} />
+          {theme() === 'dark' ? 'Light mode' : 'Dark mode'}
+        </button>
+        <Show
+          when={session()?.user}
+          fallback={
+            <A href="/login">
+              <Icon name="user" />
+              Sign in
+            </A>
+          }
+        >
+          <button
+            onClick={() => {
+              document.getElementById('profile-popover').hidePopover();
+              handleSignOut();
+            }}
+          >
+            <Icon name="user" />
+            Sign out
+          </button>
+        </Show>
+      </div>
       <CreatePicker
         isAdmin={isAdmin()}
         isPersonal={isPersonal()}
