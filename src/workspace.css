@@ -9475,3 +9475,53 @@ button.catalog-item-card {
   height: 48px;
   font-size: 48px;
 }
+
+.workspace-shell {
+  --conversation-header-height: 48px;
+}
+.workspace-shell
+  :is(.chat-panel-toolbar, .chat-request-heading, .workflow-design > .workflow-tabs) {
+  flex: 0 0 var(--conversation-header-height);
+  height: var(--conversation-header-height);
+  min-height: var(--conversation-header-height);
+  align-items: center;
+  padding: 4px 16px;
+}
+.workspace-shell .chat-request-heading {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+.chat-request-heading .chat-request-location,
+.chat-request-heading .chat-request-header-actions {
+  flex-shrink: 0;
+}
+.chat-request-heading .breadcrumbs ol,
+.chat-request-heading .request-header-actions {
+  flex-wrap: nowrap;
+}
+.workspace-shell .chat-panel-toolbar button,
+.chat-request-heading .workspace-button,
+.workspace-shell .workflow-tabs button {
+  min-height: 32px;
+  height: 32px;
+  padding-block: 5px;
+}
+.workspace-shell :is(.workflow-tabs, .record-detail-tabs) button[aria-selected='true'] {
+  border-color: #818cf84d;
+  border-radius: 6px;
+  background: #818cf826;
+  color: #4338ca;
+}
+.workspace-shell[data-theme='dark']
+  :is(.workflow-tabs, .record-detail-tabs)
+  button[aria-selected='true'] {
+  color: #c7d2fe;
+}
+.workspace-shell .request-workspace-panel > .record-detail-tabs {
+  min-height: var(--conversation-header-height);
+  margin-top: 0;
+  gap: 8px;
+}
+.workspace-shell .record-detail-tabs button {
+  padding-inline: 12px;
+}
