@@ -8518,3 +8518,165 @@ button.catalog-item-card {
   white-space: nowrap;
   text-align: left;
 }
+.ticket-journal-author {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.ticket-journal-author .profile-avatar {
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+}
+.ticket-journal-author strong {
+  overflow-wrap: anywhere;
+}
+.ticket-messages > li > div {
+  gap: 16px;
+  align-items: center;
+}
+.ticket-messages time {
+  flex-shrink: 0;
+}
+@media (max-width: 480px) {
+  .ticket-messages > li > div {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
+.mention-composer {
+  display: block;
+  position: relative;
+  min-width: 0;
+}
+.mention-options {
+  display: grid;
+  position: absolute;
+  z-index: 4;
+  bottom: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid var(--workspace-line);
+  border-radius: 10px;
+  background: var(--workspace-panel);
+  box-shadow: 0 12px 28px #0003;
+}
+.mention-options button {
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--workspace-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.mention-options button:hover,
+.mention-options button[aria-selected='true'] {
+  background: #818cf81f;
+}
+.rail-link .inbox-unread-dot {
+  position: absolute;
+  top: 7px;
+  left: 27px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #818cf8;
+  box-shadow: 0 0 0 2px var(--workspace-bg);
+}
+.inbox-mention-label {
+  padding: 3px 7px;
+  border-radius: 5px;
+  background: #818cf81c;
+  color: #818cf8;
+  font-size: 11px;
+}
+.chat-panel-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 8px 16px;
+  border-bottom: 1px solid #26262e;
+  background: #000;
+  color: #f2f2f7;
+}
+.chat-panel-toolbar h1 {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 500;
+}
+.chat-panel-toolbar button {
+  margin-left: auto;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 9px;
+  border: 1px solid #34343f;
+  border-radius: 6px;
+  background: #111116;
+  color: #e5e5ef;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+.chat-panel-toolbar button .icon {
+  width: 14px;
+  height: 14px;
+  font-size: 14px;
+}
+.chat-panel-toolbar button:hover {
+  background: #818cf825;
+}
+.chat-panel-toolbar button:focus-visible {
+  outline: 2px solid #818cf8;
+  outline-offset: 2px;
+}
+.chat-panel-toolbar button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.chat-conversation-left .chat-composer,
+.workflow-chat .builder-chat-composer,
+.workflow-chat .article-chat-composer {
+  padding-bottom: max(20px, env(safe-area-inset-bottom));
+}
+.workflow-approver-list {
+  margin-top: 12px;
+  text-align: left;
+}
+.workflow-approver-list small {
+  color: var(--workspace-muted);
+  font-size: 11px;
+}
+.workflow-approver-list ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+.workflow-approver-list li {
+  padding: 3px 0;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.workflow-approver-list a {
+  color: var(--workspace-ink);
+  text-decoration: none;
+}
+.workflow-approver-list a:hover {
+  color: #818cf8;
+}

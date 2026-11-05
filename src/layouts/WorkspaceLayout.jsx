@@ -96,6 +96,36 @@ function WorkspaceShell(props) {
     () => !!session()?.user && !session().user.isDemo,
     () => api('/api/helpdesk/workspaces'),
   );
+  const route = useLocation();
+  const [inboxState, { refetch: refreshInbox, mutate: setInboxState }] = createResource(
+    () => !access.error && access() && `${params.workspaceId}:${access().role}`,
+    () => api('/api/helpdesk/inbox/unread'),
+  );
+  let markingInbox = false;
+  async function updateInbox() {
+    if (document.visibilityState !== 'visible') return;
+    const state = await refreshInbox();
+    if (route.pathname.endsWith('/inbox') && state?.unread && !markingInbox) {
+      markingInbox = true;
+      try {
+        await api('/api/helpdesk/inbox/viewed', { method: 'POST', body: '{}' });
+        await refreshInbox();
+        setInboxState((value) => ({ ...value, unread: false }));
+      } finally {
+        markingInbox = false;
+      }
+    }
+  }
+  createEffect(() => {
+    if (!access.error && access()) {
+      const timer = setInterval(() => updateInbox().catch(() => {}), 30000);
+      onCleanup(() => clearInterval(timer));
+    }
+  });
+  createEffect(() => {
+    if (route.pathname.endsWith('/inbox') && !access.error && access())
+      updateInbox().catch(() => {});
+  });
   const visibleNavigation = () =>
     navigation.filter(([path]) => {
       if (path.endsWith('/my-work'))
@@ -110,7 +140,9 @@ function WorkspaceShell(props) {
       if (path === '/workspace/inbox')
         return (
           !access.error &&
-          (['admin', 'agent', 'read-only'].includes(access()?.role) || access()?.canApprove)
+          (['admin', 'agent', 'read-only'].includes(access()?.role) ||
+            access()?.canApprove ||
+            (!inboxState.error && inboxState()?.hasMentions))
         );
       if (
         path.endsWith('/reports') ||
@@ -267,6 +299,11 @@ function WorkspaceShell(props) {
                 aria-label={label}
               >
                 <Icon name={icon} />
+                <Show
+                  when={path === '/workspace/inbox' && !inboxState.error && inboxState()?.unread}
+                >
+                  <span class="inbox-unread-dot" role="img" aria-label="Unread inbox items" />
+                </Show>
                 <span class="rail-tooltip" aria-hidden="true">
                   {label}
                 </span>

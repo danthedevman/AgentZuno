@@ -1,3 +1,5 @@
+import Dropdown from './Dropdown.jsx';
+import { timeZoneOptions } from '../services/timezones.js';
 import ReferenceArrow from './ReferenceArrow.jsx';
 import { useSession } from '../context/SessionContext.jsx';
 import ProfileAvatar from './ProfileAvatar.jsx';
@@ -325,14 +327,29 @@ export default function WorkforceProfile(props) {
                     fallback={
                       <label>
                         {label(key)}
-                        <input
-                          name={key}
-                          maxlength="160"
-                          readOnly={!editing() || !profile()?.canEditFields}
-                          disabled={busy()}
-                          value={fields()[key] || ''}
-                          onInput={(event) => change(key, event.currentTarget.value)}
-                        />
+                        <Show
+                          when={key === 'timezone'}
+                          fallback={
+                            <input
+                              name={key}
+                              maxlength="160"
+                              readOnly={!editing() || !profile()?.canEditFields}
+                              disabled={busy()}
+                              value={fields()[key] || ''}
+                              onInput={(event) => change(key, event.currentTarget.value)}
+                            />
+                          }
+                        >
+                          <Dropdown
+                            name="timezone"
+                            ariaLabel="Time Zone"
+                            value={fields().timezone || 'UTC'}
+                            options={timeZoneOptions(fields().timezone)}
+                            readOnly={!editing() || !profile()?.canEditFields}
+                            disabled={busy()}
+                            onChange={(value) => change('timezone', value)}
+                          />
+                        </Show>
                       </label>
                     }
                   >

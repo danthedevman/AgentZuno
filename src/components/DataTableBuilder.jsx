@@ -1,3 +1,4 @@
+import ChatPanelToolbar from './ChatPanelToolbar.jsx';
 import { followChatProgress } from '../services/chatFollow.js';
 import ConversationSkeleton from './ConversationSkeleton.jsx';
 import SplitResizeHandle from './SplitResizeHandle.jsx';
@@ -76,6 +77,10 @@ export default function DataTableBuilder(props) {
       <div class="workflow-builder resizable-split">
         <SplitResizeHandle storageKey="builder" />
         <section class="workflow-chat" aria-label="Table design conversation">
+          <ChatPanelToolbar
+            disabled={props.processing || props.sending}
+            onNewChat={props.onNewConversation}
+          />
           <div
             class="workflow-chat-history"
             ref={messageList}

@@ -508,7 +508,11 @@ export function createApi(options = {}) {
         request.helpdeskUser.role === 'read-only' &&
         !(
           request.method === 'POST' &&
-          ['/api/helpdesk/recent-views', '/api/helpdesk/exports'].includes(request.path)
+          [
+            '/api/helpdesk/recent-views',
+            '/api/helpdesk/exports',
+            '/api/helpdesk/inbox/viewed',
+          ].includes(request.path)
         )
       ) {
         if (!['GET', 'HEAD'].includes(request.method))

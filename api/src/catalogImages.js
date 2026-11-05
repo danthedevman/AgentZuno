@@ -1,7 +1,8 @@
+import { storedBinaryBytes } from './storedBinary.js';
 import { uploadBytes } from './uploadBytes.js';
 import { matchesWorkflowDepartment } from './workflowDepartments.js';
 import sharp from 'sharp';
-import { ObjectId } from 'mongodb';
+import { ObjectId, Binary } from 'mongodb';
 import { deny, helpdeskScope, requireRole } from './helpdeskRoles.js';
 import { canUseWorkflow } from '../sdk/workflows/index.js';
 export const catalogIcons = [
@@ -44,7 +45,7 @@ export function installCatalogImageRoutes(app, store) {
     const result = await store.collection('catalogImages').insertOne({
       ...helpdeskScope(user),
       createdBy: user.id,
-      bytes: optimized,
+      bytes: new Binary(optimized),
       createdAt: new Date(),
     });
     response.status(201).json({ id: String(result.insertedId) });
@@ -75,7 +76,7 @@ export function installCatalogImageRoutes(app, store) {
         deny('Image not found.', 404);
     }
     response.set('Cache-Control', 'private, no-store').json({
-      image: `data:image/webp;base64,${Buffer.from(image.bytes.buffer || image.bytes).toString('base64')}`,
+      image: `data:image/webp;base64,${storedBinaryBytes(image.bytes).toString('base64')}`,
     });
   });
 }

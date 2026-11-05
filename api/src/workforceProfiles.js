@@ -1,3 +1,4 @@
+import { isTimeZone } from './timezones.js';
 import { requireCompatibleDemoReferences } from './demoReferences.js';
 import { userReferenceOptions } from './userReferences.js';
 import { ObjectId } from 'mongodb';
@@ -103,10 +104,11 @@ export function installWorkforceRoutes(app, store) {
       .findOne({ ...helpdeskScope(user), userId: id });
     const account = await store
       .collection('users')
-      .findOne({ id }, { projection: { name: 1, displayEmail: 1, email: 1 } });
+      .findOne({ id }, { projection: { name: 1, displayEmail: 1, email: 1, timezone: 1 } });
     const fields = Object.fromEntries(
       [...profileTextFields, ...referenceTypes, 'manager'].map((key) => [key, record?.[key] || '']),
     );
+    fields.timezone ||= account?.timezone || 'UTC';
     if (
       !fields.manager &&
       record?.managerDirectoryId &&
@@ -254,6 +256,7 @@ export function installWorkforceRoutes(app, store) {
     if (current.version !== input.version) deny('Profile changed. Reload before saving.', 409);
     const values = {};
     for (const key of profileTextFields) values[key] = bounded(input.fields[key] ?? '');
+    if (values.timezone && !isTimeZone(values.timezone)) deny('Choose a valid timezone.', 400);
     for (const key of referenceTypes) {
       const id = bounded(input.fields[key] ?? '', 24);
       if (

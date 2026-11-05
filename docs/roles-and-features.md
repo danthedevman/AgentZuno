@@ -88,3 +88,9 @@ Use the list's secondary actions to export permitted records as CSV or JSON. Aud
 The public Try It demo uses the same Admin UI with fictional records and predefined prompts. Suggested prompts live inside the chat input and collapse after submission. Each visitor's changes stay in API memory and disappear after reset, expiration, or an API restart. The public demo does not call a live AI provider or external connector.
 
 Loading demo data through Settings in a registered workspace is different: those records are stored in the installation's selected database and tagged for removal. They can be used with the workspace's enabled AI provider. Keep real and tagged demo records separate when building real workflows.
+
+## Keep your profile current
+
+Open Profile from the account menu. Your name is required; it appears beside your photo when the sidebar is expanded. Choose a PNG, JPEG, or WebP photo up to 5 MB using Change Photo. The image is saved immediately, separately from the profile form.
+
+New accounts use the browser's timezone when available, with UTC as the fallback. The profile's Time Zone dropdown offers common zones and preserves a saved zone outside that list. Administrators can update editable workforce fields; identity-managed fields remain subject to directory controls.

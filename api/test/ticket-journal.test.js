@@ -36,6 +36,7 @@ test(
     }
     async function register(name) {
       const result = await call(null, '/auth/register', 'POST', {
+        timezone: 'America/New_York',
         email: `${name}@journal.test`,
         password: 'Fictional-journal-password!',
       });
@@ -44,6 +45,8 @@ test(
     }
     try {
       const admin = await register('admin');
+      const initialProfile = await call(admin, `/helpdesk/workforce-profiles/${admin.id}`);
+      assert.equal(initialProfile.body.fields.timezone, 'America/New_York');
       const employee = await register('employee');
       const agent = await register('agent');
       const outsider = await register('outsider');
@@ -575,9 +578,12 @@ test(
       });
       assert.equal(largerUpload.status, 200);
 
-      assert.match(
-        (await call(agent, `/helpdesk/profile-pictures/${employee.id}`)).body.image,
-        /^data:image\/webp;base64,/,
+      const savedImage = (await call(agent, `/helpdesk/profile-pictures/${employee.id}`)).body
+        .image;
+      assert.match(savedImage, /^data:image\/webp;base64,/);
+      assert.equal(
+        (await sharp(Buffer.from(savedImage.split(',')[1], 'base64')).metadata()).format,
+        'webp',
       );
       assert.equal(
         (await call(separateWorkspace, `/helpdesk/profile-pictures/${employee.id}`)).status,

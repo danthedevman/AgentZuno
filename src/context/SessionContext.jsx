@@ -1,3 +1,4 @@
+import { browserTimeZone } from '../services/timezones.js';
 import { useLocation } from '@solidjs/router';
 import { createContext, createResource, useContext } from 'solid-js';
 import { api } from '../services/api.js';
@@ -33,7 +34,7 @@ export function SessionProvider(props) {
   async function register(email, password, name) {
     await api('/api/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ email, password, name }),
+      body: JSON.stringify({ email, password, name, timezone: browserTimeZone() }),
     });
     await refetch();
   }

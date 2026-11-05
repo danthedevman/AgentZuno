@@ -1,3 +1,4 @@
+import { prepareMentions, installMentionRoutes, inboxMatches } from './mentions.js';
 import { validateWorkflowReferenceAnswers } from './workflowReferences.js';
 import { installGlobalSearch } from './globalSearch.js';
 import { createRequestTasks, installRequestTaskRoutes } from './requestTasks.js';
@@ -61,7 +62,7 @@ function canWork(user, record) {
   );
 }
 function safeRequest(record, user) {
-  const { _id, ownerId, workspaceId, workNotes = [], ...rest } = record;
+  const { _id, ownerId, workspaceId, notifications, workNotes = [], ...rest } = record;
   const canReadInternal = canWork(user, record);
   return {
     id: _id.toHexString(),
@@ -343,6 +344,7 @@ export function createHelpdeskService(store, chats) {
     if (record.events.length >= 200) fail('Request history limit reached.', 422);
     const now = new Date();
     const changes = {};
+    let pendingNotifications = [];
     let event;
     if (action === 'assign-self') {
       fields(input, ['version']);
@@ -355,7 +357,7 @@ export function createHelpdeskService(store, chats) {
       changes.assignedToName = user.name || user.email || 'Agent';
       event = { type: 'assigned', assignedToId: user.id };
     } else if (action === 'work-note') {
-      fields(input, ['version', 'text']);
+      fields(input, ['version', 'text', 'mentionIds']);
       const body = text(input.text, 'Work note', 8000);
       if (
         (record.workNotes || []).length >= 100 ||
@@ -376,7 +378,7 @@ export function createHelpdeskService(store, chats) {
       event = { type: 'work-note-added' };
     } else if (['message', 'requester-message'].includes(action)) {
       if (action === 'requester-message' && record.requesterId !== user.id) deny();
-      fields(input, ['version', 'text']);
+      fields(input, ['version', 'text', 'mentionIds']);
       if (record.status === 'resolved') fail('Reopen the request before replying.', 409);
       const body = text(input.text, 'Message', 8000);
       if (
@@ -466,12 +468,32 @@ export function createHelpdeskService(store, chats) {
         deny('You can only route requests to your assigned queues.');
       event = { type: 'updated', changes: { ...changes } };
     }
+    if (['message', 'requester-message', 'work-note'].includes(action)) {
+      const kind = action === 'work-note' ? 'work-note' : 'comment';
+      const entry = kind === 'work-note' ? changes.workNotes.at(-1) : changes.messages.at(-1);
+      const prepared = await prepareMentions(
+        store,
+        { canRead },
+        user,
+        record,
+        entry,
+        input.mentionIds,
+        kind,
+      );
+      entry.mentions = prepared.mentions;
+      pendingNotifications = prepared.notifications;
+    }
     const updated = await requests().findOneAndUpdate(
       { ...requestScope(user), _id: record._id, version: input.version },
       {
         $set: { ...changes, updatedAt: now },
         $inc: { version: 1 },
-        $push: { events: { ...event, actorId: user.id, at: now } },
+        $push: {
+          events: { ...event, actorId: user.id, at: now },
+          ...(pendingNotifications.length
+            ? { notifications: { $each: pendingNotifications } }
+            : {}),
+        },
       },
       { returnDocument: 'after' },
     );
@@ -1312,9 +1334,9 @@ export function installHelpdeskRoutes(app, store, service) {
   app.post('/api/helpdesk/requests/:id/review', async (request, response) => {
     response.status(202).json(await service.reviewTicket(request.helpdeskUser, request.params.id));
   });
+  installMentionRoutes(app, store, service);
   app.get('/api/helpdesk/inbox', async (request, response) => {
     const user = request.helpdeskUser;
-    if (!['admin', 'agent', 'read-only'].includes(user.role) && !user.canApprove) deny();
     const tab =
       request.query.tab === undefined
         ? 'primary'
@@ -1325,14 +1347,7 @@ export function installHelpdeskRoutes(app, store, service) {
         {
           $match: {
             ...scope(user),
-            $or: [
-              {
-                queueName: {
-                  $in: ['admin', 'agent', 'read-only'].includes(user.role) ? user.queues || [] : [],
-                },
-              },
-              ...(user.canApprove ? [{ approvalUserIds: user.id }] : []),
-            ],
+            $or: inboxMatches(user),
           },
         },
         {
@@ -1371,7 +1386,16 @@ export function installHelpdeskRoutes(app, store, service) {
         submitted
           .filter(Boolean)
           .slice(0, request.query.list === '1' ? undefined : 50)
-          .map((record) => service.safeRequest(record, user)),
+          .map((record) => ({
+            ...service.safeRequest(record, user),
+            inboxNotice: record.notifications?.some(
+              (item) =>
+                item.recipientId === user.id &&
+                (item.kind !== 'work-note' || canWork(user, record)),
+            )
+              ? 'Mentioned You'
+              : undefined,
+          })),
         requestListColumns,
         { sort: 'Updated', direction: 'desc' },
       ),
@@ -1379,12 +1403,15 @@ export function installHelpdeskRoutes(app, store, service) {
   });
   app.put('/api/helpdesk/inbox/:id', async (request, response) => {
     const user = request.helpdeskUser;
-    if (!['admin', 'agent'].includes(user.role) && !user.canApprove) deny();
     fields(request.body, ['archived']);
     if (typeof request.body.archived !== 'boolean') fail('Choose whether to archive this item.');
     const record = await service.get(user, request.params.id);
     if (
       !(user.queues || []).includes(record.queueName) &&
+      !(record.notifications || []).some(
+        (item) =>
+          item.recipientId === user.id && (item.kind !== 'work-note' || canWork(user, record)),
+      ) &&
       !(await canReviewWorkflowApproval(store, user, record._id))
     )
       deny('This item is outside your assigned queues.');

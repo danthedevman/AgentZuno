@@ -1,3 +1,4 @@
+import { isTimeZone } from './timezones.js';
 import { isEmailAddress } from './emailAddress.js';
 import { randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
 import { ObjectId } from 'mongodb';
@@ -107,13 +108,17 @@ export function createAuth() {
   async function register(request, response) {
     if (
       request.body &&
-      Object.keys(request.body).some((key) => !['name', 'email', 'password'].includes(key))
+      Object.keys(request.body).some(
+        (key) => !['name', 'email', 'password', 'timezone'].includes(key),
+      )
     )
-      return response
-        .status(400)
-        .json({ error: 'Only name, email and password can be supplied during registration.' });
+      return response.status(400).json({
+        error: 'Only name, email, password and timezone can be supplied during registration.',
+      });
     if (rateLimit(request, response)) return;
-    const { email, password, name } = request.body || {};
+    const { email, password, name, timezone = 'UTC' } = request.body || {};
+    if (!isTimeZone(timezone))
+      return response.status(400).json({ error: 'Choose a valid timezone.' });
     if (
       name !== undefined &&
       (typeof name !== 'string' ||
@@ -146,6 +151,7 @@ export function createAuth() {
       workspaceId: new ObjectId().toHexString(),
       email: normalized,
       name: name === undefined ? normalized.split('@')[0] : name.trim(),
+      timezone,
       salt,
       passwordHash,
       createdAt: new Date(),

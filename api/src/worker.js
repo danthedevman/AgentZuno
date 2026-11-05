@@ -1,3 +1,5 @@
+import { createMentionDelivery } from './mentions.js';
+import { createHelpdeskService } from './helpdesk.js';
 import { enableLocalInstallation, needsDatabaseSetup } from './storage/configuration.js';
 enableLocalInstallation();
 while (needsDatabaseSetup()) await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -27,6 +29,7 @@ const integrations = createIntegrationService(store, async () => {
 });
 const deliverInvitations = createInvitationDelivery(store);
 const chats = createChatService(store, queues.chat);
+const deliverMentions = createMentionDelivery(store, createHelpdeskService(store, chats));
 const workflowExecution = createWorkflowExecution(store);
 const workflowWorker = new Worker(
   queueNames.workflow,
@@ -198,6 +201,7 @@ const schedulerWorker = new Worker(
   queueNames.scheduler,
   async () => {
     await deliverInvitations();
+    await deliverMentions();
     for (const run of await workflowExecution.recover()) await queues.workflow(run);
     await connection.set('agentzuno-worker-heartbeat', String(Date.now()), 'EX', 120);
     const bots = await store

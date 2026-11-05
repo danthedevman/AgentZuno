@@ -1,3 +1,4 @@
+import { pollConversation } from '../../services/conversationPolling.js';
 import ReferenceArrow from '../../components/ReferenceArrow.jsx';
 import BackLink from '../../components/BackLink.jsx';
 import { untrack } from 'solid-js';
@@ -80,7 +81,8 @@ export default function DataPage() {
         const next = conversation().definition;
         const before = untrack(() => draft().fields || []);
         confirmRemovedFields(before, next.fields || []).then((approved) => {
-          if (approved) setDraft(next);
+          if (approved && proposal === previousProposal && conversation()?.id === chatId())
+            setDraft(next);
         });
       }
     }
@@ -90,12 +92,7 @@ export default function DataPage() {
     conversation()?.id === chatId() &&
     !conversation.error &&
     ['queued', 'responding'].includes(conversation()?.status);
-  createEffect(() => {
-    if (processing()) {
-      const timer = setInterval(() => refreshConversation().catch(() => {}), 600);
-      onCleanup(() => clearInterval(timer));
-    }
-  });
+  pollConversation(() => processing(), refreshConversation);
   async function send(event) {
     event.preventDefault();
     if (sending() || processing() || !prompt().trim()) return;

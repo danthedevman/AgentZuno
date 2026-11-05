@@ -674,7 +674,7 @@ export function createChatService(store, enqueue, fetcher = fetch) {
       const prompt = chat.messages.filter((message) => message.role === 'user').at(-1)?.text || '';
       if (
         groupNotice &&
-        /\b(?:workflow|flow|item|form|catalog|requesting)\b/i.test(prompt) &&
+        /\b(?:workflow|flow|item|form|catalog|requesting|task|step|route)\b/i.test(prompt) &&
         !/```(?:typescript|ts)\s/i.test(groupResult)
       ) {
         await report('generating');

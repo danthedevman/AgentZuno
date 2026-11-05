@@ -1,3 +1,5 @@
+import { pollConversation } from '../../services/conversationPolling.js';
+import ChatPanelToolbar from '../../components/ChatPanelToolbar.jsx';
 import { followChatProgress } from '../../services/chatFollow.js';
 import ConversationSkeleton from '../../components/ConversationSkeleton.jsx';
 import SplitResizeHandle from '../../components/SplitResizeHandle.jsx';
@@ -164,7 +166,6 @@ export default function ChatPage() {
   const current = () => (chat.error || conversation.id !== params.id ? null : conversation);
   const busy = () => sending() || ['queued', 'responding'].includes(current()?.status);
   const [pendingMessage, setPendingMessage] = createSignal('');
-  let timer;
   let messageList;
   followChatProgress(
     () => messageList,
@@ -187,13 +188,7 @@ export default function ChatPage() {
       if (messageList) messageList.scrollTop = messageList.scrollHeight;
     });
   });
-  onCleanup(() => clearTimeout(timer));
-  createEffect(() => {
-    chat();
-    clearTimeout(timer);
-    if (['queued', 'responding'].includes(current()?.status))
-      timer = setTimeout(() => refreshChat().catch(() => {}), 500);
-  });
+  pollConversation(() => ['queued', 'responding'].includes(current()?.status), refreshChat);
   createEffect(() => {
     if (!pendingMessage()) return;
     requestAnimationFrame(() => {
@@ -361,9 +356,10 @@ export default function ChatPage() {
       >
         <div class="chat-conversation-layout resizable-split">
           <section class="chat-conversation-left">
-            <div class="chat-thread-heading">
-              <h1>{current()?.title || 'Chat'}</h1>
-            </div>
+            <ChatPanelToolbar
+              title={current()?.title || 'Chat'}
+              onNewChat={() => navigate(path('/workspace/chat'))}
+            />
             <Show when={chat.error}>
               <ToastMessage tone="error">
                 This chat could not be loaded. It may belong to another workspace.

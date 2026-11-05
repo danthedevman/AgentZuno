@@ -108,3 +108,55 @@ test('Admin chat creates scoped groups from explicit requests, audits and dedupl
   assert.equal(await database.collection('approvalGroups').countDocuments(), count);
   await store.close();
 });
+
+test('conditional task routing creates a missing named group before generation without requiring a group code fence', async () => {
+  const database = createMemoryDatabase(),
+    store = createIntegrationStore(database);
+  const owner = {
+    id: new ObjectId().toString(),
+    workspaceId: new ObjectId().toString(),
+    email: 'admin@example.test',
+  };
+  await database.collection('users').insertOne(owner);
+  const chat = {
+    _id: new ObjectId(),
+    ownerId: owner.id,
+    workspaceId: owner.workspaceId,
+    providerOwnerId: owner.id,
+    responseId: crypto.randomUUID(),
+    actionRole: 'admin',
+    assistantType: 'admin',
+    helpdeskPurpose: 'workflow',
+    messages: [
+      {
+        role: 'user',
+        text: 'add a step to route a task to desktop support as well, and if the group doesnt exist create it',
+      },
+    ],
+  };
+  assert.match(await applyAdminGroupAction(store, chat, ''), /^Created \[Desktop Support\]/);
+  assert.match(
+    await applyAdminGroupAction(store, chat, 'Added the task'),
+    /^Created \[Desktop Support\]/,
+  );
+  assert.equal(
+    await database.collection('approvalGroups').countDocuments({ name: 'Desktop Support' }),
+    1,
+  );
+  assert.equal(await database.collection('helpdeskTasks').countDocuments({}), 0);
+  const declined = {
+    ...chat,
+    responseId: crypto.randomUUID(),
+    messages: [
+      {
+        role: 'user',
+        text: "route a task to Other Support and if the group doesn't exist do not create it",
+      },
+    ],
+  };
+  await applyAdminGroupAction(store, declined, '');
+  assert.equal(
+    await database.collection('approvalGroups').countDocuments({ name: 'Other Support' }),
+    0,
+  );
+});

@@ -93,6 +93,9 @@ export default function InboxList(props) {
                     <span class="inbox-item-heading">
                       <span class="inbox-item-number">{item.number}</span>
                       <strong>{item.title}</strong>
+                      <Show when={item.inboxNotice}>
+                        <span class="inbox-mention-label">{item.inboxNotice}</span>
+                      </Show>
                       <span class="inbox-status-badge" data-status={item.status}>
                         <span class="inbox-status-dot" aria-hidden="true" />
                         {statusLabel(item.status)}

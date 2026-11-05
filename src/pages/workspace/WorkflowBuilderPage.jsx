@@ -1,3 +1,5 @@
+import { pollConversation } from '../../services/conversationPolling.js';
+import ChatPanelToolbar from '../../components/ChatPanelToolbar.jsx';
 import { hasWorkflowChanges } from '../../services/workflowPublication.js';
 import { followChatProgress } from '../../services/chatFollow.js';
 import ConversationSkeleton from '../../components/ConversationSkeleton.jsx';
@@ -27,6 +29,7 @@ import {
   For,
   Show,
   createEffect,
+  batch,
   createMemo,
   createResource,
   createSignal,
@@ -145,16 +148,6 @@ export default function WorkflowBuilderPage() {
     const timer = setInterval(() => refreshRuns().catch(() => {}), 3000);
     onCleanup(() => clearInterval(timer));
   });
-  let latestSource = '';
-  createEffect(() => {
-    const next = chatId() && !conversation.error && conversation()?.typescript;
-    if (next && next !== latestSource && conversation()?.status === 'complete') {
-      latestSource = next;
-      setSource(next);
-      setSourceEdited(false);
-      setCodeDefinition(conversation().definition);
-    }
-  });
   const [error, setError] = createSignal('');
   const [message, setMessage] = createSignal('');
   const [sending, setSending] = createSignal(false);
@@ -169,6 +162,32 @@ export default function WorkflowBuilderPage() {
   const [manualName, setManualName] = createSignal(undefined);
   const [manualRouting, setManualRouting] = createSignal(undefined);
   const [manualForm, setManualForm] = createSignal(undefined);
+  let latestAgentRevision = '';
+  createEffect(() => {
+    const chat = !conversation.error && conversation();
+    if (
+      !chatId() ||
+      chat?.id !== chatId() ||
+      chat.status !== 'complete' ||
+      !chat.typescript ||
+      !chat.definition
+    )
+      return;
+    const response = chat.messages.filter((item) => item.role === 'assistant').at(-1);
+    const revision = JSON.stringify([chat.id, response?.id, chat.typescript, chat.definition]);
+    if (revision === latestAgentRevision) return;
+    latestAgentRevision = revision;
+    batch(() => {
+      setSource(chat.typescript);
+      setSourceEdited(false);
+      setCodeDefinition(chat.definition);
+      setManualForm(undefined);
+      setManualRouting(undefined);
+      setManualName(undefined);
+      setManualPermissions(undefined);
+      setCatalogVisible(undefined);
+    });
+  });
   let latestDefinition = '';
   createEffect(() => {
     const value = JSON.stringify(
@@ -200,6 +219,28 @@ export default function WorkflowBuilderPage() {
       ...(manualRouting() === undefined ? {} : { routing: manualRouting() }),
     };
   });
+  const hasNamedApprovers = () =>
+    tab() === 'visual' &&
+    isAdmin() &&
+    definition()?.steps.some(
+      (step) => step.action === 'approval' && step.params.target !== 'manager',
+    );
+  const [visualApprovers] = createResource(hasNamedApprovers, () => api('/api/helpdesk/members'));
+  const [visualApprovalGroups] = createResource(
+    () =>
+      hasNamedApprovers() &&
+      definition()?.steps.some(
+        (step) => step.action === 'approval' && step.params.target === 'group',
+      ),
+    () =>
+      api(
+        `/api/helpdesk/approval-groups?reference=1${current()?.demoDatasetId ? '&includeDemo=1' : ''}`,
+      ),
+  );
+  const approverLabel = (id) =>
+    (!visualApprovers.error && visualApprovers()?.find((person) => person.userId === id))?.name ||
+    (!visualApprovers.error && visualApprovers()?.find((person) => person.userId === id))?.email ||
+    'Approver';
   const processing = () =>
     !!chatId() &&
     conversation()?.id === chatId() &&
@@ -212,12 +253,7 @@ export default function WorkflowBuilderPage() {
       return '';
     }
   };
-  createEffect(() => {
-    if (processing()) {
-      const timer = setInterval(() => refetch().catch(() => {}), 500);
-      onCleanup(() => clearInterval(timer));
-    }
-  });
+  pollConversation(() => processing(), refetch);
   createEffect(() => {
     if (!saved.loading && !saved.error && saved()) {
       const id = params.id || (/^[a-f0-9]{24}$/.test(query.draft || '') ? query.draft : '');
@@ -333,6 +369,7 @@ export default function WorkflowBuilderPage() {
     setSaving(true);
     setSaveStatus('Saving Draft…');
     const snapshot = JSON.stringify({ definition: definition(), source: source() });
+    const savingRecordId = selected();
     setLastAttempt(snapshot);
     try {
       const value = definition();
@@ -379,14 +416,19 @@ export default function WorkflowBuilderPage() {
       );
       clearConfirmedFields();
       await refreshSaved();
+      if (selected() !== savingRecordId) return;
+      const hasNewerEdits =
+        snapshot !== JSON.stringify({ definition: definition(), source: source() });
       setSelected(result.id);
-      setSource(result.source);
-      setSourceEdited(false);
-      setCodeDefinition(result.definition);
-      setManualName(undefined);
-      setManualForm(undefined);
-      setManualRouting(undefined);
-      setManualPermissions(undefined);
+      if (!hasNewerEdits) {
+        setSource(result.source);
+        setSourceEdited(false);
+        setCodeDefinition(result.definition);
+        setManualName(undefined);
+        setManualForm(undefined);
+        setManualRouting(undefined);
+        setManualPermissions(undefined);
+      }
       setSavedDefinition(JSON.stringify({ definition: result.definition, source: result.source }));
       setSaveStatus(enabled ? 'Published' : unpublish ? 'Unpublished' : 'Draft Saved');
       if (!params.id) {
@@ -561,6 +603,26 @@ export default function WorkflowBuilderPage() {
         <div class="workflow-builder resizable-split">
           <SplitResizeHandle storageKey="builder" />
           <section class="workflow-chat" aria-label="Workflow conversation">
+            <ChatPanelToolbar
+              disabled={processing()}
+              onNewChat={async () => {
+                setStartingNewConversation(true);
+                setViewingHistory(false);
+                setChatId('');
+                setText('');
+                setQuery({ chat: undefined });
+                if (selected()) {
+                  try {
+                    await api(`/api/helpdesk/workflows/${selected()}/view`, {
+                      method: 'PUT',
+                      body: JSON.stringify({ chatId: null }),
+                    });
+                  } catch (error) {
+                    setError(error.message);
+                  }
+                }
+              }}
+            />
             <div
               class="workflow-chat-history"
               ref={messageList}
@@ -774,6 +836,54 @@ export default function WorkflowBuilderPage() {
                                         ? 'Send a message to the support channel'
                                         : 'Complete the next step'}
                               </strong>
+                              <Show when={step.action === 'approval'}>
+                                <div class="workflow-approver-list">
+                                  <small>Approvers</small>
+                                  <Show
+                                    when={step.params.target === 'manager'}
+                                    fallback={
+                                      <Show
+                                        when={
+                                          !visualApprovers.loading &&
+                                          (step.params.target !== 'group' ||
+                                            !visualApprovalGroups.loading)
+                                        }
+                                        fallback={<Skeleton label="Loading approvers" lines={1} />}
+                                      >
+                                        <ul>
+                                          <Show
+                                            when={step.params.target === 'group'}
+                                            fallback={
+                                              <li>
+                                                <A href={`/workspace/users/${step.params.userId}`}>
+                                                  {approverLabel(step.params.userId)}
+                                                </A>
+                                              </li>
+                                            }
+                                          >
+                                            <li>
+                                              <A
+                                                href={`/workspace/users/groups/${step.params.groupId}`}
+                                              >
+                                                {(
+                                                  !visualApprovalGroups.error &&
+                                                  visualApprovalGroups()?.find(
+                                                    (group) => group.id === step.params.groupId,
+                                                  )
+                                                )?.name || 'Approval Group'}
+                                              </A>
+                                            </li>
+                                          </Show>
+                                        </ul>
+                                      </Show>
+                                    }
+                                  >
+                                    <ul>
+                                      <li>Requester’s Manager</li>
+                                    </ul>
+                                  </Show>
+                                </div>
+                              </Show>
                             </li>
                           )}
                         </For>

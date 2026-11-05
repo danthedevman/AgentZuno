@@ -1,3 +1,5 @@
+import { Binary } from 'mongodb';
+import { storedBinaryBytes } from './storedBinary.js';
 import { uploadBytes } from './uploadBytes.js';
 import sharp from 'sharp';
 import { deny, helpdeskScope } from './helpdeskRoles.js';
@@ -29,7 +31,7 @@ export function installProfilePictureRoutes(app, store) {
       .collection('profilePictures')
       .updateOne(
         { _id: user.id },
-        { $set: { bytes: optimized, type: 'image/webp', updatedAt: new Date() } },
+        { $set: { bytes: new Binary(optimized), type: 'image/webp', updatedAt: new Date() } },
         { upsert: true },
       );
     await store
@@ -46,7 +48,7 @@ export function installProfilePictureRoutes(app, store) {
     const picture = await store.collection('profilePictures').findOne({ _id: request.params.id });
     response.set('Cache-Control', 'private, no-store').json({
       image: picture
-        ? `data:${picture.type};base64,${Buffer.from(picture.bytes.buffer || picture.bytes).toString('base64')}`
+        ? `data:${picture.type};base64,${storedBinaryBytes(picture.bytes).toString('base64')}`
         : null,
     });
   });

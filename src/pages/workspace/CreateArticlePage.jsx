@@ -1,3 +1,5 @@
+import { pollConversation } from '../../services/conversationPolling.js';
+import ChatPanelToolbar from '../../components/ChatPanelToolbar.jsx';
 import { followChatProgress } from '../../services/chatFollow.js';
 import ConversationSkeleton from '../../components/ConversationSkeleton.jsx';
 import SplitResizeHandle from '../../components/SplitResizeHandle.jsx';
@@ -82,11 +84,7 @@ export default function CreateArticlePage(props) {
     () => history,
     () => JSON.stringify(currentConversation()?.messages || []),
   );
-  createEffect(() => {
-    if (!['queued', 'responding'].includes(currentConversation()?.status)) return;
-    const timer = setTimeout(() => refetch(), 500);
-    onCleanup(() => clearTimeout(timer));
-  });
+  pollConversation(() => ['queued', 'responding'].includes(currentConversation()?.status), refetch);
   const [storedAttachments] = createResource(
     () => (['attachments', 'preview'].includes(tab()) && articleId()) || false,
     (id) => api(`/api/helpdesk/article-attachment-list/${id}`),
@@ -308,6 +306,15 @@ export default function CreateArticlePage(props) {
       <div class="workflow-builder resizable-split">
         <SplitResizeHandle storageKey="builder" />
         <section class="workflow-chat" aria-label="Article conversation">
+          <ChatPanelToolbar
+            disabled={isGeneratingArticle()}
+            onNewChat={() => {
+              setChatId('');
+              setQuery({ chat: undefined });
+              setPrompt('');
+              setProposal(null);
+            }}
+          />
           <div ref={history} class="workflow-chat-history">
             <Show when={chatId() && conversation.loading && !currentConversation()}>
               <ConversationSkeleton />

@@ -1,3 +1,5 @@
+import MentionTextarea from './MentionTextarea.jsx';
+import { createStore, reconcile } from 'solid-js/store';
 import ApprovalDecisionForm from './ApprovalDecisionForm.jsx';
 import RequestTasks from './RequestTasks.jsx';
 import RequestAttachments from './RequestAttachments.jsx';
@@ -40,12 +42,17 @@ export default function RequestPanel(props) {
     () => api(`/api/helpdesk/requests/${requestId()}`),
   );
   const current = () => (ticket.error ? null : ticket());
+  const [stableRuns, setStableRuns] = createStore([]);
   const [workflowRuns, { refetch: refreshRuns }] = createResource(
     () =>
       current()?.workflowId &&
       (['admin', 'agent'].includes(access()?.role) || access()?.canApprove) &&
       requestId(),
-    (id) => api(`/api/helpdesk/workflow-runs?requestId=${id}`),
+    async (id) => {
+      const runs = await api(`/api/helpdesk/workflow-runs?requestId=${id}`);
+      setStableRuns(reconcile(runs, { key: 'id' }));
+      return stableRuns;
+    },
   );
   createEffect(() => {
     if (
@@ -53,13 +60,16 @@ export default function RequestPanel(props) {
       !(['admin', 'agent'].includes(access()?.role) || access()?.canApprove)
     )
       return;
-    const timer = setInterval(() => refreshRuns().catch(() => {}), 5000);
+    const timer = setInterval(() => {
+      if (document.visibilityState === 'visible') refreshRuns().catch(() => {});
+    }, 5000);
     onCleanup(() => clearInterval(timer));
   });
   const [status, setStatus] = createSignal('open');
   const [priority, setPriority] = createSignal('normal');
   const [mode, setMode] = createSignal('comment');
   const [comment, setComment] = createSignal('');
+  const [mentionIds, setMentionIds] = createSignal({});
   const [workNote, setWorkNote] = createSignal('');
   const [error, setError] = createSignal('');
   const [saving, setSaving] = createSignal(false);
@@ -101,6 +111,9 @@ export default function RequestPanel(props) {
       setSaving(false);
     }
   }
+  const authorName = (entry) =>
+    entry.authorName ||
+    (entry.authorId === 'zuno' ? 'Zuno' : entry.role === 'requester' ? 'Requester' : 'Support');
   const entries = () =>
     mode() === 'work-note' ? current()?.workNotes || [] : current()?.messages || [];
   const RequestActions = () => (
@@ -551,6 +564,7 @@ export default function RequestPanel(props) {
                         if (
                           await save(internal ? '/work-notes' : '/comments', 'POST', {
                             text: internal ? workNote() : comment(),
+                            mentionIds: mentionIds()[mode()] || [],
                           })
                         ) {
                           if (internal) setWorkNote('');
@@ -560,17 +574,20 @@ export default function RequestPanel(props) {
                     >
                       <label>
                         {mode() === 'work-note' ? 'Work note' : 'Comment'}
-                        <textarea
+                        <MentionTextarea
                           id="ticket-journal-entry"
                           name="entry"
                           required
                           maxlength="8000"
                           rows="4"
+                          requestId={requestId()}
+                          kind={mode() === 'work-note' ? 'work-note' : 'comment'}
                           value={mode() === 'work-note' ? workNote() : comment()}
-                          onInput={(event) =>
-                            mode() === 'work-note'
-                              ? setWorkNote(event.currentTarget.value)
-                              : setComment(event.currentTarget.value)
+                          onInput={(value) =>
+                            mode() === 'work-note' ? setWorkNote(value) : setComment(value)
+                          }
+                          onMentionsChange={(ids) =>
+                            setMentionIds((values) => ({ ...values, [mode()]: ids }))
                           }
                         />
                       </label>
@@ -593,14 +610,25 @@ export default function RequestPanel(props) {
                       {(entry) => (
                         <li>
                           <div>
-                            <strong>
-                              {entry.authorName ||
-                                (entry.authorId === 'zuno'
-                                  ? 'Zuno'
-                                  : entry.role === 'requester'
-                                    ? 'Requester'
-                                    : 'Support')}
-                            </strong>
+                            <span class="ticket-journal-author">
+                              <Show
+                                when={entry.authorId === 'zuno'}
+                                fallback={
+                                  <ProfileAvatar
+                                    userId={entry.authorId}
+                                    name={authorName(entry)}
+                                    refreshKey={
+                                      entry.authorId === session()?.user?.id
+                                        ? session()?.user?.profilePictureVersion
+                                        : undefined
+                                    }
+                                  />
+                                }
+                              >
+                                <Icon name="agent" />
+                              </Show>
+                              <strong>{authorName(entry)}</strong>
+                            </span>
                             <time datetime={entry.createdAt}>{dateLabel(entry.createdAt)}</time>
                           </div>
                           <p>{entry.text}</p>

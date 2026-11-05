@@ -283,3 +283,6 @@
 
 - Put create/edit breadcrumbs on record forms using actual parent records and human-readable labels. Knowledge-base permissions belong on the dedicated edit form, not a permissions disclosure on the knowledge-base browsing page. The default General base can be renamed without changing its ID or duplicating it.
 - Keep demo suggested prompts inside the shared chat composer, bounded in height, collapsible after submission, and reopenable. Public demo isolation comes from per-visitor memory storage; do not apply workspace demo-tag reference restrictions between that visitor's fictional records. Keep strict real/demo separation in persisted workspaces.
+
+- Database-dependent changes must work with both MongoDB and PostgreSQL. Run behavioral integration tests against both engines before finishing changes to persisted fields, binary data, profile/account setup, or adapters. Do not count skipped adapter tests as verification. Store binary values explicitly as BSON Binary and test that retrieved bytes decode, rather than only checking a data URL prefix. Keep the dual-database CI checks passing.
+- Background status refreshes must reconcile records by stable IDs and preserve open forms, draft input, focus, and selection. Pause polling while the document is hidden, and stop it when its view unmounts.

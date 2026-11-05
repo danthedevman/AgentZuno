@@ -2,7 +2,7 @@ import { Show, createResource } from 'solid-js';
 import { api } from '../services/api.js';
 export default function ProfileAvatar(props) {
   const [picture] = createResource(
-    () => props.userId && `${props.userId}:${props.refreshKey || ''}`,
+    () => props.userId && `${props.userId}:${props.refreshKey ?? props.version ?? ''}`,
     () => api(`/api/helpdesk/profile-pictures/${props.userId}`),
   );
   return (

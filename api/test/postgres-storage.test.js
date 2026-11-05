@@ -5,6 +5,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import pg from 'pg';
+import sharp from 'sharp';
 import { ObjectId, Binary } from 'mongodb';
 import { createPostgresDatabase } from '../src/storage/postgres.js';
 import { postgresConnection } from '../src/storage/configuration.js';
@@ -120,6 +121,7 @@ test(
       const encrypted = await readFile(join(directory, 'database.json'), 'utf8');
       assert.ok(!encrypted.includes(connection.password));
       const first = await call('/api/auth/register', {
+        timezone: 'America/Los_Angeles',
         name: 'Alex Example',
         email: 'alex@postgres.test',
         password: 'Fictional-password-for-tests!',
@@ -143,6 +145,38 @@ test(
       const access = await call('/api/helpdesk/access', null, first.cookie);
       assert.equal(access.status, 200, JSON.stringify(access.body));
       assert.equal(access.body.role, 'admin');
+      const profile = await call(
+        `/api/helpdesk/workforce-profiles/${first.body.user.id}`,
+        null,
+        first.cookie,
+      );
+      assert.equal(profile.body.fields.timezone, 'America/Los_Angeles');
+      const invalidTimezone = await call('/api/auth/register', {
+        email: 'badzone@example.test',
+        password: 'Fictional-password-for-tests!',
+        timezone: ['UTC'],
+      });
+      assert.equal(invalidTimezone.status, 400);
+      const png = await sharp({
+        create: { width: 32, height: 32, channels: 3, background: '#818cf8' },
+      })
+        .png()
+        .toBuffer();
+      const upload = await fetch(origin + '/api/helpdesk/profile-picture', {
+        method: 'PUT',
+        headers: { cookie: first.cookie, 'Content-Type': 'image/png' },
+        body: png,
+      });
+      assert.equal(upload.status, 200);
+      const avatar = await call(
+        `/api/helpdesk/profile-pictures/${first.body.user.id}`,
+        null,
+        first.cookie,
+      );
+      assert.equal(avatar.status, 200);
+      const image = Buffer.from(avatar.body.image.split(',')[1], 'base64');
+      assert.equal((await sharp(image).metadata()).format, 'webp');
+
       const demo = await call(
         '/api/helpdesk/demo/settings',
         { action: 'load', industry: 'tech', enableApprovals: true },

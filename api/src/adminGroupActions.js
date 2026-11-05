@@ -10,14 +10,28 @@ export async function applyAdminGroupAction(store, chat, responseText) {
     const match = latestPrompt.match(
       /^(?:please\s+)?(?:create|add|make|build|generate)(?:\s+me)?\s+(?:a\s+|an\s+|the\s+)?(?:(assignment|approval)\s+)?(?:group|queue|team)\s*(?::|called|named)?\s+["“]?([^"”\n.!?]+)["”]?/i,
     );
-    if (!match) return responseText;
-    const name = match[2].split(/\s+(?:for|with|and|that)\s+/i)[0].trim();
+    const conditional =
+      /\bif\b[\s\S]{0,80}\b(?:group|queue|team)\b[\s\S]{0,40}\b(?:doesn['’]?t|does not|isn['’]?t|is not)\b[\s\S]{0,30}\bexist\b[\s\S]{0,50}\bcreate\b/i.test(
+        latestPrompt,
+      );
+    const destination =
+      conditional &&
+      latestPrompt.match(
+        /\b(?:route|assign|send)\s+(?:a\s+|the\s+)?(?:task|request|item)\s+to\s+["“]?([^"”\n.,;]+)/i,
+      );
+    if (!match && !destination) return responseText;
+    const name = match
+      ? match[2].split(/\s+(?:for|with|and|that)\s+/i)[0].trim()
+      : destination[1]
+          .split(/\s+(?:as well|and|if|then)\b/i)[0]
+          .trim()
+          .replace(/\b[a-z]/g, (letter) => letter.toUpperCase());
     block = [
       '',
       JSON.stringify({
         name,
-        assignmentEnabled: match[1]?.toLowerCase() !== 'approval',
-        approvalEnabled: match[1]?.toLowerCase() === 'approval',
+        assignmentEnabled: match?.[1]?.toLowerCase() !== 'approval',
+        approvalEnabled: match?.[1]?.toLowerCase() === 'approval',
       }),
     ];
   }
