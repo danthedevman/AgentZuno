@@ -11,6 +11,7 @@ export default function KnowledgePermissions(props) {
   const [roles, setRoles] = createSignal([]);
   const [saving, setSaving] = createSignal(false);
   const [message, setMessage] = createSignal('');
+  const [tone, setTone] = createSignal('info');
   const endpoint = () => `/api/helpdesk/knowledge-permissions/${props.kind}/${props.id}`;
   const [policy] = createResource(
     () => props.id || false,
@@ -50,7 +51,30 @@ export default function KnowledgePermissions(props) {
       <Show when={policy.loading || members.loading}>
         <Skeleton label="Loading permissions" lines={3} />
       </Show>
-      <div class="create-form tab-content-reveal" hidden={policy.loading || members.loading}>
+      <Show when={props.readOnly && !policy.loading && !members.loading}>
+        <dl class="record-value">
+          <dt>Access</dt>
+          <dd>
+            {mode() === 'inherit'
+              ? 'Inherit from Knowledge Base'
+              : mode() === 'workspace'
+                ? 'Workspace Members'
+                : 'Selected Users'}
+          </dd>
+        </dl>
+        <Show when={mode() === 'restricted'}>
+          <p>
+            {(members.error ? [] : members() || [])
+              .filter((member) => userIds().includes(member.userId || member.id))
+              .map((member) => member.name || member.email)
+              .join(', ') || 'No users selected'}
+          </p>
+        </Show>
+      </Show>
+      <div
+        class="create-form tab-content-reveal"
+        hidden={policy.loading || members.loading || props.readOnly}
+      >
         <Show when={policy.error || members.error}>
           <ToastMessage tone="error">
             {policy.error?.message || members.error?.message}
@@ -96,8 +120,10 @@ export default function KnowledgePermissions(props) {
               setMessage('');
               try {
                 await savePermissions();
+                setTone('info');
                 setMessage('Permissions saved.');
               } catch (error) {
+                setTone('error');
                 setMessage(error.message);
               } finally {
                 setSaving(false);
@@ -109,7 +135,7 @@ export default function KnowledgePermissions(props) {
           </button>
         </Show>
         <Show when={message()}>
-          <ToastMessage>{message()}</ToastMessage>
+          <ToastMessage tone={tone()}>{message()}</ToastMessage>
         </Show>
       </div>
     </section>

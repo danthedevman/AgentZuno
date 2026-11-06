@@ -1,3 +1,4 @@
+import ChatReports from '../../../components/chat/ChatReports.jsx';
 import MyTeamReport from '../../../components/MyTeamReport.jsx';
 import ReferenceLookup from '../../../components/ReferenceLookup.jsx';
 import A from '../../../components/WorkspaceLink.jsx';
@@ -27,7 +28,14 @@ export default function ReportsPage() {
   const report = () =>
     (access()?.role === 'agent'
       ? ['team']
-      : ['team', 'knowledge', 'workflows', 'agents', 'audit']
+      : [
+          'team',
+          'knowledge',
+          'workflows',
+          'agents',
+          'audit',
+          ...(access()?.role === 'admin' ? ['chats'] : []),
+        ]
     ).includes(query.report)
       ? query.report
       : access()?.role === 'agent'
@@ -42,7 +50,9 @@ export default function ReportsPage() {
   const days = () => (['7', '30', '90'].includes(query.days) ? query.days : '30');
   const [data, { refetch }] = createResource(
     () =>
-      canRead() && !['team', 'knowledge', 'audit'].includes(report()) && `${report()}:${days()}`,
+      canRead() &&
+      !['team', 'knowledge', 'audit', 'chats'].includes(report()) &&
+      `${report()}:${days()}`,
     () => api(`/api/helpdesk/reports/${report()}?days=${days()}`),
   );
   const [refreshKey, setRefreshKey] = createSignal(0);
@@ -58,6 +68,7 @@ export default function ReportsPage() {
             { value: 'knowledge', label: 'Knowledge Health' },
             { value: 'workflows', label: 'Workflow Execution' },
             { value: 'agents', label: 'Agent Activity' },
+            ...(access()?.role === 'admin' ? [{ value: 'chats', label: 'Chat Activity' }] : []),
             { value: 'audit', label: 'Audit' },
           ]
       ).concat([{ value: 'team', label: 'My Team' }])}
@@ -100,7 +111,8 @@ export default function ReportsPage() {
                   title="Refresh"
                   disabled={data.loading}
                   onClick={() => {
-                    if (['audit', 'team'].includes(report())) setRefreshKey((value) => value + 1);
+                    if (['audit', 'team', 'chats'].includes(report()))
+                      setRefreshKey((value) => value + 1);
                     else refetch();
                   }}
                 >
@@ -113,7 +125,10 @@ export default function ReportsPage() {
               <Show when={report() === 'team'}>
                 <MyTeamReport refreshKey={refreshKey()} />
               </Show>
-              <Show when={!['audit', 'team'].includes(report())}>
+              <Show when={report() === 'chats'}>
+                <ChatReports days={days()} refreshKey={refreshKey()} />
+              </Show>
+              <Show when={!['audit', 'team', 'chats'].includes(report())}>
                 <div class="knowledge-metrics">
                   <For
                     each={

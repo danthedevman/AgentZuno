@@ -77,6 +77,14 @@ export function createUserAccess(store) {
       },
     );
   }
+  async function recover(user, offerId, request) {
+    const claim = await records().findOne({
+      ...helpdeskScope(user),
+      userId: queryString(user.id),
+      offerId: queryString(offerId, 36),
+    });
+    if (claim) await attach(user, claim, request);
+  }
   async function get(user, id) {
     requireRole(user, ['admin', 'agent', 'user', 'read-only']);
     if (typeof id !== 'string' || !/^[a-f0-9]{24}$/.test(id)) deny('Invalid access record.', 400);
@@ -149,5 +157,5 @@ export function createUserAccess(store) {
     if (!result.matchedCount) deny('Access record changed. Reload and retry.', 409);
     return get(user, id);
   }
-  return { application, reserve, attach, get, change };
+  return { application, reserve, attach, recover, get, change };
 }

@@ -350,7 +350,7 @@ export default function HomePage() {
             <div class="ownership-benefits">
               <span>No expensive platform contracts</span>
               <span>No vendor lock-in</span>
-              <span>No drama</span>
+              <span>No limits on customization</span>
             </div>
           </div>
         </div>

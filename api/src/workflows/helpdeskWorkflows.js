@@ -1,3 +1,4 @@
+import { ensureWorkflowAuthoringDraft } from './authoringDrafts.js';
 import { queryString, queryVersion } from '../shared/queryValues.js';
 import { archiveWorkflowVersion } from './workflowVersions.js';
 import { validateWorkflowReferences } from './workflowReferences.js';
@@ -343,7 +344,13 @@ export function createHelpdeskWorkflows(store, chats) {
     const record = await collection().findOneAndUpdate(
       { ...filter, version: queryVersion(input.version) },
       {
-        $set: { ...value, ...publication, updatedAt: now, updatedBy: user.id },
+        $set: {
+          ...value,
+          ...publication,
+          updatedAt: now,
+          updatedBy: user.id,
+          isAuthoringDraft: false,
+        },
         $inc: { version: 1 },
       },
       { returnDocument: 'after' },
@@ -385,6 +392,15 @@ export function createHelpdeskWorkflows(store, chats) {
         ...(input.source ? { workflowSource: String(input.source).slice(0, 40000) } : {}),
       },
     );
+    const existingDraft = await store.collection('helpdeskWorkflowConversations').findOne({
+      ...scope(user),
+      chatId: queryString(chat.id, 24),
+      actorId: queryString(user.id, 80),
+    });
+    const workflowId =
+      input.workflowId ||
+      existingDraft?.workflowId ||
+      (await ensureWorkflowAuthoringDraft(store, user, chat));
     // A distinct association prevents ordinary chats being used as workflow setup sessions.
     await store.collection('helpdeskWorkflowConversations').updateOne(
       { ...scope(user), chatId: chat.id, actorId: queryString(user.id, 80) },
@@ -393,13 +409,13 @@ export function createHelpdeskWorkflows(store, chats) {
           ...scope(user),
           chatId: chat.id,
           actorId: queryString(user.id, 80),
-          ...(input.workflowId ? { workflowId: input.workflowId } : {}),
+          workflowId,
           createdAt: new Date(),
         },
       },
       { upsert: true },
     );
-    return chat;
+    return { ...chat, workflowId };
   }
   async function followup(user, id, input) {
     requireRole(user, ['admin']);

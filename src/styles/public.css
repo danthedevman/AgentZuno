@@ -1500,28 +1500,6 @@ h1 {
   margin-left: 3px;
   vertical-align: middle;
 }
-/* Reveal copy by paragraph, then build each illustrative graphic in sequence. */
-.marketing-scroll-section :is(.marketing-section-intro, .marketing-copy) > * {
-  opacity: 0;
-}
-.marketing-scroll-section :is(.marketing-section-intro, .marketing-copy).is-visible > * {
-  animation: hero-copy-fade-up 0.6s ease-out both;
-}
-.marketing-scroll-section
-  :is(.marketing-section-intro, .marketing-copy).is-visible
-  > :nth-child(2) {
-  animation-delay: 0.08s;
-}
-.marketing-scroll-section
-  :is(.marketing-section-intro, .marketing-copy).is-visible
-  > :nth-child(3) {
-  animation-delay: 0.16s;
-}
-.marketing-scroll-section
-  :is(.marketing-section-intro, .marketing-copy).is-visible
-  > :nth-child(4) {
-  animation-delay: 0.24s;
-}
 .marketing-scroll-section
   :is(
     .marketing-workflow-preview,
@@ -1747,24 +1725,6 @@ h1 {
 .marketing-agents-preview article small {
   color: #8cabcf;
   font-size: 10px;
-}
-.landing-hero-copy.is-visible > h1 {
-  animation: hero-copy-fade-up 0.6s ease-out both;
-}
-.landing-hero-copy.is-visible .tagline span {
-  animation: hero-copy-fade-up 0.6s ease-out both;
-}
-.landing-hero-copy .tagline span:nth-child(1) {
-  animation-delay: 0.16s;
-}
-.landing-hero-copy .tagline span:nth-child(2) {
-  animation-delay: 0.3s;
-}
-.landing-hero-copy .tagline span:nth-child(3) {
-  animation-delay: 0.44s;
-}
-.landing-hero-copy.is-visible .landing-actions {
-  animation: hero-copy-fade-up 0.6s ease-out 0.58s both;
 }
 @keyframes hero-copy-fade-up {
   from {
@@ -3766,4 +3726,28 @@ html:not(.app-ready)
 }
 .hero-employee-panel > header {
   padding-right: 58px;
+}
+
+/* Reveal each section once; illustration loops only reset their inner content. */
+@media (prefers-reduced-motion: no-preference) {
+  .marketing-scroll-section .marketing-reveal {
+    opacity: 0;
+    transform: translateY(22px);
+    transition:
+      opacity 800ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 800ms cubic-bezier(0.22, 1, 0.36, 1);
+    transition-delay: var(--marketing-reveal-delay, 0ms);
+  }
+  .marketing-scroll-section .marketing-reveal.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .marketing-scroll-section .marketing-reveal {
+    opacity: 1;
+    transform: none;
+    animation: none;
+    transition: none;
+  }
 }

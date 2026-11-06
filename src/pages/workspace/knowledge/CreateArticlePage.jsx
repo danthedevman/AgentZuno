@@ -47,7 +47,7 @@ export default function CreateArticlePage(props) {
   const [status, setStatus] = createSignal(props.article?.status || 'Draft');
   const [tab, setTab] = createSignal('editor');
   const [prompt, setPrompt] = createSignal('');
-  const [chatId, setChatId] = createSignal(query.chat || '');
+  const [chatId, setChatId] = createSignal(query.chat || props.article?.authoringChatId || '');
   const [proposal, setProposal] = createSignal(null);
   const [busy, setBusy] = createSignal(false);
   const [uploading, setUploading] = createSignal(false);
@@ -69,7 +69,7 @@ export default function CreateArticlePage(props) {
     () => chatId() || false,
     (id) => api(`/api/helpdesk/article-conversations/${id}`),
   );
-  createEffect(() => setChatId(query.chat || ''));
+  createEffect(() => setChatId(query.chat || props.article?.authoringChatId || ''));
   const currentConversation = () =>
     !chatId() || conversation.error || conversation()?.id !== chatId() ? null : conversation();
   createEffect(() => {
@@ -84,6 +84,7 @@ export default function CreateArticlePage(props) {
   followChatProgress(
     () => history,
     () => JSON.stringify(currentConversation()?.messages || []),
+    () => chatId(),
   );
   pollConversation(() => ['queued', 'responding'].includes(currentConversation()?.status), refetch);
   const [storedAttachments] = createResource(
@@ -160,6 +161,17 @@ export default function CreateArticlePage(props) {
       );
       setChatId(result.id);
       setQuery({ chat: result.id });
+      if (!articleId() && result.articleId) {
+        setArticleId(result.articleId);
+        setUpdatedAt(result.articleUpdatedAt);
+        await refresh();
+        navigate(
+          path(
+            `/workspace/articles/${result.articleId}/edit?chat=${encodeURIComponent(result.id)}`,
+          ),
+          { replace: true },
+        );
+      }
       setPrompt('');
       await refetch();
       requestAnimationFrame(() => {

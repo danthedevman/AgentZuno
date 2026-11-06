@@ -10,15 +10,15 @@ export default function DataRecordField(props) {
         `/api/helpdesk/data/tables/${id}/options${props.includeDemo || props.readOnly ? '?includeDemo=1' : ''}`,
       ),
   );
-  const selected = () =>
-    !options.error && options()?.find((option) => option.value === props.value);
+  const availableOptions = () => (options.error ? [] : options.latest || []);
+  const selected = () => availableOptions().find((option) => option.value === props.value);
   const displayValue = () =>
     props.field.type === 'boolean'
       ? props.value
         ? 'Yes'
         : 'No'
       : props.field.type === 'reference'
-        ? options.loading
+        ? options.loading && !options.latest
           ? 'Loading…'
           : selected()?.label || '—'
         : props.value === 0
@@ -47,13 +47,13 @@ export default function DataRecordField(props) {
           required={props.field.required}
           value={props.value || ''}
           onChange={props.onChange}
-          options={(options() || []).map((option) => ({
+          options={availableOptions().map((option) => ({
             ...option,
             href:
               option.href ||
               `/workspace/data/${props.field.referenceTable}/records/${encodeURIComponent(option.value)}`,
           }))}
-          disabled={options.loading || !!options.error}
+          disabled={(options.loading && !options.latest) || !!options.error}
           readOnly={props.readOnly}
         />
       </Match>

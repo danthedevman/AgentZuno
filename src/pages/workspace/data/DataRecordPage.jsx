@@ -151,9 +151,6 @@ export default function DataRecordPage() {
           </div>
         </Show>
         <Show when={!table.error && table() && (isNew() || (!record.error && record()))}>
-          <Show when={isNew()}>
-            <h2>{table().name}</h2>
-          </Show>
           <Show when={record()?.sourceHref}>
             <A
               class="workspace-button secondary small"

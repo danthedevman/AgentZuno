@@ -190,6 +190,7 @@ export function createContentController(auth, store, designer = {}) {
           .json({ error: 'An attachment is not available in your workspace.' });
     const values = {
       workspaceId: request.user.workspaceId,
+      isAuthoringDraft: false,
       attachmentIds: [...new Set(attachmentIds)],
       title: title.trim(),
       status,

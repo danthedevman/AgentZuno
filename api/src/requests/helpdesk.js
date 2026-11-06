@@ -785,7 +785,11 @@ export function createHelpdeskService(store, chats) {
       chatId: id,
       requestId: offerId,
     });
-    if (prior) return safeRequest(prior, user);
+    if (prior) {
+      const saved = safeRequest(prior, user);
+      await createUserAccess(store).recover(user, offerId, saved);
+      return saved;
+    }
     if (offerId !== chat.responseId) fail('This form is no longer active.', 409);
     const form = chat.requestForm;
     if (

@@ -113,6 +113,7 @@ export default function WorkflowBuilderPage() {
   followChatProgress(
     () => messageList,
     () => JSON.stringify(conversation()?.messages || []),
+    () => chatId(),
   );
   createEffect(() => {
     if (!pendingUserText()) return;
@@ -287,8 +288,15 @@ export default function WorkflowBuilderPage() {
             ...(code() ? { source: code() } : {}),
           }),
         });
-        setChatId(result.id);
-        setQuery({ chat: result.id }, { replace: true });
+        batch(() => {
+          setChatId(result.id);
+          if (result.workflowId && !selected()) {
+            setSelected(result.workflowId);
+            setLoadedId(result.workflowId);
+            setQuery({ chat: result.id, draft: result.workflowId }, { replace: true });
+          } else setQuery({ chat: result.id }, { replace: true });
+        });
+        await refreshSaved();
       }
       setText('');
       await refetch();

@@ -36,6 +36,28 @@ const definition = (name, description, parameters, kind, execute) => ({
 const empty = object({});
 const tools = [
   definition(
+    'getMyAccess',
+    'Read the current user’s tracked application access and pending access requests before suggesting duplicate access. This does not grant or revoke access.',
+    empty,
+    'channel-request',
+    async ({ store, actor }) => ({
+      access: (
+        await store
+          .collection('userAccess')
+          .find({ ...helpdeskScope(actor), userId: queryString(actor.id, 80) })
+          .sort({ updatedAt: -1 })
+          .limit(20)
+          .toArray()
+      ).map((row) => ({
+        application: row.applicationName,
+        accessLevel: row.accessLevel,
+        status: row.status,
+        requestNumber: row.requestNumber || null,
+        href: `/workspace/${actor.workspaceId}/access/${row._id}`,
+      })),
+    }),
+  ),
+  definition(
     'getMyRequests',
     'Read the current user’s own recent submitted requests and verified statuses. Use this for status questions; never claim a new request was submitted merely from a message.',
     empty,

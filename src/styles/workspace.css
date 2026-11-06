@@ -10228,5 +10228,102 @@ button.catalog-item-card {
   box-shadow: none;
   cursor: default;
 }
-.workspace-main :is(input, textarea)[readonly] { user-select: text; }
-.workspace-main :is(input, textarea):disabled { -webkit-text-fill-color: var(--workspace-muted); }
+.workspace-main :is(input, textarea)[readonly] {
+  user-select: text;
+}
+.workspace-main :is(input, textarea):disabled {
+  -webkit-text-fill-color: var(--workspace-muted);
+}
+
+.workspace-shell .record-page-buttons .workspace-button,
+.workspace-shell .record-page-size .category-trigger {
+  height: 32px;
+  min-height: 32px;
+  padding-block: 5px;
+  line-height: 20px;
+}
+.reports-page .reports-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.reports-page
+  :is(.reports-toolbar, .list-toolbar)
+  :is(.workspace-button, .category-trigger, .refresh-icon-button) {
+  min-height: 32px;
+  height: 32px;
+  padding-block: 5px;
+}
+.report-transcript {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+.report-transcript-message {
+  padding-block: 12px;
+  border-bottom: 1px solid var(--workspace-line);
+  overflow-wrap: anywhere;
+}
+
+.workspace-shell.is-nav-expanded .workspace-sidebar .rail-create {
+  border-radius: 999px;
+  padding-inline: 20px;
+  gap: 8px;
+}
+.record-form-page .record-section {
+  width: 100%;
+  min-width: 0;
+}
+.record-form-page .record-section .knowledge-permissions {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  width: 100%;
+}
+.record-form-page .record-property-list {
+  gap: 24px;
+}
+.record-form-page .record-property-list label:has(textarea) {
+  align-items: start;
+}
+.record-form-page .record-property-list textarea {
+  min-height: 120px;
+}
+.record-form-page .record-section .field-help {
+  margin: 0;
+}
+
+.workforce-profile .editable-profile-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 40px;
+  grid-template-rows: auto minmax(44px, auto);
+  gap: 8px 0;
+  align-items: center;
+}
+.workforce-profile .editable-profile-field > label {
+  display: contents;
+}
+.workforce-profile
+  .editable-profile-field
+  > label
+  > :is(input, .shared-dropdown, .readonly-reference-control) {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  width: 100%;
+  min-width: 0;
+}
+.workforce-profile .editable-profile-field > .field-edit-button {
+  position: static;
+  grid-column: 2;
+  grid-row: 2;
+  align-self: center;
+  justify-self: center;
+  transform: none;
+}
+.workforce-profile .editable-profile-field .readonly-reference-control {
+  padding-right: 40px;
+}
+.workforce-profile .editable-profile-field:has(> .multi-select-field) {
+  display: block;
+}

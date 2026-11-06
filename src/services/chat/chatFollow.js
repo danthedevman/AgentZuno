@@ -6,6 +6,7 @@ export function followChatProgress(element, revision, identity = () => '') {
   let previousTop = 0;
   let frame;
   let thread;
+  let initialized = false;
   function onScroll() {
     if (!observed) return;
     if (observed.scrollTop < previousTop - 2) following = false;
@@ -18,6 +19,7 @@ export function followChatProgress(element, revision, identity = () => '') {
     if (thread !== nextThread) {
       following = true;
       thread = nextThread;
+      initialized = false;
     }
     cancelAnimationFrame(frame);
     frame = requestAnimationFrame(() => {
@@ -27,16 +29,19 @@ export function followChatProgress(element, revision, identity = () => '') {
         observed?.removeEventListener('scroll', onScroll);
         observed = node;
         following = true;
+        initialized = false;
         previousTop = node.scrollTop;
         node.addEventListener('scroll', onScroll, { passive: true });
       }
       if (following)
         node.scrollTo({
           top: node.scrollHeight,
-          behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
-            ? 'instant'
-            : 'smooth',
+          behavior:
+            !initialized || window.matchMedia('(prefers-reduced-motion: reduce)').matches
+              ? 'instant'
+              : 'smooth',
         });
+      if (node.querySelector('article')) initialized = true;
     });
   });
   onCleanup(() => {

@@ -10,7 +10,8 @@ import { useSession } from '../../../context/SessionContext.jsx';
 import { useWorkspacePath } from '../../../services/workspaceRoutes.js';
 import { api } from '../../../services/api.js';
 import A from '../../../components/WorkspaceLink.jsx';
-import PageHeading from '../../../components/PageHeading.jsx';
+import RecordHeader from '../../../components/records/RecordHeader.jsx';
+import RecordValue from '../../../components/records/RecordValue.jsx';
 import MultiSelectLookup from '../../../components/MultiSelectLookup.jsx';
 
 export default function CreateTopicPage(props) {
@@ -21,16 +22,20 @@ export default function CreateTopicPage(props) {
   const [params] = useSearchParams();
   const baseId = () => props.topic?.knowledgeBaseId || params.base || '';
   const path = useWorkspacePath();
+  const [editing, setEditing] = createSignal(!props.topic);
+  const [savedId, setSavedId] = createSignal(props.topic?.id || '');
+  let permissions;
   const [saving, setSaving] = createSignal(false);
   const [error, setError] = createSignal('');
   async function save(event) {
     event.preventDefault();
+    if (!editing()) return;
     setSaving(true);
     setError('');
     const form = new FormData(event.currentTarget);
     try {
-      await api(`/api/topics${props.topic ? '/' + props.topic.id : ''}`, {
-        method: props.topic ? 'PATCH' : 'POST',
+      const result = await api(`/api/topics${savedId() ? '/' + savedId() : ''}`, {
+        method: savedId() ? 'PATCH' : 'POST',
         body: JSON.stringify({
           name: form.get('name'),
           description: form.get('description'),
@@ -38,6 +43,11 @@ export default function CreateTopicPage(props) {
           ...(baseId() ? { knowledgeBaseId: baseId() } : {}),
         }),
       });
+      try {
+        if (permissions) await permissions.save(result.id);
+      } finally {
+        setSavedId(result.id);
+      }
       await refresh();
       const destination = path(
         baseId() ? `/workspace/knowledge/bases/${baseId()}` : '/workspace/knowledge?tab=topics',
@@ -55,7 +65,7 @@ export default function CreateTopicPage(props) {
     }
   }
   return (
-    <section class="reading-page">
+    <section class="reading-page record-form-page">
       <Breadcrumbs
         label="Topic location"
         items={[
@@ -69,10 +79,35 @@ export default function CreateTopicPage(props) {
           { label: props.topic?.name || 'New Topic' },
         ]}
       />
-      <Show when={props.topic?.id}>
-        <KnowledgePermissions kind="topic" id={props.topic.id} />
-      </Show>
-      <PageHeading title={props.topic ? 'Edit topic' : 'New topic'} />
+      <RecordHeader title={props.topic?.name || 'New Topic'}>
+        <Show
+          when={editing()}
+          fallback={
+            <button class="workspace-button small" onClick={() => setEditing(true)}>
+              Edit Topic
+            </button>
+          }
+        >
+          <A
+            class="workspace-button secondary small"
+            href={
+              baseId()
+                ? `/workspace/knowledge/bases/${baseId()}`
+                : '/workspace/knowledge?tab=topics'
+            }
+          >
+            Cancel
+          </A>
+          <button
+            type="submit"
+            form="topic-record-form"
+            class="workspace-button small"
+            disabled={saving()}
+          >
+            {saving() ? 'Saving…' : 'Save Topic'}
+          </button>
+        </Show>
+      </RecordHeader>
       <Show
         when={session()?.user && !session().user.isDemo}
         fallback={
@@ -81,51 +116,82 @@ export default function CreateTopicPage(props) {
           </p>
         }
       >
-        <ValidatedForm class="create-form" onSubmit={save}>
-          <label>
-            Name
-            <input name="name" required maxlength="100" value={props.topic?.name || ''} />
-          </label>
-          <label>
-            Description
-            <textarea
-              name="description"
-              rows="3"
-              maxlength="1000"
-              value={props.topic?.description || ''}
+        <ValidatedForm
+          id="topic-record-form"
+          class="create-form record-surface record-property-sheet"
+          onSubmit={save}
+        >
+          <section class="record-section">
+            <h2>Topic Details</h2>
+            <div class="record-property-list">
+              <Show
+                when={editing()}
+                fallback={
+                  <>
+                    <RecordValue label="Name" value={props.topic?.name} />
+                    <RecordValue label="Description" value={props.topic?.description} />
+                  </>
+                }
+              >
+                <label>
+                  Name
+                  <input name="name" required maxlength="100" value={props.topic?.name || ''} />
+                </label>
+                <label>
+                  Description
+                  <textarea
+                    name="description"
+                    rows="3"
+                    maxlength="1000"
+                    value={props.topic?.description || ''}
+                  />
+                </label>
+              </Show>
+              <MultiSelectLookup
+                label="Articles"
+                readOnly={!editing()}
+                referenceTable="ref-article"
+                name="article"
+                defaultValue={
+                  props.topic
+                    ? (workspace()?.articles || [])
+                        .filter((article) =>
+                          Array.isArray(article.topicIds)
+                            ? article.topicIds.includes(props.topic.id)
+                            : props.topic.articleIds?.includes(article.id),
+                        )
+                        .map((article) => article.id)
+                    : []
+                }
+                options={(workspace()?.articles || [])
+                  .filter((article) => !baseId() || article.base === baseId())
+                  .map((article) => ({
+                    value: article.id,
+                    href: `/workspace/articles/${article.id}`,
+                    label: article.title,
+                  }))}
+              />
+            </div>
+            <small>
+              Topics organize articles. They never grant access to another knowledge base.
+            </small>
+          </section>
+          <section class="record-section">
+            <h2>Permissions</h2>
+            <KnowledgePermissions
+              kind="topic"
+              id={savedId()}
+              embedded
+              disabled={!editing() || saving()}
+              readOnly={!editing()}
+              controller={(controller) => {
+                permissions = controller;
+              }}
             />
-          </label>
-          <MultiSelectLookup
-            label="Articles"
-            name="article"
-            defaultValue={
-              props.topic
-                ? (workspace()?.articles || [])
-                    .filter((article) =>
-                      Array.isArray(article.topicIds)
-                        ? article.topicIds.includes(props.topic.id)
-                        : props.topic.articleIds?.includes(article.id),
-                    )
-                    .map((article) => article.id)
-                : []
-            }
-            options={(workspace()?.articles || [])
-              .filter((article) => !baseId() || article.base === baseId())
-              .map((article) => ({
-                value: article.id,
-                href: `/workspace/articles/${article.id}`,
-                label: article.title,
-              }))}
-          />
-          <small>
-            Topics organize articles. They never grant access to another knowledge base.
-          </small>
+          </section>
           <Show when={error()}>
             <ToastMessage tone="error">{error()}</ToastMessage>
           </Show>
-          <button class="workspace-button" disabled={saving()}>
-            {saving() ? 'Saving…' : 'Save'}
-          </button>
         </ValidatedForm>
       </Show>
     </section>

@@ -1,3 +1,5 @@
+import { ensureArticleAuthoringDraft } from '../../workflows/authoringDrafts.js';
+import { queryString } from '../../shared/queryValues.js';
 import { listResponse } from '../../shared/listQuery.js';
 import { ObjectId } from 'mongodb';
 
@@ -70,19 +72,31 @@ export function createArticleDesignerController(store, content, chats, saveArtic
     const draft = validateArticleDraft(request.body?.draft);
     if (request.body.articleId && !(await content.article(user.id, request.body.articleId)))
       fail('Article not found.', 404);
-    response.status(202).json(
-      await chats.create(
-        user,
-        { requestId: request.body.requestId, text: request.body.text },
-        {
-          providerOwnerId: user.helpdeskOwnerId || user.id,
-          assistantType: 'admin',
-          helpdeskPurpose: 'article',
-          articleDraft: draft,
-          articleId: request.body.articleId || null,
-        },
-      ),
+    const chat = await chats.create(
+      user,
+      { requestId: request.body.requestId, text: request.body.text },
+      {
+        providerOwnerId: user.helpdeskOwnerId || user.id,
+        assistantType: 'admin',
+        helpdeskPurpose: 'article',
+        articleDraft: draft,
+        articleId: request.body.articleId || null,
+      },
     );
+    let articleId = request.body.articleId || null,
+      updatedAt = null;
+    if (!articleId) {
+      const saved = await ensureArticleAuthoringDraft(store, user, chat, draft);
+      articleId = saved.id;
+      updatedAt = saved.updatedAt;
+      await store
+        .collection('chats')
+        .updateOne(
+          { ...scope(user), _id: new ObjectId(chat.id), helpdeskPurpose: 'article' },
+          { $set: { articleId: queryString(articleId, 24) } },
+        );
+    }
+    response.status(202).json({ ...chat, articleId, articleUpdatedAt: updatedAt });
   };
   const getArticleConversationsId = async (request, response) => {
     const user = await actor(request);

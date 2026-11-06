@@ -121,7 +121,7 @@ export default function App() {
         <Route path="/tasks/:taskId" component={TaskPage} />
         <Route path="/help" component={HelpPage} />
         <Route path="/help/:id" component={ArticlePage} />
-        <Route path="/articles/:id" component={ArticlePage} />
+        <Route path="/articles/:id" component={ArticleReadPage} />
         <Route path="/articles/:id/read" component={ArticleReadPage} />
         <Route path="/articles/:id/edit" component={EditArticlePage} />
         <Route path="/files/:id" component={ContentPage} />

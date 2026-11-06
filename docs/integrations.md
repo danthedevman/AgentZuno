@@ -58,3 +58,17 @@ Queued work stores source IDs and reloads current credentials, mappings and acti
 Linked active users can complete published request workflows inside Slack modals or Teams Adaptive Cards. The assistants can collect answers in conversation and prefill a review; submission still requires the user's **Submit Request** action. Text, multiline text, choices, booleans, and bounded permitted record lookups use the same validation and workflow submission service as the app. Unsupported or large reference forms offer an app link instead of dropping fields. Teams cards that exceed the supported payload budget also use an app link.
 
 Slack requires its dedicated Interactivity URL in addition to Events and OAuth; see [Connect Slack](slack.md). Teams uses the existing authenticated personal bot activity endpoint and Adaptive Card submit messages; no new public unauthenticated endpoint is added. Forms expire after 30 minutes, recheck current permissions and publication versions, and deduplicate repeated submissions. Follow-up status questions can retrieve the user's own recent requests. Approval decisions still use the existing approval service and are not implied by a requester submitting a form.
+
+## Track application access
+
+In a workflow's **Settings → Access Tracking**, enable tracking, select an Applications record, and select a required text or choice form field containing the access level. Publish the workflow to apply the setting. Submission through the portal, Slack, or Teams creates a Requested User Access record linked to the request. Another request for the same person, application and normalized access level is rejected while that access is pending or active. Different access levels remain separate; the app does not infer privilege hierarchies.
+
+Admins can review records in **Data Tables → User Access**. A request also links to its access record. The requester can read their own record; current authorized fulfillment Agents can read and confirm records for their assignments. **Confirm Provisioned** records an explicit fulfillment attestation only after approvals and any workflow run have completed. Approval or resolving a request does not automatically mark access Active. **Confirm Revoked** records removal after it has happened in the external application. These controls do not provision or revoke external access themselves.
+
+Tracking applies to newly submitted requests after configuration. It does not discover existing external entitlements or backfill old requests. Failed and Revoked records permit a new request; an interrupted submission remains fail-closed and can be reviewed by an Admin.
+
+## Workflow versions and chat reports
+
+Saved workflows have a **Versions** tab. Preview a version and confirm **Restore as Draft** to create a new editable version. Current publication remains unchanged until you explicitly publish. Newly saved draft versions are retained from this feature onward; historical published revisions are also shown when available. Older unsaved draft edits cannot be reconstructed.
+
+**Reports → Chat Activity** lets Admins search workspace chat activity across portal and channel conversations and read full transcripts. Transcript reads are audited. Agent, User and Read Only roles cannot use this endpoint. Model instructions, credentials and raw tool arguments/results are excluded; this view does not grant access to private attachment downloads.

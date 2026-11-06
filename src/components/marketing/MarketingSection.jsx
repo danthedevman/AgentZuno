@@ -5,7 +5,7 @@ export default function MarketingSection(props) {
   onMount(() => {
     const targets = [
       ...element.querySelectorAll(
-        '.landing-hero-copy, .marketing-section-intro, .marketing-copy, .marketing-workflow-preview, .marketing-knowledge-preview, .marketing-platform-preview, .marketing-feature-grid article, .ownership-benefits',
+        '.landing-hero-copy > *, .marketing-section-intro > *, .marketing-copy > *, .hero-demo-stack, .marketing-live-chat, .marketing-builder, .marketing-workflow-preview, .marketing-knowledge-preview, .marketing-platform-preview, .marketing-feature-grid article, .ownership-benefits',
       ),
     ];
     if (
@@ -23,9 +23,15 @@ export default function MarketingSection(props) {
             observer.unobserve(entry.target);
           }
       },
-      { threshold: 0, rootMargin: '0px 0px 64px 0px' },
+      { threshold: 0, rootMargin: '0px 0px -32px 0px' },
     );
-    targets.forEach((target) => observer.observe(target));
+    targets.forEach((target) => {
+      // Keep the stagger local so later sections never wait for the whole page.
+      const index = [...target.parentElement.children].indexOf(target);
+      target.style.setProperty('--marketing-reveal-delay', `${Math.min(index, 3) * 100}ms`);
+      target.classList.add('marketing-reveal');
+      observer.observe(target);
+    });
     onCleanup(() => observer.disconnect());
   });
   return (

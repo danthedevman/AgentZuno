@@ -561,7 +561,7 @@ test(
     try {
       await store.ready();
       const defaults = await service.tables(admin);
-      assert.equal(defaults.length, 18);
+      assert.equal(defaults.length, 20);
       assert.ok(defaults.some((table) => table.id === 'ref-task'));
       assert.ok(defaults.some((table) => table.id === 'ref-request'));
       assert.ok(defaults.some((table) => table.id === 'ref-catalog-category'));
