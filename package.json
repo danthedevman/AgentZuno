@@ -16,7 +16,8 @@
     "dev:api": "npm --prefix api run dev",
     "start:api": "npm --prefix api start",
     "test:ui": "node --test test/*.test.js",
-    "test:browser": "playwright test"
+    "test:browser": "playwright test",
+    "test:marketing": "playwright test --config playwright.public.config.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1",

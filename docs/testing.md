@@ -14,4 +14,6 @@ Desktop and phone checks cover startup routing, article creation with base conte
 
 On failure, inspect `playwright-report/index.html` with `npx playwright show-report`. Screenshots and traces are retained for failed tests. GitHub Actions uploads these artifacts when the browser step fails. Use only fictional test content so artifacts do not expose private information.
 
+Run `npm run test:marketing` for the production marketing build. It builds with `VITE_STATIC_SITE=true` and starts a separate preview on port 4191. Desktop and phone checks cover animation startup after load and refresh, panel switching, article expansion, preserved prerendered headings, and reduced motion. The prerenderer and browser must render the same `PublicApp` component tree so hydration attaches interactive behavior to the visible elements. This suite replaces `dist` with the static build; run `npm run build` afterward to restore the self-hosted build.
+
 For native database restore drills and upgrade rehearsals, see [recovery](recovery.md). For the disposable employee request-list benchmark, see [capacity testing](capacity.md).

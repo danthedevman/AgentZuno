@@ -29,9 +29,9 @@ function OpenApplication() {
   onMount(() => window.location.reload());
   return null;
 }
-export default function PublicApp() {
+export default function PublicApp(props) {
   return (
-    <Router base={import.meta.env.BASE_URL.replace(/\/$/, '')} root={PublicLayout}>
+    <Router url={props.url} base={import.meta.env.BASE_URL.replace(/\/$/, '')} root={PublicLayout}>
       <PublicRoutes />
     </Router>
   );

@@ -104,7 +104,11 @@ test(
       });
       assert.equal(preview.status, 201);
       assert.equal(await db.collection('articles').countDocuments({}), 1);
-      assert.equal((await db.collection('articles').findOne({ _id: new ObjectId(draftChat.body.articleId) })).status, 'Draft');
+      assert.equal(
+        (await db.collection('articles').findOne({ _id: new ObjectId(draftChat.body.articleId) }))
+          .status,
+        'Draft',
+      );
       assert.equal(preview.body.draft.body, '<h2>Start</h2><p>Contact support.</p>');
       assert.equal(
         (await call(other, `/helpdesk/article-proposals/${preview.body.id}`)).status,
@@ -127,7 +131,11 @@ test(
         400,
       );
       assert.equal(await db.collection('articles').countDocuments({}), 1);
-      assert.equal((await db.collection('articles').findOne({ _id: new ObjectId(draftChat.body.articleId) })).status, 'Draft');
+      assert.equal(
+        (await db.collection('articles').findOne({ _id: new ObjectId(draftChat.body.articleId) }))
+          .status,
+        'Draft',
+      );
       const saved = await call(
         admin,
         `/helpdesk/article-proposals/${preview.body.id}/approve`,

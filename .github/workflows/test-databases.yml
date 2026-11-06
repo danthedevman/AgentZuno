@@ -62,6 +62,8 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Browser regression tests
         run: npm run test:browser
+      - name: Production marketing regression tests
+        run: npm run test:marketing
       - name: Upload browser failure reports
         if: ${{ failure() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

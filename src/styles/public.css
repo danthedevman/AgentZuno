@@ -3899,10 +3899,136 @@ html:not(.app-ready)
   color: #a5b4fc;
   flex: 0 0 40px;
 }
-.marketing-diagram-number {
-  float: right;
-  color: #65738b;
-  font-size: 12px;
+.request-lifecycle-visual {
+  height: 168px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 16px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #c9d2e5;
+}
+.lifecycle-message {
+  align-self: flex-end;
+  padding: 10px 14px;
+  border: 1px solid #818cf83b;
+  border-radius: 12px 12px 3px 12px;
+  background: #818cf81a;
+}
+.lifecycle-response,
+.lifecycle-task {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #a5b4fc;
+}
+.lifecycle-response .icon {
+  width: 21px;
+  height: 21px;
+  font-size: 18px;
+}
+.lifecycle-form {
+  padding: 12px;
+  background: #0d1420;
+  border: 1px solid #293346;
+  border-radius: 9px;
+  display: grid;
+  gap: 5px;
+}
+.lifecycle-form > span {
+  color: #e5eaf4;
+  font-weight: 500;
+  margin-bottom: 3px;
+}
+.lifecycle-form small {
+  font-size: 9px;
+  color: #8997ad;
+}
+.lifecycle-form > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 8px;
+  border: 1px solid #2c374b;
+  border-radius: 5px;
+  font-size: 10px;
+}
+.lifecycle-form .icon {
+  font-size: 14px;
+}
+.lifecycle-approval {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.lifecycle-avatar {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #818cf81a;
+  color: #a5b4fc;
+}
+.lifecycle-approval small {
+  display: block;
+  color: #8997ad;
+  font-size: 9px;
+}
+.lifecycle-approval > .icon {
+  margin-left: auto;
+  color: #9bd1b3;
+  font-size: 17px;
+}
+.lifecycle-connector {
+  height: 18px;
+  width: 1px;
+  background: #34445a;
+  margin: -8px auto;
+}
+.lifecycle-success {
+  align-self: center;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  background: #79bd9714;
+  color: #9bd1b3;
+}
+.lifecycle-success .icon,
+.lifecycle-task .icon {
+  font-size: 14px;
+}
+.lifecycle-receipt {
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+}
+.lifecycle-receipt > .icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #9bd1b345;
+  background: #79bd9714;
+  border-radius: 50%;
+  color: #9bd1b3;
+  font-size: 20px;
+  margin-bottom: 3px;
+}
+.lifecycle-receipt strong {
+  font-weight: 500;
+  color: #e5eaf4;
+}
+.lifecycle-receipt > span {
+  color: #8997ad;
+}
+.lifecycle-task {
+  justify-content: center;
+  color: #9bd1b3;
+  font-size: 10px;
 }
 .request-lifecycle h3,
 .marketing-workflow-diagram h3 {

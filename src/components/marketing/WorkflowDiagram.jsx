@@ -32,7 +32,6 @@ export default function WorkflowDiagram() {
       <header>
         <Icon name="workflow" />
         <strong>Laptop Request</strong>
-        <span>Example workflow</span>
       </header>
       <ol>
         <For each={steps}>
