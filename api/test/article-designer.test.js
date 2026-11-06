@@ -332,7 +332,7 @@ test(
         await db.collection('governanceAudit').findOne({
           ownerId: admin.id,
           workspaceId: admin.workspaceId,
-          action: 'articles.insertOne',
+          action: 'articles.updateOne',
         }),
       );
       assert.equal(

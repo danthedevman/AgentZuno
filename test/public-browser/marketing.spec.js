@@ -61,3 +61,48 @@ test('lifecycle visuals have no numbering and respect reduced motion', async ({ 
     true,
   );
 });
+
+test('lifecycle cards stack during natural scrolling and release before the next section', async ({
+  page,
+}) => {
+  await page.goto('/');
+  const cards = page.locator('.request-lifecycle article');
+  const origins = await cards.evaluateAll((items) =>
+    items.map((item) => item.getBoundingClientRect().top + window.scrollY),
+  );
+  for (let index = 0; index < origins.length; index++) {
+    const top = await cards.nth(index).evaluate((card) => parseFloat(getComputedStyle(card).top));
+    await page.evaluate(
+      (position) => window.scrollTo({ top: position, behavior: 'instant' }),
+      origins[index] - top + 20,
+    );
+    await expect(cards.nth(index)).toHaveClass(/is-revealed/);
+    const pinned = await cards.nth(index).boundingBox();
+    expect(Math.abs(pinned.y - top)).toBeLessThan(2);
+    if (index < 3) {
+      const nextBefore = await cards.nth(index + 1).boundingBox();
+      await page.mouse.wheel(0, 100);
+      await expect
+        .poll(() => page.evaluate(() => window.scrollY))
+        .toBeGreaterThan(origins[index] - top + 80);
+      const nextAfter = await cards.nth(index + 1).boundingBox();
+      expect(nextAfter.y).toBeLessThan(nextBefore.y - 60);
+      expect(Math.abs((await cards.nth(index).boundingBox()).y - top)).toBeLessThan(2);
+    }
+  }
+  await page.locator('#build-workflows-title').scrollIntoViewIfNeeded();
+  const lastCard = await cards.last().boundingBox();
+  expect(lastCard.y + lastCard.height).toBeLessThan(
+    await page
+      .locator('#build-workflows-title')
+      .evaluate((heading) => heading.getBoundingClientRect().top),
+  );
+  await page.evaluate(
+    (position) => window.scrollTo({ top: position, behavior: 'instant' }),
+    origins[1] - 110,
+  );
+  expect(await cards.nth(1).evaluate((card) => getComputedStyle(card).position)).toBe('sticky');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+});

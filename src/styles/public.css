@@ -3874,19 +3874,50 @@ html:not(.app-ready)
   font-family: 'Inter Variable', sans-serif;
 }
 .request-lifecycle {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 20px;
-  width: 100%;
+  --lifecycle-top: max(96px, calc((100svh - 380px) / 2));
+  --lifecycle-gap: clamp(160px, 35svh, 360px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--lifecycle-gap);
+  width: min(820px, 100%);
+  margin-inline: auto;
+  font-family: 'Inter Variable', sans-serif;
+}
+/* Give the final card a short reading pause before the stack leaves its section. */
+.request-lifecycle::after {
+  content: '';
+  height: clamp(60px, 16svh, 160px);
+  flex-shrink: 0;
+  margin-top: calc(-1 * var(--lifecycle-gap));
 }
 .request-lifecycle article {
-  position: relative;
-  padding: 28px;
-  min-height: 240px;
+  flex-shrink: 0;
+  position: sticky;
+  top: calc(var(--lifecycle-top) + var(--card-index) * 12px);
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  align-items: center;
+  gap: 48px;
+  padding: 44px;
+  min-height: 360px;
+  box-sizing: border-box;
   border: 1px solid #263140;
-  border-radius: 14px;
+  border-radius: 20px;
   background: #080d15;
   text-align: left;
+  box-shadow:
+    0 -12px 40px #0003,
+    0 24px 60px #0003;
+}
+.request-lifecycle-copy {
+  min-width: 0;
+}
+.request-lifecycle-copy h3 {
+  font-size: clamp(20px, 2.4vw, 28px);
+  line-height: 1.25;
+}
+.request-lifecycle-copy p {
+  font-size: 15px;
 }
 .marketing-diagram-icon {
   width: 40px;
@@ -3900,12 +3931,12 @@ html:not(.app-ready)
   flex: 0 0 40px;
 }
 .request-lifecycle-visual {
-  height: 168px;
+  min-height: 220px;
   display: flex;
   flex-direction: column;
   justify-content: center;
   gap: 16px;
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.5;
   color: #c9d2e5;
 }
@@ -3942,7 +3973,7 @@ html:not(.app-ready)
   margin-bottom: 3px;
 }
 .lifecycle-form small {
-  font-size: 9px;
+  font-size: 11px;
   color: #8997ad;
 }
 .lifecycle-form > div {
@@ -3952,7 +3983,7 @@ html:not(.app-ready)
   padding: 5px 8px;
   border: 1px solid #2c374b;
   border-radius: 5px;
-  font-size: 10px;
+  font-size: 12px;
 }
 .lifecycle-form .icon {
   font-size: 14px;
@@ -4080,17 +4111,331 @@ html:not(.app-ready)
 .marketing-workflow-diagram h3 {
   margin: 0 0 6px;
 }
-@media (max-width: 950px) {
+@media (max-width: 650px) {
   .request-lifecycle {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-@media (max-width: 500px) {
-  .request-lifecycle {
-    grid-template-columns: minmax(0, 1fr);
+    --lifecycle-top: 84px;
+    --lifecycle-gap: 28svh;
   }
   .request-lifecycle article {
-    min-height: 200px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+    min-height: 400px;
     padding: 24px;
+  }
+  .request-lifecycle-visual {
+    min-height: 190px;
+    width: min(280px, 100%);
+    margin-inline: auto;
+  }
+  .request-lifecycle-copy .marketing-diagram-icon {
+    display: none;
+  }
+  .request-lifecycle-copy h3 {
+    margin-top: 0;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .request-lifecycle .is-revealed .lifecycle-message,
+  .request-lifecycle .is-revealed .lifecycle-form,
+  .request-lifecycle .is-revealed .lifecycle-approval {
+    animation: lifecycle-detail-enter 650ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .request-lifecycle .is-revealed .lifecycle-response,
+  .request-lifecycle .is-revealed .lifecycle-success,
+  .request-lifecycle .is-revealed .lifecycle-task {
+    animation: lifecycle-detail-enter 650ms 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .request-lifecycle .is-revealed .lifecycle-receipt > .icon {
+    animation: lifecycle-check-enter 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
+@keyframes lifecycle-detail-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes lifecycle-check-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce), (max-height: 600px) {
+  .request-lifecycle {
+    gap: 24px;
+    padding-bottom: 0;
+  }
+  .request-lifecycle article {
+    position: relative;
+    top: auto;
+    box-shadow: none;
+  }
+  .request-lifecycle::after {
+    display: none;
+  }
+}
+
+/* Each lifecycle card presents a compact, recognizable application surface. */
+.request-lifecycle {
+  --lifecycle-top: max(96px, calc((100svh - 440px) / 2));
+}
+.request-lifecycle article {
+  min-height: 400px;
+  padding: 32px;
+  gap: 36px;
+  grid-template-columns: 1.3fr 1fr;
+}
+.request-lifecycle-visual {
+  min-height: 290px;
+  gap: 0;
+  border: 1px solid #293346;
+  border-radius: 12px;
+  background: #0b111b;
+  overflow: hidden;
+}
+.lifecycle-app-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 14px;
+  border-bottom: 1px solid #263140;
+  color: #dce4f2;
+}
+.lifecycle-app-header > .icon {
+  font-size: 17px;
+  color: #a5b4fc;
+}
+.lifecycle-app-header strong {
+  font-size: 11px;
+  font-weight: 500;
+}
+.lifecycle-window-dots {
+  margin-left: auto;
+  color: #718098;
+  letter-spacing: 2px;
+}
+.lifecycle-app-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex: 1;
+  gap: 12px;
+  padding: 18px;
+  font-size: 11px;
+}
+.lifecycle-message {
+  max-width: 86%;
+  padding: 8px 11px;
+  font-size: 11px;
+}
+.lifecycle-response {
+  align-items: flex-start;
+  color: #c9d2e5;
+}
+.lifecycle-response > div {
+  display: grid;
+  gap: 5px;
+}
+.lifecycle-response strong {
+  font-size: 10px;
+  font-weight: 500;
+  color: #a5b4fc;
+}
+.lifecycle-response > div > span {
+  line-height: 1.65;
+}
+.lifecycle-response .icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.lifecycle-composer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  margin-top: 4px;
+  border: 1px solid #2b364a;
+  border-radius: 9px;
+  color: #8391a8;
+  font-size: 10px;
+}
+.lifecycle-composer .icon {
+  font-size: 14px;
+}
+.lifecycle-composer .icon:last-child {
+  margin-left: auto;
+  color: #a5b4fc;
+}
+.lifecycle-form {
+  padding: 0;
+  border: 0;
+  background: none;
+  gap: 8px;
+}
+.lifecycle-form .lifecycle-form-intro {
+  font-size: 10px;
+  color: #9eacc1;
+  font-weight: 400;
+  margin-bottom: 4px;
+}
+.lifecycle-form > div {
+  font-size: 11px;
+  padding: 8px 10px;
+  background: #080d15;
+}
+.lifecycle-form small {
+  margin-top: 2px;
+  font-size: 10px;
+}
+.lifecycle-form .lifecycle-submit {
+  margin: 6px 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #818cf8;
+  color: #10131e;
+  border-radius: 6px;
+  font-size: 10px;
+}
+.lifecycle-submit .icon {
+  font-size: 14px;
+}
+.lifecycle-approval,
+.lifecycle-workflow-trigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #2c374a;
+  border-radius: 8px;
+  background: #101825;
+}
+.lifecycle-workflow-trigger > .icon {
+  font-size: 17px;
+  color: #a5b4fc;
+}
+.lifecycle-workflow-trigger > .icon:last-child {
+  margin-left: auto;
+  font-size: 14px;
+}
+.lifecycle-workflow-trigger small {
+  display: block;
+  font-size: 9px;
+  color: #8997ad;
+  margin-top: 2px;
+}
+.lifecycle-approval small {
+  margin-top: 2px;
+}
+.lifecycle-connector {
+  height: 14px;
+  flex-shrink: 0;
+  margin: -12px auto;
+}
+.lifecycle-workflow-trigger.lifecycle-success {
+  align-self: stretch;
+  border-radius: 8px;
+  background: #101825;
+  color: #c9d2e5;
+}
+.lifecycle-receipt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.lifecycle-receipt > .icon {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  margin-bottom: 0;
+  font-size: 16px;
+}
+.lifecycle-receipt > div {
+  display: grid;
+  gap: 3px;
+}
+.lifecycle-receipt strong {
+  font-size: 11px;
+}
+.lifecycle-receipt > div > span {
+  font-size: 9px;
+  color: #8997ad;
+}
+.lifecycle-receipt .lifecycle-status {
+  margin-left: auto;
+  color: #9bd1b3;
+  background: #79bd9714;
+  padding: 3px 6px;
+  border-radius: 4px;
+  font-size: 8px;
+}
+.lifecycle-record-fields {
+  display: grid;
+  gap: 10px;
+  margin: 8px 0;
+  font-size: 10px;
+}
+.lifecycle-record-fields > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.lifecycle-record-fields dt {
+  color: #8997ad;
+}
+.lifecycle-record-fields dd {
+  margin: 0;
+  color: #dce4f2;
+}
+.lifecycle-task {
+  padding: 12px;
+  border: 1px solid #2c374a;
+  border-radius: 8px;
+  justify-content: flex-start;
+  color: #c9d2e5;
+}
+.lifecycle-task > .icon {
+  color: #9bd1b3;
+}
+.lifecycle-task small {
+  display: block;
+  margin-top: 3px;
+  color: #8997ad;
+  font-size: 9px;
+}
+@media (max-width: 650px) {
+  .request-lifecycle {
+    --lifecycle-top: 84px;
+  }
+  .request-lifecycle article {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 20px;
+    gap: 22px;
+    min-height: 490px;
+  }
+  .request-lifecycle-visual {
+    width: 100%;
+    min-height: 290px;
+  }
+  .request-lifecycle-copy h3 {
+    font-size: 22px;
+    margin-bottom: 8px;
+  }
+  .request-lifecycle-copy p {
+    font-size: 13px;
+    line-height: 1.7;
+    margin-bottom: 0;
   }
 }

@@ -5,6 +5,7 @@ import A from '../WorkspaceLink.jsx';
 import Icon from '../Icon.jsx';
 import Skeleton from '../Skeleton.jsx';
 import ToastMessage from '../ToastMessage.jsx';
+import ActionMenu from '../ActionMenu.jsx';
 
 function Directory(props) {
   const [page, setPage] = createSignal(1);
@@ -52,6 +53,9 @@ function Directory(props) {
             revision={props.revision}
             level={props.level || 1}
             onSelect={props.onSelect}
+            canManage={props.canManage}
+            onAddTopic={props.onAddTopic}
+            articleLink={props.articleLink}
           />
         )}
       </For>
@@ -150,6 +154,25 @@ function TreeNode(props) {
         >
           {props.node.name}
         </A>
+        <Show when={props.canManage && folder()}>
+          <ActionMenu
+            label={`Create in ${props.node.name}`}
+            items={[
+              ...(props.node.depth < 3
+                ? [
+                    {
+                      label: 'Add Topic',
+                      onClick: () => {
+                        setExpanded(true);
+                        props.onAddTopic(props.node);
+                      },
+                    },
+                  ]
+                : []),
+              { label: 'Add Article', href: props.articleLink(props.node) },
+            ]}
+          />
+        </Show>
       </div>
       <Show when={folder() && expanded()}>
         <ul role="group">
@@ -161,6 +184,9 @@ function TreeNode(props) {
             selected={props.selected}
             level={props.level + 1}
             onSelect={props.onSelect}
+            canManage={props.canManage}
+            onAddTopic={props.onAddTopic}
+            articleLink={props.articleLink}
           />
         </ul>
       </Show>
@@ -176,6 +202,9 @@ export default function KnowledgeExplorer(props) {
         ancestors={props.ancestors}
         selected={props.selected}
         onSelect={props.onSelect}
+        canManage={props.canManage}
+        onAddTopic={props.onAddTopic}
+        articleLink={props.articleLink}
       />
     </ul>
   );

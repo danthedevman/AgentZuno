@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { MongoClient } from 'mongodb';
+import { MongoClient, ObjectId } from 'mongodb';
 import { createIntegrationStore } from '../src/storage/integrationStore.js';
 import { createHelpdeskService } from '../src/requests/helpdesk.js';
 import { createApi } from '../src/app.js';
@@ -50,8 +50,9 @@ test(
         }),
         { status: 400 },
       );
+      const workflowChatId = String(new ObjectId());
       const workflowService = createHelpdeskWorkflows(store, {
-        create: async () => ({ id: 'workflow-chat', status: 'queued' }),
+        create: async () => ({ id: workflowChatId, status: 'queued' }),
         send: async () => ({ status: 'queued' }),
       });
       const workflowInput = {
@@ -103,12 +104,11 @@ test(
         text: 'Route VPN requests to IT',
         requestId: randomUUID(),
       });
-      await assert.rejects(
-        workflowService.followup(other, 'workflow-chat', { text: 'Change it' }),
-        { status: 404 },
-      );
+      await assert.rejects(workflowService.followup(other, workflowChatId, { text: 'Change it' }), {
+        status: 404,
+      });
       assert.equal(
-        (await workflowService.followup(user, 'workflow-chat', { text: 'Ask for human review' }))
+        (await workflowService.followup(user, workflowChatId, { text: 'Ask for human review' }))
           .status,
         'queued',
       );

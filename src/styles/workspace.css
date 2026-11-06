@@ -11130,6 +11130,8 @@ button.catalog-item-card {
   flex-wrap: wrap;
   gap: 16px;
   padding-bottom: 20px;
+  border-bottom: 1px solid var(--workspace-line);
+  margin-bottom: 16px;
 }
 .knowledge-workspace-heading h1 {
   margin: 0 auto 0 0;
@@ -11159,6 +11161,28 @@ button.catalog-item-card {
   color: var(--workspace-muted);
   font-size: 12px;
   padding-left: 8px;
+  justify-content: space-between;
+  gap: 8px;
+}
+.knowledge-explorer-heading .workspace-button,
+.knowledge-tree-row .list-action-menu > button {
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  padding: 0;
+  background: transparent;
+  border-color: transparent;
+}
+.knowledge-tree-row .list-action-menu {
+  flex: 0 0 28px;
+}
+.knowledge-tree-row .list-action-options {
+  right: 0;
+  min-width: 150px;
+}
+.knowledge-tree-row .list-action-options a {
+  padding: 8px 12px;
+  color: var(--workspace-ink);
 }
 .knowledge-tree,
 .knowledge-tree ul {

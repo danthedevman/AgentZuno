@@ -34,7 +34,13 @@ export function createContentController(auth, store, designer = {}) {
       return response.status(400).json({
         error: 'Enter a name (up to 160 characters) and details (up to 20,000 characters).',
       });
-    const record = { type, name: name.trim(), description, updatedAt: new Date().toISOString() };
+    const record = {
+      type,
+      name: name.trim(),
+      description,
+      workspaceId: request.user.workspaceId,
+      updatedAt: new Date().toISOString(),
+    };
     if (type === 'knowledge-base') {
       record.icon = 'layers';
       if (existing?.sourceConnectionId) record.nameCustomized = true;

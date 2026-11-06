@@ -68,8 +68,11 @@ export default function KnowledgeCenterPage() {
       : data()?.rows || [];
   const selected = () => query.article || query.topic || query.base || '';
   const ancestors = () => [query.base, ...(folder()?.ancestors || [])].filter(Boolean);
-  const articleLink = () =>
-    `/workspace/create/article${query.base ? `?base=${encodeURIComponent(query.base)}${query.topic ? `&topic=${encodeURIComponent(query.topic)}` : ''}` : ''}`;
+  const articleLink = (node) => {
+    const base = node?.baseId || query.base;
+    const topic = node ? (node.type === 'topic' ? node.id : '') : query.topic;
+    return `/workspace/create/article${base ? `?${new URLSearchParams({ base, ...(topic ? { topic } : {}) })}` : ''}`;
+  };
   function select(node) {
     setSearch('');
     setApplied('');
@@ -89,13 +92,17 @@ export default function KnowledgeCenterPage() {
       baseId: query.base,
     });
   }
-  function addTopic() {
-    setEditor({ kind: 'topic', baseId: query.base, parentTopicId: query.topic || '' });
+  function addTopic(node) {
+    setEditor({
+      kind: 'topic',
+      baseId: node?.baseId || query.base,
+      parentTopicId: node ? (node.type === 'topic' ? node.id : '') : query.topic || '',
+    });
   }
   const actions = () => [
     { label: 'Add Knowledge Base', onClick: () => setEditor({ kind: 'base' }) },
     ...(query.base && (folder()?.depth || 0) < 3
-      ? [{ label: 'Add Topic', onClick: addTopic }]
+      ? [{ label: 'Add Topic', onClick: () => addTopic() }]
       : []),
     ...(folder()?.editable
       ? [
@@ -159,12 +166,26 @@ export default function KnowledgeCenterPage() {
         <nav class="knowledge-explorer-sidebar" aria-label="Knowledge explorer">
           <div class="knowledge-explorer-heading">
             <span>Knowledge Bases</span>
+            <Show when={canManage()}>
+              <button
+                type="button"
+                class="workspace-button secondary small icon-only"
+                aria-label="Add Knowledge Base"
+                title="Add Knowledge Base"
+                onClick={() => setEditor({ kind: 'base' })}
+              >
+                <Icon name="plus" />
+              </button>
+            </Show>
           </div>
           <KnowledgeExplorer
             selected={selected()}
             ancestors={ancestors()}
             revision={revision()}
             onSelect={select}
+            canManage={canManage()}
+            onAddTopic={addTopic}
+            articleLink={articleLink}
           />
         </nav>
         <KnowledgeResizeHandle

@@ -1078,7 +1078,7 @@ test('knowledge bases use card skeletons and stacked modal fields', async ({ pag
   await expect(page.locator('.help-center-base-card ul')).toHaveCount(0);
   await expect(page.locator('.help-center-browse')).toHaveCount(0);
   await expect(title).toHaveCSS('color', 'rgb(129, 140, 248)');
-  await page.getByRole('button', { name: 'Add Knowledge Base', exact: true }).click();
+  await page.locator('.help-center-add-card').click();
   const dialog = page.getByRole('dialog', { name: 'Add Knowledge Base' });
   const input = dialog.locator('input[name="name"]');
   const description = dialog.locator('textarea[name="description"]');
@@ -1146,4 +1146,39 @@ test('Dashboard is the shared landing page with role-appropriate work views', as
     } else await expect(page.getByRole('navigation', { name: 'Dashboard views' })).toHaveCount(0);
     await expect(page.getByRole('checkbox', { name: /Select all.*records/ })).toHaveCount(0);
   }
+});
+
+test('knowledge explorer creates bases and topics and opens articles in the selected folder', async ({
+  page,
+  isMobile,
+}, testInfo) => {
+  await page
+    .context()
+    .addCookies([{ name: 'browser_test', value: '1', url: 'http://127.0.0.1:4180' }]);
+  await page.goto('/workspace/222222222222222222222222/knowledge');
+  const explorer = page.getByRole('navigation', { name: 'Knowledge explorer' });
+  await explorer.getByRole('button', { name: 'Add Knowledge Base', exact: true }).click();
+  let dialog = page.getByRole('dialog', { name: 'Add Knowledge Base' });
+  const name = `Inline guides ${testInfo.project.name}`;
+  await dialog.getByRole('textbox', { name: 'Name', exact: true }).fill(name);
+  await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  const baseId = new URL(page.url()).searchParams.get('base');
+  expect(baseId).toMatch(/^[a-f0-9]{24}$/);
+  if (isMobile) await page.getByRole('button', { name: 'Browse knowledge folders' }).click();
+  await explorer.getByRole('button', { name: `Create in ${name}`, exact: true }).click();
+  await explorer.getByRole('menuitem', { name: 'Add Topic', exact: true }).click();
+  dialog = page.getByRole('dialog', { name: 'Add Topic', exact: true });
+  await dialog.getByRole('textbox', { name: 'Name', exact: true }).fill('Getting started');
+  await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  const topicId = new URL(page.url()).searchParams.get('topic');
+  expect(topicId).toMatch(/^[a-f0-9]{24}$/);
+  if (isMobile) await page.getByRole('button', { name: 'Browse knowledge folders' }).click();
+  await explorer.getByRole('button', { name: 'Create in Getting started', exact: true }).click();
+  const link = explorer.getByRole('menuitem', { name: 'Add Article', exact: true });
+  await expect(link).toHaveAttribute('href', new RegExp(`base=${baseId}.*topic=${topicId}`));
+  await link.click();
+  await expect(page).toHaveURL(new RegExp(`/create/article\\?base=${baseId}&topic=${topicId}`));
+  await expect(page.getByRole('heading', { name: 'New Article', exact: true })).toBeVisible();
 });

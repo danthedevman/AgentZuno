@@ -381,8 +381,9 @@ test(
       ],
       updatedAt: new Date(),
     };
+    const workflowChatId = String(new ObjectId());
     const service = createHelpdeskWorkflows(store, {
-      create: async () => ({ id: 'fixture-conversation', status: 'queued' }),
+      create: async () => ({ id: workflowChatId, status: 'queued' }),
       get: async () => response,
       send: async () => ({ status: 'queued' }),
     });
@@ -392,7 +393,7 @@ test(
         text: 'Notify support for office phone requests',
         requestId: randomUUID(),
       });
-      const initial = await service.getConversation(user, 'fixture-conversation');
+      const initial = await service.getConversation(user, workflowChatId);
       assert.equal(initial.definition.steps.length, 1);
       assert.ok(initial.typescript.includes('defineWorkflow'));
       response = {
@@ -421,7 +422,7 @@ test(
           },
         ],
       };
-      const updated = await service.getConversation(user, 'fixture-conversation');
+      const updated = await service.getConversation(user, workflowChatId);
       assert.equal(updated.definition.steps.length, 2);
       assert.ok(updated.typescript.includes('jira.createIssue'));
       response = {
@@ -435,15 +436,14 @@ test(
           },
         ],
       };
-      const rejected = await service.getConversation(user, 'fixture-conversation');
+      const rejected = await service.getConversation(user, workflowChatId);
       assert.ok(rejected.validationError);
       assert.equal(rejected.definition.steps.length, 2);
+      await assert.rejects(service.getConversation({ ...user, role: 'user' }, workflowChatId), {
+        status: 403,
+      });
       await assert.rejects(
-        service.getConversation({ ...user, role: 'user' }, 'fixture-conversation'),
-        { status: 403 },
-      );
-      await assert.rejects(
-        service.getConversation({ ...user, id: 'other-admin' }, 'fixture-conversation'),
+        service.getConversation({ ...user, id: 'other-admin' }, workflowChatId),
         { status: 404 },
       );
     } finally {
