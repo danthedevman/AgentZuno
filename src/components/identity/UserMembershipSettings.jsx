@@ -1,3 +1,5 @@
+import RecordForm from '../records/RecordForm.jsx';
+import { roleOptions, canAssignGroups } from '../../utils/roles.js';
 import { useSession } from '../../context/SessionContext.jsx';
 import { createResource, createSignal, createEffect, Show } from 'solid-js';
 import { useNavigate } from '@solidjs/router';
@@ -6,10 +8,6 @@ import { api } from '../../services/api.js';
 import { confirmAction } from '../../services/confirmations.js';
 import { useToasts } from '../../context/ToastContext.jsx';
 import { useWorkspace } from '../../context/WorkspaceContext.jsx';
-import ValidatedForm from '../ValidatedForm.jsx';
-import Dropdown from '../Dropdown.jsx';
-import MultiSelectLookup from '../MultiSelectLookup.jsx';
-import Toggle from '../Toggle.jsx';
 import Skeleton from '../Skeleton.jsx';
 import ToastMessage from '../ToastMessage.jsx';
 export default function UserMembershipSettings(props) {
@@ -27,6 +25,7 @@ export default function UserMembershipSettings(props) {
   const member = () => !members.error && members()?.find((item) => item.userId === props.userId);
   const [draft, setDraft] = createSignal({});
   const [busy, setBusy] = createSignal(false);
+  const [editing, setEditing] = createSignal(false);
   createEffect(() => {
     const item = member();
     if (item)
@@ -47,6 +46,7 @@ export default function UserMembershipSettings(props) {
         body: JSON.stringify(draft()),
       });
       await refetch();
+      setEditing(false);
       notify({ tone: 'success', message: 'User settings saved.' });
     } catch (error) {
       notify({ tone: 'error', message: error.message });
@@ -64,52 +64,83 @@ export default function UserMembershipSettings(props) {
         <ToastMessage tone="error">{members.error.message}</ToastMessage>
       </Show>
       <Show when={member()}>
-        <ValidatedForm class="create-form" onSubmit={save}>
-          <label>
-            Role
-            <Dropdown
-              ariaLabel="User role"
-              value={draft().role}
-              options={['admin', 'agent', 'user', 'read-only'].map((value) => ({
-                value,
-                label:
-                  value === 'read-only' ? 'Read Only' : value[0].toUpperCase() + value.slice(1),
-              }))}
-              onChange={(value) => {
-                change('role', value);
-                if (['user', 'read-only'].includes(value)) change('queues', []);
-              }}
-            />
-          </label>
-          <Show when={['admin', 'agent'].includes(draft().role)}>
-            <MultiSelectLookup
-              label="Assignment Groups"
-              value={draft().queues || []}
-              disabled={groups.loading || !!groups.error}
-              options={(groups.error ? [] : groups() || []).map((group) => ({
-                value: group.name,
-                label: group.name,
-                href: `/workspace/users/groups/${group.groupId || group.id}`,
-              }))}
-              onChange={(value) => change('queues', value)}
-            />
-          </Show>
-          <Toggle
-            label="Active"
-            disabled={props.userId === session()?.user?.id}
-            checked={draft().active}
-            onChange={(value) => change('active', value)}
-          />
-          <Toggle
-            label="Can Approve"
-            checked={draft().canApprove}
-            disabled={draft().role === 'read-only'}
-            onChange={(value) => change('canApprove', value)}
-          />
+        <RecordForm
+          sections={[
+            {
+              fields: [
+                { id: 'role', label: 'Role', type: 'select', options: roleOptions },
+                {
+                  id: 'queues',
+                  label: 'Assignment Groups',
+                  type: 'reference',
+                  multiple: true,
+                  visible: canAssignGroups(draft().role),
+                  options: (groups.error ? [] : groups() || []).map((group) => ({
+                    value: group.name,
+                    label: group.name,
+                    href: `/workspace/users/groups/${group.groupId || group.id}`,
+                  })),
+                },
+                {
+                  id: 'active',
+                  label: 'Active',
+                  type: 'boolean',
+                  readOnly: props.userId === session()?.user?.id,
+                },
+                {
+                  id: 'canApprove',
+                  label: 'Can Approve',
+                  type: 'boolean',
+                  readOnly: draft().role === 'read-only',
+                },
+              ],
+            },
+          ]}
+          values={draft()}
+          detailsOnly={!editing()}
+          disabled={busy()}
+          onChange={(key, value) => {
+            change(key, value);
+            if (key === 'role' && !canAssignGroups(value)) change('queues', []);
+            if (key === 'role' && value === 'read-only') change('canApprove', false);
+          }}
+          onSubmit={save}
+        >
           <div class="helpdesk-actions">
-            <button type="submit" class="workspace-button" disabled={busy()}>
-              Save Access
-            </button>
+            <Show
+              when={editing()}
+              fallback={
+                <button
+                  type="button"
+                  class="workspace-button secondary"
+                  onClick={() => setEditing(true)}
+                >
+                  Edit Access
+                </button>
+              }
+            >
+              <button type="submit" class="workspace-button" disabled={busy()}>
+                Save Access
+              </button>
+              <button
+                type="button"
+                class="workspace-button secondary"
+                disabled={busy()}
+                onClick={() => {
+                  const item = member();
+                  setDraft({
+                    role: item.role,
+                    queues: item.queues,
+                    active: item.active,
+                    canApprove: item.canApprove,
+                    version: item.version,
+                  });
+                  setEditing(false);
+                }}
+              >
+                Cancel
+              </button>
+            </Show>
             <Show
               when={
                 !provisioning.loading &&
@@ -156,7 +187,7 @@ export default function UserMembershipSettings(props) {
               </button>
             </Show>
           </div>
-        </ValidatedForm>
+        </RecordForm>
       </Show>
     </section>
   );

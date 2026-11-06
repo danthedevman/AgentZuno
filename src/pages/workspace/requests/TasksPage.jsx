@@ -1,4 +1,4 @@
-import { displayLabel } from '../../../services/displayLabels.js';
+import { displayLabel } from '../../../utils/displayLabels.js';
 import A from '../../../components/WorkspaceLink.jsx';
 import { For, Show } from 'solid-js';
 import { useWorkspace } from '../../../context/WorkspaceContext.jsx';

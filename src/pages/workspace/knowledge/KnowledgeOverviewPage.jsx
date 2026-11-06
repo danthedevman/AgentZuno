@@ -1,6 +1,7 @@
+import DashboardToolbar from '../../../components/reports/DashboardToolbar.jsx';
 import DataExportButtons from '../../../components/DataExportButtons.jsx';
 import Skeleton from '../../../components/Skeleton.jsx';
-import { displayLabel } from '../../../services/displayLabels.js';
+import { displayLabel } from '../../../utils/displayLabels.js';
 import Icon from '../../../components/Icon.jsx';
 import ToastMessage from '../../../components/ToastMessage.jsx';
 import { For, Show, Suspense, createResource, lazy } from 'solid-js';
@@ -42,7 +43,12 @@ export default function KnowledgeOverviewPage(props) {
         ];
   return (
     <section class="knowledge-overview" aria-label="Knowledge overview">
-      <div class="knowledge-overview-toolbar">
+      <DashboardToolbar
+        refreshLabel="Refresh knowledge statistics"
+        loading={report.loading}
+        actions={props.actions}
+        onRefresh={() => refetch()}
+      >
         {props.selector}
         <Dropdown
           ariaLabel="Reporting period"
@@ -54,17 +60,7 @@ export default function KnowledgeOverviewPage(props) {
             { value: '90', label: 'Last 90 days' },
           ]}
         />
-        <button
-          class="knowledge-refresh-button refresh-icon-button"
-          type="button"
-          aria-label="Refresh knowledge statistics"
-          title="Refresh"
-          onClick={() => refetch()}
-          disabled={report.loading}
-        >
-          <Icon name="refresh" />
-        </button>
-      </div>
+      </DashboardToolbar>
       <Show when={report.error}>
         <ToastMessage tone="error">Could not load knowledge statistics.</ToastMessage>
       </Show>

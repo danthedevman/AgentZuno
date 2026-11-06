@@ -1,3 +1,4 @@
+import AddUserPage from './pages/workspace/identity/AddUserPage.jsx';
 import SlackLinkPage from './pages/auth/SlackLinkPage.jsx';
 import InstallationPage from './pages/setup/InstallationPage.jsx';
 import TaskPage from './pages/workspace/requests/TaskPage.jsx';
@@ -87,6 +88,7 @@ export default function App() {
         <Route path="/data/:id" component={DataPage} />
         <Route path="/data/:id/records/:recordId" component={DataRecordPage} />
         <Route path="/users" component={UsersPage} />
+        <Route path="/users/new" component={AddUserPage} />
         <Route path="/users/:userId" component={UserRecordPage} />
         <Route path="/users/queues/:id" component={LegacyQueuePage} />
         <Route path="/users/groups/:id" component={() => <QueuePage group />} />

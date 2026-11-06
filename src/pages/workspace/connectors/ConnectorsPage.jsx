@@ -9,7 +9,7 @@ import RecordTable from '../../../components/records/RecordTable.jsx';
 import Skeleton from '../../../components/Skeleton.jsx';
 import { useWorkspacePath } from '../../../services/workspaceRoutes.js';
 import Icon from '../../../components/Icon.jsx';
-import { displayLabel } from '../../../services/displayLabels.js';
+import { displayLabel } from '../../../utils/displayLabels.js';
 import ToastMessage from '../../../components/ToastMessage.jsx';
 import { For, Show, createEffect, createResource, createSignal } from 'solid-js';
 import Dropdown from '../../../components/Dropdown.jsx';

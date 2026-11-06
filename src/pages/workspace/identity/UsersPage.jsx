@@ -1,19 +1,18 @@
+import ActionMenu from '../../../components/ActionMenu.jsx';
+import ProfileAvatar from '../../../components/identity/ProfileAvatar.jsx';
+import { displayLabel } from '../../../utils/displayLabels.js';
 import { useToasts } from '../../../context/ToastContext.jsx';
 import ApprovalGroupList from '../../../components/requests/ApprovalGroupList.jsx';
 import { useNavigate, useSearchParams } from '@solidjs/router';
 import { useWorkspacePath } from '../../../services/workspaceRoutes.js';
 import Icon from '../../../components/Icon.jsx';
-import WorkforceProfile from '../../../components/identity/WorkforceProfile.jsx';
 import ToastMessage from '../../../components/ToastMessage.jsx';
 import RecordTable from '../../../components/records/RecordTable.jsx';
-import WorkspaceModal from '../../../components/WorkspaceModal.jsx';
 import { For, Show, createEffect, createResource, createSignal } from 'solid-js';
 import { useWorkspace } from '../../../context/WorkspaceContext.jsx';
 import { api } from '../../../services/api.js';
 import PageHeading from '../../../components/PageHeading.jsx';
 import ValidatedForm from '../../../components/ValidatedForm.jsx';
-import Dropdown from '../../../components/Dropdown.jsx';
-import MultiSelectLookup from '../../../components/MultiSelectLookup.jsx';
 import { useSession } from '../../../context/SessionContext.jsx';
 import { confirmAction } from '../../../services/confirmations.js';
 
@@ -39,22 +38,14 @@ export default function UsersPage() {
     const profile = profileFor(id);
     return profile?.labels[profile?.fields[key]] || profile?.fields[key] || '';
   };
-  const [settings] = createResource(isAdmin, () => api('/api/helpdesk/settings'));
   const [provisioning, { refetch: refreshProvisioning }] = createResource(isAdmin, () =>
     api('/api/helpdesk/provisioning'),
   );
   const [directory] = createResource(isAdmin, () => api('/api/helpdesk/directory-users'));
-  const [isFormOpen, setIsFormOpen] = createSignal(false);
   function openUser(member = null) {
-    if (member) {
-      navigate(path(`/workspace/users/${member.userId || member.id}`));
-      return;
-    }
-    if (!member && (provisioning.loading || provisioning.error || provisioning()?.enabled)) return;
-    setSelected(member);
-    setError('');
-    setMessage('');
-    setIsFormOpen(true);
+    if (member) navigate(path(`/workspace/users/${member.userId || member.id}`));
+    else if (!provisioning.loading && !provisioning.error && !provisioning()?.enabled)
+      navigate(path('/workspace/users/new'));
   }
   createEffect(() => {
     if (
@@ -67,14 +58,7 @@ export default function UsersPage() {
       setRouteQuery({ invite: undefined });
     }
   });
-  const [selected, setSelected] = createSignal(null);
-  const [role, setRole] = createSignal('user');
-  const [queues, setQueues] = createSignal([]);
-  const [active, setActive] = createSignal(true);
-  const [canApprove, setCanApprove] = createSignal(false);
   const [error, setError] = createSignal('');
-  const [message, setMessage] = createSignal('');
-  const [saving, setSaving] = createSignal(false);
   const [token, setToken] = createSignal('');
   const [query, setQuery] = createSignal('');
   const [tab, setTab] = createSignal(
@@ -122,7 +106,7 @@ export default function UsersPage() {
     }
   }
   async function removeUser(event, member) {
-    event.stopPropagation();
+    event?.stopPropagation();
     if (
       !(await confirmAction(
         `Remove ${member.name || member.email} from this workspace? Their account and audit history are retained.`,
@@ -146,9 +130,6 @@ export default function UsersPage() {
       setPendingAction('');
     }
   }
-  const [savedQueues, { refetch: refreshQueues }] = createResource(isAdmin, () =>
-    api('/api/helpdesk/queues'),
-  );
   function switchTab(value) {
     setTab(value);
     setRouteQuery({ tab: value });
@@ -169,72 +150,6 @@ export default function UsersPage() {
       ];
     switchTab(next);
     document.getElementById(`users-tab-${next}`)?.focus();
-  }
-  createEffect(() => {
-    const member = selected();
-    setRole(member?.role || 'user');
-    setQueues(member?.queues || []);
-    setActive(member?.active ?? true);
-    setCanApprove(member?.canApprove || false);
-  });
-  const queueOptions = () =>
-    [
-      ...new Set([
-        ...(!savedQueues.error ? savedQueues() || [] : []).map((queue) => queue.name),
-        ...(!settings.error ? settings()?.routing || [] : []).map((item) => item.queueName),
-        ...(!members.error ? members() || [] : []).flatMap((item) => item.queues),
-      ]),
-    ]
-      .sort((a, b) => a.localeCompare(b))
-      .map((value) => {
-        const group = (!savedQueues.error ? savedQueues() || [] : []).find(
-          (item) => item.name === value,
-        );
-        return {
-          value,
-          label: value,
-          href: group ? `/workspace/users/groups/${group.groupId || group.id}` : undefined,
-        };
-      });
-  async function save(event) {
-    event.preventDefault();
-    setError('');
-    setMessage('');
-    setSaving(true);
-    const formElement = event.currentTarget;
-    const form = new FormData(formElement);
-    const member = selected();
-    try {
-      const result = await api(
-        member ? `/api/helpdesk/members/${member.userId}` : '/api/helpdesk/invitations',
-        {
-          method: member ? 'PUT' : 'POST',
-          body: JSON.stringify({
-            ...(member ? { version: member.version } : { email: form.get('email') }),
-            role: role(),
-            queues: ['admin', 'agent'].includes(role()) ? queues() : [],
-            canApprove: canApprove(),
-            active: active(),
-          }),
-        },
-      );
-      setSelected(null);
-      formElement.reset();
-      await refetch();
-      setInvitationLink(result.invitationUrl || '');
-      setMessage(
-        member
-          ? 'User saved.'
-          : result.delivery === 'manual'
-            ? 'Invitation created. Copy and share the link with the invited user.'
-            : 'Invitation queued for email delivery.',
-      );
-      setIsFormOpen(false);
-    } catch (error) {
-      setError(error.message);
-    } finally {
-      setSaving(false);
-    }
   }
   return (
     <section class="reading-page helpdesk-page users-page">
@@ -358,10 +273,7 @@ export default function UsersPage() {
                     { label: 'Email', render: (item) => item.email },
                     {
                       label: 'Role',
-                      render: (item) =>
-                        item.role === 'read-only'
-                          ? 'Read Only'
-                          : item.role[0].toUpperCase() + item.role.slice(1),
+                      render: (item) => displayLabel(item.role),
                     },
                     {
                       label: 'Status',
@@ -448,17 +360,22 @@ export default function UsersPage() {
                       onClick={() => openUser(member)}
                       aria-label={`Edit ${member.email}`}
                     >
-                      {member.email}
+                      <span class="record-person-cell">
+                        <ProfileAvatar userId={member.userId} name={member.name || member.email} />
+                        <span>
+                          {member.name || member.email}
+                          <Show when={member.name}>
+                            <small>{member.email}</small>
+                          </Show>
+                        </span>
+                      </span>
                     </button>
                   ),
                 },
                 {
                   label: 'Role',
                   sortValue: (member) => member.role,
-                  render: (member) =>
-                    member.role === 'read-only'
-                      ? 'Read Only'
-                      : member.role[0].toUpperCase() + member.role.slice(1),
+                  render: (member) => displayLabel(member.role),
                 },
                 {
                   label: 'Title',
@@ -506,123 +423,17 @@ export default function UsersPage() {
                         member.userId !== access()?.ownerId
                       }
                     >
-                      <button
-                        class="workspace-button secondary small"
+                      <ActionMenu
+                        label={`Actions for ${member.email}`}
                         disabled={!!pendingAction()}
-                        onClick={(event) => removeUser(event, member)}
-                      >
-                        Remove User
-                      </button>
+                        items={[{ label: 'Remove User', onClick: () => removeUser(null, member) }]}
+                      />
                     </Show>
                   ),
                 },
               ]}
               emptyText={members.loading ? 'Loading users…' : 'No users match this search.'}
             />
-            <Show when={isFormOpen()}>
-              <WorkspaceModal
-                title={selected() ? 'Edit user' : 'Add user'}
-                onClose={() => setIsFormOpen(false)}
-              >
-                <ValidatedForm class="create-form" onSubmit={save}>
-                  <Show when={!selected()} fallback={<p>{selected()?.email}</p>}>
-                    <label>
-                      Email
-                      <input
-                        name="email"
-                        type="email"
-                        required
-                        maxlength="254"
-                        autocomplete="off"
-                      />
-                    </label>
-                  </Show>
-                  <label>
-                    Role
-                    <Dropdown
-                      name="role"
-                      ariaLabel="Role"
-                      value={role()}
-                      onChange={(value) => {
-                        setRole(value);
-                        if (['user', 'read-only'].includes(value)) setQueues([]);
-                        if (value === 'read-only') setCanApprove(false);
-                      }}
-                      options={['admin', 'agent', 'user', 'read-only'].map((value) => ({
-                        value,
-                        label:
-                          value === 'read-only'
-                            ? 'Read Only'
-                            : value[0].toUpperCase() + value.slice(1),
-                      }))}
-                    />
-                  </label>
-                  <Show when={['admin', 'agent'].includes(role())}>
-                    <MultiSelectLookup
-                      name="queues"
-                      label="Assignment Groups"
-                      ariaLabel="Assignment Groups"
-                      options={queueOptions()}
-                      value={queues()}
-                      onChange={setQueues}
-                    />
-                  </Show>
-                  <div class="preference-row">
-                    <span>Active</span>
-                    <button
-                      class="toggle-switch"
-                      type="button"
-                      role="switch"
-                      aria-label="Active user"
-                      aria-checked={active()}
-                      onClick={() => setActive(!active())}
-                    >
-                      <span />
-                    </button>
-                  </div>
-
-                  <div class="preference-row">
-                    <span>Approval permission</span>
-                    <button
-                      class="toggle-switch"
-                      type="button"
-                      role="switch"
-                      aria-label="Approval permission"
-                      aria-checked={canApprove()}
-                      onClick={() => setCanApprove(!canApprove())}
-                    >
-                      <span />
-                    </button>
-                  </div>
-
-                  <div class="helpdesk-actions">
-                    <button class="workspace-button" disabled={saving()}>
-                      {saving() ? 'Saving…' : 'Save user'}
-                    </button>
-                    <button
-                      class="workspace-button secondary"
-                      type="button"
-                      onClick={() => setIsFormOpen(false)}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                  <Show when={error()}>
-                    <ToastMessage tone="error">{error()}</ToastMessage>
-                  </Show>
-                </ValidatedForm>
-                <Show when={selected()}>
-                  <WorkforceProfile userId={selected().userId} onSaved={refreshProfiles} />
-                </Show>
-              </WorkspaceModal>
-            </Show>
-            <Show when={error() && !isFormOpen()}>
-              <ToastMessage tone="error">{error()}</ToastMessage>
-            </Show>
-            <Show when={message()}>
-              <ToastMessage tone="success" message={message()} />
-            </Show>
-
             <Show when={provisioning.error}>
               <ToastMessage tone="error">{provisioning.error.message}</ToastMessage>
             </Show>

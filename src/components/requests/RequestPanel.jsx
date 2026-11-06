@@ -12,7 +12,7 @@ import { useSession } from '../../context/SessionContext.jsx';
 import Skeleton from '../Skeleton.jsx';
 import A from '../WorkspaceLink.jsx';
 import Icon from '../Icon.jsx';
-import { displayLabel, statusLabel } from '../../services/displayLabels.js';
+import { displayLabel, statusLabel } from '../../utils/displayLabels.js';
 import ToastMessage from '../ToastMessage.jsx';
 import { For, Show, createResource, createSignal, createEffect, onCleanup } from 'solid-js';
 import { useParams, useSearchParams } from '@solidjs/router';

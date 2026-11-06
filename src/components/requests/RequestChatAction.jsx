@@ -1,6 +1,6 @@
 import { Show, createSignal } from 'solid-js';
 import { api } from '../../services/api.js';
-import { displayLabel } from '../../services/displayLabels.js';
+import { displayLabel } from '../../utils/displayLabels.js';
 import { useToasts } from '../../context/ToastContext.jsx';
 import A from '../WorkspaceLink.jsx';
 

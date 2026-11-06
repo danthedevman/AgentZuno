@@ -2107,19 +2107,6 @@ h1 {
   outline-color: #818cf8;
 }
 
-.landing-hero-copy:not(.is-visible) > h1,
-.landing-hero-copy:not(.is-visible) .tagline span,
-.landing-hero-copy:not(.is-visible) .landing-actions {
-  opacity: 0;
-}
-@media (prefers-reduced-motion: reduce) {
-  .landing-hero-copy:not(.is-visible) > h1,
-  .landing-hero-copy:not(.is-visible) .tagline span,
-  .landing-hero-copy:not(.is-visible) .landing-actions {
-    opacity: 1;
-  }
-}
-
 .marketing-scroll-section .marketing-platform-preview.marketing-agents-preview::after,
 .marketing-scroll-section .marketing-platform-preview.marketing-agents-preview.is-visible::after {
   content: none;

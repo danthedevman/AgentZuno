@@ -60,6 +60,7 @@ services:
       POSTGRES_URL: postgres://agentzuno:${POSTGRES_PASSWORD:-agentzuno-local-only}@postgres:5432/agentzuno
       INSTALLATION_CONFIG_DIR: /app/installation
       APP_ORIGIN: ${APP_ORIGIN:-http://localhost:3000}
+      APP_ADDITIONAL_ORIGINS: ${APP_ADDITIONAL_ORIGINS:-}
       CUSTOM_DOMAIN_TARGET: ${CUSTOM_DOMAIN_TARGET:-}
       CREDENTIAL_ENCRYPTION_KEY: ${CREDENTIAL_ENCRYPTION_KEY:-}
       OIDC_ALLOWED_ORIGINS: ${OIDC_ALLOWED_ORIGINS:-}

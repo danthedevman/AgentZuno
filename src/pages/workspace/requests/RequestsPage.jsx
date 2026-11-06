@@ -1,5 +1,5 @@
 import WorkspaceModal from '../../../components/WorkspaceModal.jsx';
-import { displayLabel, statusLabel } from '../../../services/displayLabels.js';
+import { displayLabel, statusLabel } from '../../../utils/displayLabels.js';
 import InboxList from '../../../components/requests/InboxList.jsx';
 import { useToasts } from '../../../context/ToastContext.jsx';
 import ToastMessage from '../../../components/ToastMessage.jsx';

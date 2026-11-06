@@ -1,10 +1,18 @@
 const loopbackHosts = new Set(['localhost', '127.0.0.1', '[::1]']);
-export function isAllowedBrowserOrigin(value, configured) {
+export function isAllowedBrowserOrigin(value, configured, additional = '') {
   try {
     const origin = new URL(value);
     const expected = new URL(configured);
     if (value !== origin.origin || origin.username || origin.password) return false;
     if (origin.origin === expected.origin) return true;
+    if (typeof additional === 'string' && additional.length <= 2048) {
+      const allowed = additional
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean);
+      if (allowed.length <= 10 && allowed.some((item) => isAllowedBrowserOrigin(value, item)))
+        return true;
+    }
     // Local browser URLs commonly use either loopback spelling. Keep protocol and port fixed.
     return (
       loopbackHosts.has(origin.hostname) &&

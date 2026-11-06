@@ -1,6 +1,6 @@
 import RecordTable from '../records/RecordTable.jsx';
 import A from '../WorkspaceLink.jsx';
-import { displayLabel } from '../../services/displayLabels.js';
+import { displayLabel } from '../../utils/displayLabels.js';
 export default function QueueList(props) {
   return (
     <RecordTable

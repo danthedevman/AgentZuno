@@ -1,3 +1,5 @@
+import DashboardToolbar from '../../../components/reports/DashboardToolbar.jsx';
+import RecordHeader from '../../../components/records/RecordHeader.jsx';
 import ChatReports from '../../../components/chat/ChatReports.jsx';
 import MyTeamReport from '../../../components/MyTeamReport.jsx';
 import ReferenceLookup from '../../../components/ReferenceLookup.jsx';
@@ -9,8 +11,7 @@ import { createSignal, Show, createResource, lazy, Suspense, For } from 'solid-j
 import { useSearchParams } from '@solidjs/router';
 import { useWorkspace } from '../../../context/WorkspaceContext.jsx';
 import { api } from '../../../services/api.js';
-import { displayLabel } from '../../../services/displayLabels.js';
-import PageHeading from '../../../components/PageHeading.jsx';
+import { displayLabel } from '../../../utils/displayLabels.js';
 import Dropdown from '../../../components/Dropdown.jsx';
 import RecordTable from '../../../components/records/RecordTable.jsx';
 import Skeleton from '../../../components/Skeleton.jsx';
@@ -57,6 +58,18 @@ export default function ReportsPage() {
   );
   const [refreshKey, setRefreshKey] = createSignal(0);
   const current = () => (data.error ? null : data());
+  const reportActions = () =>
+    report() === 'workflows'
+      ? [{ label: 'View Workflows', href: '/workspace/workflows' }]
+      : report() === 'knowledge'
+        ? [
+            { label: 'Knowledge Bases', href: '/workspace/knowledge?tab=bases' },
+            { label: 'Articles', href: '/workspace/knowledge?tab=articles' },
+            { label: 'Topics', href: '/workspace/knowledge?tab=topics' },
+          ]
+        : report() === 'audit' && access()?.role === 'admin'
+          ? [{ label: 'Workspace Settings', href: '/workspace/settings' }]
+          : [{ label: 'My Work', href: '/workspace/my-work' }];
   const selector = () => (
     <Dropdown
       ariaLabel="Report"
@@ -76,9 +89,7 @@ export default function ReportsPage() {
   );
   return (
     <section class="reading-page reports-page">
-      <div class="connections-heading">
-        <PageHeading title="Reports" />
-      </div>
+      <RecordHeader title="Reports" />
       <Show
         when={canRead()}
         fallback={
@@ -91,7 +102,15 @@ export default function ReportsPage() {
           when={report() === 'knowledge'}
           fallback={
             <>
-              <div class="list-toolbar reports-toolbar" data-list-actions>
+              <DashboardToolbar
+                loading={data.loading}
+                actions={reportActions()}
+                onRefresh={() => {
+                  if (['audit', 'team', 'chats'].includes(report()))
+                    setRefreshKey((value) => value + 1);
+                  else refetch();
+                }}
+              >
                 {selector()}
                 <Show when={report() !== 'team'}>
                   <Dropdown
@@ -104,21 +123,7 @@ export default function ReportsPage() {
                     }))}
                   />
                 </Show>
-                <button
-                  class="knowledge-refresh-button refresh-icon-button"
-                  type="button"
-                  aria-label="Refresh report"
-                  title="Refresh"
-                  disabled={data.loading}
-                  onClick={() => {
-                    if (['audit', 'team', 'chats'].includes(report()))
-                      setRefreshKey((value) => value + 1);
-                    else refetch();
-                  }}
-                >
-                  <Icon name="refresh" />
-                </button>
-              </div>
+              </DashboardToolbar>
               <Show when={data.error}>
                 <ToastMessage tone="error">{data.error.message}</ToastMessage>
               </Show>
@@ -350,7 +355,7 @@ export default function ReportsPage() {
           }
         >
           <Suspense fallback={<Skeleton label="Loading knowledge report" lines={5} />}>
-            <KnowledgeReport selector={selector()} />
+            <KnowledgeReport actions={reportActions()} selector={selector()} />
           </Suspense>
         </Show>
       </Show>

@@ -1,6 +1,6 @@
 import ProfileAvatar from '../identity/ProfileAvatar.jsx';
 import RecordTable from '../records/RecordTable.jsx';
-import { displayLabel, statusLabel } from '../../services/displayLabels.js';
+import { displayLabel, statusLabel } from '../../utils/displayLabels.js';
 import { Show, createEffect } from 'solid-js';
 import A from '../WorkspaceLink.jsx';
 import Icon from '../Icon.jsx';

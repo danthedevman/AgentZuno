@@ -618,3 +618,94 @@ test('pending invitations offer confirmed replacement links and confirmed remova
   await expect(page.getByRole('button', { name: 'Generate New Link', exact: true })).toHaveCount(0);
   await expect(page.getByText('Invitation removed.', { exact: true })).toBeVisible();
 });
+
+test('Add User opens a dedicated page and creates a shareable invitation', async ({
+  page,
+  isMobile,
+}) => {
+  await page
+    .context()
+    .addCookies([{ name: 'browser_test', value: '1', url: 'http://127.0.0.1:4180' }]);
+  await page.goto('/workspace/222222222222222222222222/users');
+  await page.getByRole('button', { name: 'Add User', exact: true }).first().click();
+  await expect(page).toHaveURL(/\/users\/new$/);
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'User Details' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Workspace Access' })).toBeVisible();
+  const email = page.getByRole('textbox', { name: 'Email', exact: true });
+  await email.pressSequentially(`record-${isMobile ? 'mobile' : 'desktop'}@fixture.test`);
+  await expect(email).toHaveValue(`record-${isMobile ? 'mobile' : 'desktop'}@fixture.test`);
+  const responsePromise = page.waitForResponse(
+    (response) =>
+      response.url().endsWith('/api/helpdesk/invitations') &&
+      response.request().method() === 'POST',
+  );
+  await page.getByRole('button', { name: 'Send Invitation', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Invitation Created' })).toBeVisible();
+  await expect(page.getByLabel('Invitation Link', { exact: true })).toHaveValue(/\/invite#/);
+  const invitation = await (await responsePromise).json();
+  const removed = await page.request.delete(`/api/helpdesk/invitations/${invitation.id}`, {
+    headers: { Origin: 'http://127.0.0.1:4180', 'X-Workspace-Id': '222222222222222222222222' },
+    data: { confirmed: true, version: invitation.version || 1 },
+  });
+  expect(removed.ok()).toBeTruthy();
+});
+
+test('group records share ordered sections and retain typed values through field changes', async ({
+  page,
+  isMobile,
+}) => {
+  await page
+    .context()
+    .addCookies([{ name: 'browser_test', value: '1', url: 'http://127.0.0.1:4180' }]);
+  await page.goto('/workspace/222222222222222222222222/users/groups/new');
+  const name = `Form Layout ${isMobile ? 'Mobile' : 'Desktop'}`;
+  await page.getByRole('textbox', { name: 'Name', exact: true }).pressSequentially(name);
+  await page
+    .getByRole('textbox', { name: 'Description', exact: true })
+    .pressSequentially('A clearly organized group.');
+  await expect(page.getByRole('textbox', { name: 'Name', exact: true })).toHaveValue(name);
+  await page.getByRole('switch', { name: 'Assignment Group', exact: true }).click();
+  await expect(page.getByRole('textbox', { name: 'Routing Instructions' })).toHaveCount(0);
+  await page.getByRole('switch', { name: 'Assignment Group', exact: true }).click();
+  await page
+    .getByRole('textbox', { name: 'Routing Instructions' })
+    .fill('Route appropriate requests here.');
+  await expect(page.locator('.record-section > h2')).toHaveText([
+    'Group Details',
+    'Group Settings',
+    'Membership',
+  ]);
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page).not.toHaveURL(/\/new$/);
+  await expect(page.getByRole('heading', { name, exact: true })).toBeVisible();
+  await expect(page.getByRole('textbox')).toHaveCount(0);
+  await expect(page.getByText('Route appropriate requests here.', { exact: true })).toBeVisible();
+});
+
+test('dashboards share compact refresh and secondary links and chat reports load', async ({
+  page,
+}) => {
+  await page
+    .context()
+    .addCookies([{ name: 'browser_test', value: '1', url: 'http://127.0.0.1:4180' }]);
+  await page.goto('/workspace/222222222222222222222222/my-work');
+  await page.getByRole('button', { name: 'Dashboard actions' }).click();
+  await expect(page.getByRole('menuitem', { name: 'Open Inbox' })).toHaveAttribute(
+    'href',
+    /\/inbox$/,
+  );
+  await page.keyboard.press('Escape');
+  await page.goto('/workspace/222222222222222222222222/reports?report=chats');
+  await expect(page.getByText('API route not found.', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('combobox', { name: 'Report', exact: true })).toContainText(
+    'Chat Activity',
+  );
+  const response = await page.request.get('/api/helpdesk/report-chats?days=30', {
+    headers: { 'X-Workspace-Id': '222222222222222222222222' },
+  });
+  expect(response.status()).toBe(200);
+  await expect(
+    page.locator('.dashboard-toolbar-actions').getByRole('button', { name: 'Refresh report' }),
+  ).toBeVisible();
+});

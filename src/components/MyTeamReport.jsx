@@ -4,7 +4,7 @@ import RecordTable from './records/RecordTable.jsx';
 import Skeleton from './Skeleton.jsx';
 import ToastMessage from './ToastMessage.jsx';
 import A from './WorkspaceLink.jsx';
-import { statusLabel } from '../services/displayLabels.js';
+import { statusLabel } from '../utils/displayLabels.js';
 export default function MyTeamReport(props) {
   const [tab, setTab] = createSignal('requests');
   const [summary] = createResource(

@@ -1,19 +1,15 @@
+import RecordForm from '../../../components/records/RecordForm.jsx';
 import RecordActivity from '../../../components/records/RecordActivity.jsx';
-import Icon from '../../../components/Icon.jsx';
-import RecordValue from '../../../components/records/RecordValue.jsx';
 import BackLink from '../../../components/BackLink.jsx';
-import { For, Show, createEffect, createResource, createSignal } from 'solid-js';
+import { Show, createEffect, createResource, createSignal } from 'solid-js';
 import { useNavigate, useParams } from '@solidjs/router';
 import { useWorkspace } from '../../../context/WorkspaceContext.jsx';
 import { useWorkspacePath } from '../../../services/workspaceRoutes.js';
 import { api } from '../../../services/api.js';
 import { useToasts } from '../../../context/ToastContext.jsx';
 import RecordHeader from '../../../components/records/RecordHeader.jsx';
-import ValidatedForm from '../../../components/ValidatedForm.jsx';
-import MultiSelectLookup from '../../../components/MultiSelectLookup.jsx';
 import Skeleton from '../../../components/Skeleton.jsx';
 import ToastMessage from '../../../components/ToastMessage.jsx';
-import A from '../../../components/WorkspaceLink.jsx';
 export default function QueuePage(props) {
   const params = useParams();
   const { access } = useWorkspace();
@@ -126,172 +122,89 @@ export default function QueuePage(props) {
         when={isAdmin() && (isNew() || (!record.error && record()))}
         fallback={<Skeleton label="Loading fields" lines={5} />}
       >
-        <ValidatedForm
+        <RecordForm
           id="queue-form"
-          class="create-form data-record-form record-surface record-property-sheet"
+          sections={[
+            {
+              title: 'Group Details',
+              fields: [
+                {
+                  id: 'name',
+                  label: 'Name',
+                  type: 'text',
+                  required: true,
+                  maxLength: 80,
+                  readOnly: !isNew() && record()?.assignmentEnabled,
+                },
+                {
+                  id: 'description',
+                  label: 'Description',
+                  type: 'textarea',
+                  maxLength: 1000,
+                  rows: 4,
+                  descriptionBlock: true,
+                },
+                { id: 'active', label: 'Active', type: 'boolean' },
+              ],
+            },
+            {
+              title: 'Group Settings',
+              fields: [
+                { id: 'assignmentEnabled', label: 'Assignment Group', type: 'boolean' },
+                {
+                  id: 'routingInstructions',
+                  label: 'Routing Instructions',
+                  type: 'textarea',
+                  maxLength: 2000,
+                  visible: assignmentEnabled(),
+                },
+                { id: 'approvalEnabled', label: 'Approval Group', type: 'boolean' },
+              ],
+            },
+            {
+              title: 'Membership',
+              fields: [
+                {
+                  id: 'memberIds',
+                  label: 'Members',
+                  type: 'reference',
+                  multiple: true,
+                  options: ((!members.error && members()) || [])
+                    .filter((member) => member.active || memberIds().includes(member.userId))
+                    .map((member) => ({
+                      value: member.userId,
+                      label: member.name || member.email,
+                      href: `/workspace/users/${member.userId}`,
+                    })),
+                },
+              ],
+            },
+          ]}
+          values={{
+            name: name(),
+            description: description(),
+            active: active(),
+            assignmentEnabled: assignmentEnabled(),
+            approvalEnabled: approvalEnabled(),
+            routingInstructions: instructions(),
+            memberIds: memberIds(),
+          }}
+          detailsOnly={!editing()}
+          readOnly={!editing()}
+          disabled={saving()}
+          onChange={(key, value) =>
+            ({
+              name: setName,
+              description: setDescription,
+              active: setActive,
+              assignmentEnabled: setAssignmentEnabled,
+              approvalEnabled: setApprovalEnabled,
+              routingInstructions: setInstructions,
+              memberIds: setMemberIds,
+            })[key](value)
+          }
           onSubmit={save}
-        >
-          <Show
-            when={editing()}
-            fallback={
-              <>
-                <RecordValue label="Name" value={name()} />
-              </>
-            }
-          >
-            <label>
-              Name
-              <input
-                name="name"
-                required
-                maxlength="80"
-                value={name()}
-                readOnly={!editing() || (!isNew() && record()?.assignmentEnabled)}
-                onInput={(event) => setName(event.currentTarget.value)}
-              />
-            </label>
-          </Show>
-          <fieldset class="group-settings">
-            <legend>Group Settings</legend>
-            <For
-              each={[
-                { label: 'Assignment Group', value: assignmentEnabled, set: setAssignmentEnabled },
-                { label: 'Approval Group', value: approvalEnabled, set: setApprovalEnabled },
-              ]}
-            >
-              {(toggle) => (
-                <>
-                  <Show
-                    when={editing()}
-                    fallback={
-                      <RecordValue
-                        label={toggle.label}
-                        value={toggle.value() ? 'Enabled' : 'Disabled'}
-                      />
-                    }
-                  >
-                    <div class="preference-row">
-                      <span>{toggle.label}</span>
-                      <button
-                        type="button"
-                        class="toggle-switch"
-                        role="switch"
-                        aria-label={toggle.label}
-                        aria-checked={toggle.value()}
-                        disabled={!editing()}
-                        onClick={() => toggle.set(!toggle.value())}
-                      >
-                        <span />
-                      </button>
-                    </div>
-                  </Show>
-                  <Show when={toggle.label === 'Assignment Group'}>
-                    {' '}
-                    <Show when={assignmentEnabled()}>
-                      <Show
-                        when={editing()}
-                        fallback={
-                          <RecordValue label="Routing Instructions" value={instructions()} />
-                        }
-                      >
-                        <label>
-                          Routing Instructions
-                          <textarea
-                            name="routingInstructions"
-                            maxlength="2000"
-                            rows="5"
-                            value={instructions()}
-                            readOnly={!editing()}
-                            onInput={(event) => setInstructions(event.currentTarget.value)}
-                          />
-                        </label>
-                      </Show>
-                    </Show>
-                  </Show>
-                </>
-              )}
-            </For>
-          </fieldset>
-
-          <Show
-            when={editing()}
-            fallback={
-              <RecordValue label="Members">
-                {memberIds().map((id) => {
-                  const member = ((!members.error && members()) || []).find(
-                    (member) => member.userId === id,
-                  );
-                  return member ? (
-                    <A
-                      class="record-value-reference"
-                      href={`/workspace/users/${id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {member.name || member.email}
-                      <Icon name="info" />
-                    </A>
-                  ) : null;
-                })}
-              </RecordValue>
-            }
-          >
-            <MultiSelectLookup
-              name="members"
-              label="Members"
-              value={memberIds()}
-              onChange={setMemberIds}
-              readOnly={!editing()}
-              options={(!members.error ? members() || [] : [])
-                .filter((member) => member.active)
-                .map((member) => ({
-                  value: member.userId,
-                  label: member.name || member.email,
-                  href: `/workspace/users/${member.userId}`,
-                }))}
-            />
-          </Show>
-          <Show
-            when={editing()}
-            fallback={<RecordValue label="Active" value={active() ? 'Yes' : 'No'} />}
-          >
-            <div class="preference-row">
-              <span>Active</span>
-              <button
-                type="button"
-                class="toggle-switch"
-                role="switch"
-                aria-label="Active group"
-                aria-checked={active()}
-                disabled={!editing()}
-                onClick={() => setActive(!active())}
-              >
-                <span />
-              </button>
-            </div>
-          </Show>
-          <div
-            class="record-description-field"
-            classList={{ 'record-description-block': !editing() }}
-          >
-            <Show
-              when={editing()}
-              fallback={<RecordValue label="Description" value={description()} />}
-            >
-              <label>
-                Description
-                <textarea
-                  rows="4"
-                  name="description"
-                  maxlength="1000"
-                  value={description()}
-                  readOnly={!editing()}
-                  onInput={(event) => setDescription(event.currentTarget.value)}
-                />
-              </label>
-            </Show>
-          </div>
-        </ValidatedForm>
+        />
         <Show when={!isNew()}>
           <RecordActivity kind="group" recordId={params.id} />
         </Show>

@@ -54,6 +54,8 @@ Deploy on Render with the included [`render.yaml`](render.yaml) Blueprint. See [
 
 Approval permission and an explicit assignment are required to decide approvals. Role access does not override private-file or knowledge permissions. See [roles and everyday features](docs/roles-and-features.md) and the [Knowledge guide](docs/knowledge.md) for step-by-step instructions.
 
+Admins add users from the dedicated Add User page. Creating an invitation shows its shareable link when email delivery is not configured. Groups and data-table records share consistent details/edit forms with named sections and controls based on field types.
+
 ## Learn more
 
 The running application includes public documentation at `/docs` and workflow SDK guidance at `/docs/workflows`.

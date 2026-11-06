@@ -254,6 +254,7 @@ export function installApplicationMiddleware(app, { auth, integrations, customDo
             request.portalDomain
               ? `https://${request.portalDomain}`
               : process.env.APP_ORIGIN || 'http://localhost:3000',
+            request.portalDomain ? '' : process.env.APP_ADDITIONAL_ORIGINS || '',
           )) ||
         request.headers['sec-fetch-site'] === 'cross-site'
       )

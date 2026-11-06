@@ -1,4 +1,4 @@
-import { displayLabel } from '../../services/displayLabels.js';
+import { displayLabel } from '../../utils/displayLabels.js';
 import ToastMessage from '../ToastMessage.jsx';
 import SourceKnowledgeBases from './SourceKnowledgeBases.jsx';
 import A from '../WorkspaceLink.jsx';

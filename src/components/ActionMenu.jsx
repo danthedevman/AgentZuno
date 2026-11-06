@@ -1,5 +1,6 @@
 import { For, Show, createSignal, createUniqueId, onMount, onCleanup } from 'solid-js';
 import Icon from './Icon.jsx';
+import A from './WorkspaceLink.jsx';
 
 export default function ActionMenu(props) {
   const [open, setOpen] = createSignal(false);
@@ -71,16 +72,25 @@ export default function ActionMenu(props) {
         >
           <For each={props.items}>
             {(item) => (
-              <button
-                role="menuitem"
-                type="button"
-                onClick={() => {
-                  close();
-                  item.onClick();
-                }}
+              <Show
+                when={item.href}
+                fallback={
+                  <button
+                    role="menuitem"
+                    type="button"
+                    onClick={() => {
+                      close();
+                      item.onClick?.();
+                    }}
+                  >
+                    {item.label}
+                  </button>
+                }
               >
-                {item.label}
-              </button>
+                <A role="menuitem" href={item.href} onClick={close}>
+                  {item.label}
+                </A>
+              </Show>
             )}
           </For>
         </div>

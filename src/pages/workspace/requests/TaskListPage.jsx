@@ -3,7 +3,7 @@ import { useWorkspace } from '../../../context/WorkspaceContext.jsx';
 import A from '../../../components/WorkspaceLink.jsx';
 import RecordTable from '../../../components/records/RecordTable.jsx';
 import Breadcrumbs from '../../../components/Breadcrumbs.jsx';
-import { statusLabel } from '../../../services/displayLabels.js';
+import { statusLabel } from '../../../utils/displayLabels.js';
 export default function TaskListPage() {
   const { access } = useWorkspace();
   const canCreate = () => ['admin', 'agent'].includes(access()?.role);

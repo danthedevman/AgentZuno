@@ -9,8 +9,7 @@ import { useWorkspace } from '../../../context/WorkspaceContext.jsx';
 import { useWorkspacePath } from '../../../services/workspaceRoutes.js';
 import { useToasts } from '../../../context/ToastContext.jsx';
 import RecordHeader from '../../../components/records/RecordHeader.jsx';
-import ValidatedForm from '../../../components/ValidatedForm.jsx';
-import DataRecordField from '../../../components/data/DataRecordField.jsx';
+import RecordForm from '../../../components/records/RecordForm.jsx';
 import ToastMessage from '../../../components/ToastMessage.jsx';
 import A from '../../../components/WorkspaceLink.jsx';
 import RecordTable from '../../../components/records/RecordTable.jsx';
@@ -161,46 +160,16 @@ export default function DataRecordPage() {
               Open Original Record →
             </A>
           </Show>
-          <ValidatedForm class="create-form record-surface record-property-sheet" onSubmit={save}>
-            <div class="data-record-fields record-property-list">
-              <For each={table().fields}>
-                {(field) => (
-                  <div
-                    classList={{
-                      'record-description-block':
-                        !isEditing() &&
-                        [
-                          'description',
-                          'details',
-                          'notes',
-                          'routingInstructions',
-                          'routing-instructions',
-                        ].includes(field.id),
-                      'record-field-full': [
-                        'name',
-                        'title',
-                        'description',
-                        'details',
-                        'notes',
-                        'routingInstructions',
-                        'routing-instructions',
-                      ].includes(field.id),
-                    }}
-                  >
-                    <DataRecordField
-                      includeDemo={Boolean(record()?.demoDatasetId)}
-                      detailsOnly={!isEditing()}
-                      readOnly={!isEditing() || table().readOnlyFields?.includes(field.id)}
-                      field={field}
-                      value={values()[field.id]}
-                      onChange={(value) =>
-                        setValues((previous) => ({ ...previous, [field.id]: value }))
-                      }
-                    />
-                  </div>
-                )}
-              </For>
-            </div>
+          <RecordForm
+            fields={table().fields}
+            values={values()}
+            detailsOnly={!isEditing()}
+            readOnly={!isEditing()}
+            readOnlyFields={table().readOnlyFields}
+            includeDemo={Boolean(record()?.demoDatasetId)}
+            onChange={(key, value) => setValues((previous) => ({ ...previous, [key]: value }))}
+            onSubmit={save}
+          >
             <Show when={isEditing()}>
               <div class="helpdesk-actions">
                 <button class="workspace-button" disabled={saving()}>
@@ -228,7 +197,7 @@ export default function DataRecordPage() {
                 </Show>
               </div>
             </Show>
-          </ValidatedForm>
+          </RecordForm>
           <Show when={!isNew()}>
             <RecordActivity kind="data" recordId={params.recordId} tableId={params.id} />
           </Show>

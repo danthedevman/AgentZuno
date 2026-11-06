@@ -1,4 +1,4 @@
-import { displayLabel } from './displayLabels.js';
+import { displayLabel } from '../utils/displayLabels.js';
 const tones = {
   active: 'positive',
   published: 'positive',

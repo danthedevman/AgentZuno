@@ -1,9 +1,10 @@
+import DashboardToolbar from '../../../components/reports/DashboardToolbar.jsx';
+import RecordHeader from '../../../components/records/RecordHeader.jsx';
 import { createResource, createSignal, Show, For, lazy, Suspense } from 'solid-js';
 import { useWorkspace } from '../../../context/WorkspaceContext.jsx';
 import { api } from '../../../services/api.js';
-import { statusLabel, displayLabel } from '../../../services/displayLabels.js';
+import { statusLabel, displayLabel } from '../../../utils/displayLabels.js';
 import A from '../../../components/WorkspaceLink.jsx';
-import PageHeading from '../../../components/PageHeading.jsx';
 import RecordTable from '../../../components/records/RecordTable.jsx';
 import Skeleton from '../../../components/Skeleton.jsx';
 import ContentTransition from '../../../components/ContentTransition.jsx';
@@ -31,21 +32,20 @@ export default function MyWorkPage() {
   ];
   return (
     <section class="reading-page my-work-page">
-      <div class="connections-heading">
-        <PageHeading title="My Work" />
-        <button
-          class="workspace-button secondary small refresh-icon-button"
-          type="button"
-          aria-label="Refresh My Work"
-          disabled={!allowed() || summary.loading}
-          onClick={() => {
-            refetch();
-            setRevision((value) => value + 1);
-          }}
-        >
-          <Icon name="refresh" />
-        </button>
-      </div>
+      <RecordHeader title="My Work" />
+      <DashboardToolbar
+        refreshLabel="Refresh My Work"
+        loading={summary.loading}
+        disabled={!allowed()}
+        onRefresh={() => {
+          refetch();
+          setRevision((value) => value + 1);
+        }}
+        actions={[
+          { label: 'Open Inbox', href: '/workspace/inbox' },
+          { label: 'My Requests', href: '/workspace/requests' },
+        ]}
+      />
       <Show when={!access.error && (access.loading || !access())}>
         <Skeleton label="Loading access" lines={3} />
       </Show>

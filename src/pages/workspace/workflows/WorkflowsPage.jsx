@@ -1,5 +1,5 @@
 import Skeleton from '../../../components/Skeleton.jsx';
-import { displayLabel, statusLabel } from '../../../services/displayLabels.js';
+import { displayLabel, statusLabel } from '../../../utils/displayLabels.js';
 import { Show, createEffect, createResource } from 'solid-js';
 import { useNavigate, useSearchParams } from '@solidjs/router';
 import { useWorkspace } from '../../../context/WorkspaceContext.jsx';

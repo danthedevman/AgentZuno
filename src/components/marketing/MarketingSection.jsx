@@ -5,7 +5,7 @@ export default function MarketingSection(props) {
   onMount(() => {
     const targets = [
       ...element.querySelectorAll(
-        '.landing-hero-copy > *, .marketing-section-intro > *, .marketing-copy > *, .hero-demo-stack, .marketing-live-chat, .marketing-builder, .marketing-workflow-preview, .marketing-knowledge-preview, .marketing-platform-preview, .marketing-feature-grid article, .ownership-benefits',
+        '.landing-hero-copy > h1 > span, .landing-hero-copy .tagline > span, .landing-hero-copy > .landing-actions, .marketing-section-intro > *, .marketing-copy > *, .hero-demo-stack, .marketing-live-chat, .marketing-builder, .marketing-workflow-preview, .marketing-knowledge-preview, .marketing-platform-preview, .marketing-feature-grid article, .ownership-benefits',
       ),
     ];
     if (

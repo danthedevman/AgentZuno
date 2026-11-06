@@ -10,7 +10,7 @@ import { For, Show, createSignal, createEffect } from 'solid-js';
 import A from '../WorkspaceLink.jsx';
 import ValidatedForm from '../ValidatedForm.jsx';
 import DataDefinitionEditor from './DataDefinitionEditor.jsx';
-import DataRecordField from './DataRecordField.jsx';
+import RecordField from '../records/RecordField.jsx';
 import ChatMarkdown from '../chat/ChatMarkdown.jsx';
 import AgentProgress from '../chat/AgentProgress.jsx';
 import ToastMessage from '../ToastMessage.jsx';
@@ -167,7 +167,7 @@ export default function DataTableBuilder(props) {
               <fieldset class="data-record-preview create-form" disabled>
                 <For each={props.value.fields}>
                   {(field) => (
-                    <DataRecordField
+                    <RecordField
                       field={field}
                       value={field.type === 'boolean' ? false : ''}
                       onChange={() => {}}

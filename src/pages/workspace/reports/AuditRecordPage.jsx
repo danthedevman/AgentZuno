@@ -9,7 +9,7 @@ import RecordTable from '../../../components/records/RecordTable.jsx';
 import Skeleton from '../../../components/Skeleton.jsx';
 import ToastMessage from '../../../components/ToastMessage.jsx';
 import CodeBlock from '../../../components/CodeBlock.jsx';
-import { displayLabel } from '../../../services/displayLabels.js';
+import { displayLabel } from '../../../utils/displayLabels.js';
 import A from '../../../components/WorkspaceLink.jsx';
 
 export default function AuditRecordPage() {

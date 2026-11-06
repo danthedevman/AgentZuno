@@ -8,6 +8,8 @@ Run the web app, API, worker, database, and queue. Configure an AI provider in S
 
 For local testing, install and authorize [ngrok](https://ngrok.com/docs/start), then run `ngrok http 3000`. Keep your authtoken outside Git and chat. Set the local `APP_ORIGIN` to the tunnel's HTTPS origin, restart the API and worker, and open AgentZuno through that same HTTPS address. The tunnel requires the app, ngrok process, and computer to remain running. A deployed installation uses its stable public hostname instead. See [deployment options](deployment.md).
 
+To also use the local app during tunnel testing, set `APP_ADDITIONAL_ORIGINS=http://localhost:3000` in your local environment and recreate the API and worker containers. This explicitly allows that browser origin while keeping public links and OAuth callbacks on `APP_ORIGIN`. Start and complete Slack authorization through the public tunnel address. Leave additional origins empty in production unless intentionally required; never use wildcards.
+
 ## Create and install the Slack app
 
 1. Open **Connectors → Slack** in AgentZuno. Expand Setup Instructions and copy the generated app manifest.
