@@ -1617,6 +1617,8 @@ test('README shows fictional IT chat cards and a populated workflow audit', asyn
   await expect(page.getByRole('heading', { name: 'Audit Record', exact: true })).toBeVisible();
   await expect(page.locator('.audit-record-details')).toContainText('createDataRecord');
   await expect(page.locator('.record-card').first()).toBeVisible();
+  await expect(page.getByText('Record JSON', { exact: true })).toBeInViewport();
+  expect((await page.locator('.workspace-sidebar').boundingBox()).height).toBe(1400);
   await page.screenshot({
     path: 'public/help/readme-workflow-audit-dark.png',
     fullPage: false,
@@ -1764,4 +1766,93 @@ test('empty knowledge folders can be deleted from their editor after typed confi
   await expect(folder).toHaveCount(0);
   const deleted = await page.request.get(`/api/records/knowledge-base/${base.id}`);
   expect(deleted.status()).toBe(404);
+});
+
+test('workflow Settings danger zone uses default-off preservation choices and typed confirmation', async ({
+  page,
+  isMobile,
+}, testInfo) => {
+  await page
+    .context()
+    .addCookies([{ name: 'browser_test', value: '1', url: 'http://127.0.0.1:4180' }]);
+  const queueName = `Workflow deletion group ${testInfo.project.name}`;
+  const group = await page.request.post('/api/helpdesk/groups', {
+    data: {
+      name: queueName,
+      description: '',
+      routingInstructions: '',
+      userIds: [],
+      active: true,
+      assignmentEnabled: true,
+      approvalEnabled: true,
+    },
+  });
+  expect(group.ok(), await group.text()).toBe(true);
+  const name = `Disposable Workflow ${testInfo.project.name}`;
+  const created = await page.request.post('/api/helpdesk/workflows', {
+    data: {
+      name,
+      department: 'it',
+      keywords: [],
+      action: 'route',
+      queueName,
+      enabled: false,
+      intent: 'draft',
+    },
+  });
+  expect(created.ok(), await created.text()).toBe(true);
+  const workflow = await created.json();
+  await page.goto(`/workspace/222222222222222222222222/workflows/${workflow.id}/edit`);
+  if (isMobile)
+    await page
+      .getByRole('group', { name: 'Conversation view' })
+      .getByRole('button', { name: 'Workflow', exact: true })
+      .click();
+  await page.getByRole('tab', { name: 'Settings', exact: true }).click();
+  const danger = page.getByRole('region', { name: 'Danger Zone', exact: true });
+  const requests = danger.getByRole('switch', { name: 'Preserve existing requests', exact: true });
+  const history = danger.getByRole('switch', { name: 'Preserve workflow history', exact: true });
+  await expect(requests).toHaveAttribute('aria-checked', 'false');
+  await expect(history).toHaveAttribute('aria-checked', 'false');
+  await danger.getByRole('button', { name: 'Delete Workflow', exact: true }).click();
+  const confirmation = page.getByRole('dialog', { name: 'Delete Workflow', exact: true });
+  await expect(confirmation).toContainText('Workflow runs and saved versions will be deleted.');
+  await expect(confirmation).toContainText('their tasks, and request attachments will be deleted.');
+  await confirmation.getByRole('button', { name: 'Cancel', exact: true }).click();
+  expect(
+    (await (await page.request.get('/api/helpdesk/workflows')).json()).some(
+      (row) => row.id === workflow.id,
+    ),
+  ).toBe(true);
+  await requests.click();
+  await history.click();
+  await danger.getByRole('button', { name: 'Delete Workflow', exact: true }).click();
+  await expect(confirmation).toContainText('Existing requests and their tasks will be kept.');
+  await expect(confirmation).toContainText('Workflow runs and saved versions will be kept.');
+  await expect(
+    confirmation.getByRole('button', { name: 'Delete Workflow', exact: true }),
+  ).toBeDisabled();
+  await confirmation.getByRole('textbox', { name: 'Confirmation name', exact: true }).fill(name);
+  const deleted = page.waitForResponse(
+    (response) =>
+      response.request().method() === 'DELETE' &&
+      response.url().endsWith(`/api/helpdesk/workflows/${workflow.id}`),
+  );
+  await confirmation.getByRole('button', { name: 'Delete Workflow', exact: true }).click();
+  const response = await deleted;
+  expect(response.ok(), await response.text()).toBe(true);
+  expect(response.request().postDataJSON()).toMatchObject({
+    confirmed: true,
+    preserveRequests: true,
+    preserveHistory: true,
+    name,
+    version: workflow.version,
+  });
+  await expect(page).toHaveURL(/\/workflows$/);
+  await expect(page.getByText('Workflow deleted.', { exact: true })).toBeVisible();
+  expect(
+    (await (await page.request.get('/api/helpdesk/workflows')).json()).some(
+      (row) => row.id === workflow.id,
+    ),
+  ).toBe(false);
 });

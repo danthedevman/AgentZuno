@@ -57,13 +57,11 @@ export async function deleteWorkflow(store, user, id, input) {
               { upsert: true },
             );
       }
-      const deleted = await store
-        .collection('helpdeskWorkflows')
-        .deleteOne({
-          ...filter,
-          version: queryVersion(input.version),
-          name: queryString(input.name, 80),
-        });
+      const deleted = await store.collection('helpdeskWorkflows').deleteOne({
+        ...filter,
+        version: queryVersion(input.version),
+        name: queryString(input.name, 80),
+      });
       if (!deleted.deletedCount) deny('Workflow changed. Reload before deleting.', 409);
       // Removing the authoritative workflow prevents new offers and future run actions.
       await store.collection('workflowRuns').updateMany(

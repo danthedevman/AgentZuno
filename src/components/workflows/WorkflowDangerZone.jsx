@@ -41,8 +41,8 @@ export default function WorkflowDangerZone(props) {
           ...choices,
         }),
       });
+      notify({ tone: 'success', message: 'Workflow deleted.', destination: props.destination });
       await props.onDeleted?.();
-      notify({ tone: 'success', message: 'Workflow deleted.' });
     } catch (error) {
       notify({ tone: 'error', message: error.message });
     } finally {

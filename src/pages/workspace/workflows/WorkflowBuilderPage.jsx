@@ -860,6 +860,7 @@ export default function WorkflowBuilderPage() {
                 {(workflow) => (
                   <WorkflowDangerZone
                     workflow={workflow}
+                    destination={path('/workspace/workflows')}
                     disabled={saving() || sending() || processing()}
                     onBusy={setDeleting}
                     onDeleted={() => {

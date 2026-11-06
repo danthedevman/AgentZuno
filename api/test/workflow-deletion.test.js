@@ -30,6 +30,7 @@ async function verify(db) {
     const request = {
       _id: new ObjectId(),
       ...related,
+      requestId: String(new ObjectId()),
       title: 'Existing request',
       status: 'waiting-for-approval',
       approvalUserIds: ['approver'],
@@ -42,15 +43,13 @@ async function verify(db) {
     await store
       .collection('requestAttachments')
       .insertOne({ ...scope, requestId: String(request._id), name: 'device.png' });
-    await store
-      .collection('workflowRuns')
-      .insertOne({
-        _id: String(new ObjectId()),
-        ...related,
-        requestId: String(request._id),
-        status: 'awaiting-approval',
-        steps: [],
-      });
+    await store.collection('workflowRuns').insertOne({
+      _id: String(new ObjectId()),
+      ...related,
+      requestId: String(request._id),
+      status: 'awaiting-approval',
+      steps: [],
+    });
     return {
       workflow,
       related,
