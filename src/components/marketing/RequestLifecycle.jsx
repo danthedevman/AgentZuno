@@ -28,24 +28,28 @@ export default function RequestLifecycle() {
       surface: 'AgentZuno',
       title: 'Ask naturally',
       text: 'Start with what you need. AgentZuno guides the conversation from there.',
+      details: ['Identify the right request', 'Keep the conversation in context'],
     },
     {
       icon: 'request',
       surface: 'Figma Access Request',
       title: 'Collect the details',
       text: 'Choose a role and explain what you need.',
+      details: ['Collect required information', 'Review before submitting'],
     },
     {
       icon: 'users',
       surface: 'Access workflow',
       title: 'Get approval',
       text: 'Bring in the right approver, then pass the work to your fulfillment team.',
+      details: ['Approve before fulfillment', 'Give each task a clear owner'],
     },
     {
       icon: 'check',
       surface: 'Figma access',
       title: 'Follow through',
       text: 'Track the request and its fulfillment tasks.',
+      details: ['Keep the request history together', 'Give the requester a clear outcome'],
     },
   ];
   return (
@@ -55,13 +59,17 @@ export default function RequestLifecycle() {
           <article style={{ '--card-index': index() }}>
             <div class="request-lifecycle-visual" aria-hidden="true">
               <div class="lifecycle-app-header">
-                <Icon name={step.icon} />
+                <Icon name="agent" class="marketing-agent-mark" />
                 <strong>{step.surface}</strong>
                 <span class="lifecycle-window-dots">•••</span>
               </div>
               <div class="lifecycle-app-body">
                 <Switch>
                   <Match when={step.icon === 'chat'}>
+                    <span class="lifecycle-context">
+                      <Icon name="software" />
+                      Figma access request
+                    </span>
                     <div class="lifecycle-message">I need access to Figma.</div>
                     <div class="lifecycle-response">
                       <Icon name="agent" />
@@ -82,6 +90,11 @@ export default function RequestLifecycle() {
                   <Match when={step.icon === 'request'}>
                     <div class="lifecycle-form">
                       <span class="lifecycle-form-intro">Review your request details</span>
+                      <small>Requested for</small>
+                      <div>
+                        <Icon name="user" />
+                        Alex Morgan<span class="lifecycle-self-label">You</span>
+                      </div>
                       <small>Role</small>
                       <div>
                         Editor
@@ -120,6 +133,10 @@ export default function RequestLifecycle() {
                       </span>
                       <Icon name="arrow" />
                     </div>
+                    <span class="lifecycle-context">
+                      <Icon name="lock" />
+                      Approval required before access is granted
+                    </span>
                   </Match>
                   <Match when={step.icon === 'check'}>
                     <div class="lifecycle-receipt">
@@ -150,6 +167,10 @@ export default function RequestLifecycle() {
                         Provision Editor access<small>IT Support · Completed</small>
                       </span>
                     </div>
+                    <span class="lifecycle-context">
+                      <Icon name="notifications" />
+                      Requester notified of completion
+                    </span>
                   </Match>
                 </Switch>
               </div>
@@ -160,6 +181,16 @@ export default function RequestLifecycle() {
               </span>
               <h3>{step.title}</h3>
               <p>{step.text}</p>
+              <ul class="lifecycle-highlights">
+                <For each={step.details}>
+                  {(detail) => (
+                    <li>
+                      <Icon name="check" />
+                      <span>{detail}</span>
+                    </li>
+                  )}
+                </For>
+              </ul>
             </div>
           </article>
         )}

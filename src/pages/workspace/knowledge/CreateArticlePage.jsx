@@ -30,6 +30,7 @@ import { workflowChatText } from '../../../services/workflows/workflowChatText.j
 import { useToasts } from '../../../context/ToastContext.jsx';
 
 export default function CreateArticlePage(props) {
+  let selectMobilePanel;
   const { workspace, refresh, access } = useWorkspace();
   const { session } = useSession();
   const { notify } = useToasts();
@@ -261,6 +262,7 @@ export default function CreateArticlePage(props) {
       );
       setProposal(result);
       setTab('preview');
+      if (!standalone) selectMobilePanel?.('right');
       if (standalone)
         window.open(
           `/preview/${session().user.workspaceId}/proposals/${result.id}`,
@@ -432,7 +434,13 @@ export default function CreateArticlePage(props) {
         <ToastMessage tone="error">{error() || conversation.error?.message}</ToastMessage>
       </Show>
       <div class="workflow-builder resizable-split">
-        <SplitResizeHandle storageKey="builder" rightLabel="Article" />
+        <SplitResizeHandle
+          storageKey="builder"
+          rightLabel="Article"
+          onPanelReady={(select) => {
+            selectMobilePanel = select;
+          }}
+        />
         <section class="workflow-chat" aria-label="Article conversation">
           <ChatPanelToolbar
             disabled={isGeneratingArticle()}

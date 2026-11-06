@@ -238,25 +238,52 @@ export default function HomePage() {
         </div>
         <div class="marketing-feature-grid">
           <article>
-            <span>01</span>
             <h3>Controlled Access</h3>
             <p>Give teams confidence that the right people can access the right information.</p>
+            <ul class="marketing-feature-checklist">
+              <li>
+                <Icon name="check" />
+                Workspace roles and assignment groups
+              </li>
+              <li>
+                <Icon name="check" />
+                Permissions for bases, topics, and articles
+              </li>
+            </ul>
           </article>
           <article>
-            <span>02</span>
             <h3>Human Oversight</h3>
             <p>
               Keep people involved in decisions that need judgment, with clear ownership and
               accountability.
             </p>
+            <ul class="marketing-feature-checklist">
+              <li>
+                <Icon name="check" />
+                Approval steps with authorized decisions
+              </li>
+              <li>
+                <Icon name="check" />
+                Explicit review and workflow publication
+              </li>
+            </ul>
           </article>
           <article>
-            <span>03</span>
             <h3>Operational Visibility</h3>
             <p>
               Understand what happened across your organization and give teams the context they need
               for review.
             </p>
+            <ul class="marketing-feature-checklist">
+              <li>
+                <Icon name="check" />
+                Searchable activity and audit history
+              </li>
+              <li>
+                <Icon name="check" />
+                Request, task, and workload reports
+              </li>
+            </ul>
           </article>
         </div>
       </MarketingSection>
@@ -430,6 +457,38 @@ export default function HomePage() {
               <span class="provider-logo">
                 <img
                   src={publicAsset('/provider-logos/gemini.png')}
+                  width="32"
+                  height="32"
+                  alt=""
+                />
+              </span>
+            </a>
+            <a
+              href="https://cursor.com/docs/agent/overview"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Cursor"
+              title="Cursor"
+            >
+              <span class="provider-logo">
+                <img
+                  src={publicAsset('/provider-logos/cursor.svg')}
+                  width="32"
+                  height="32"
+                  alt=""
+                />
+              </span>
+            </a>
+            <a
+              href="https://github.com/features/copilot/"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="GitHub Copilot"
+              title="GitHub Copilot"
+            >
+              <span class="provider-logo">
+                <img
+                  src={publicAsset('/provider-logos/github-copilot.svg')}
                   width="32"
                   height="32"
                   alt=""

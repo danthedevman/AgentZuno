@@ -21,6 +21,7 @@ export default function SplitResizeHandle(props) {
   onMount(() => {
     container = handle.parentElement;
     selectPanel('left');
+    props.onPanelReady?.(selectPanel);
     if (window.matchMedia('(max-width: 900px)').matches) return;
     try {
       const saved = Number(localStorage.getItem(`agentzuno-split-${props.storageKey || 'chat'}`));

@@ -106,3 +106,101 @@ test('lifecycle cards stack during natural scrolling and release before the next
     true,
   );
 });
+
+test('hero request submission slides a full-width record over the chat', async ({
+  page,
+  isMobile,
+}) => {
+  await page.clock.install();
+  await page.goto('/');
+  await page.locator('.hero-demo-stack').scrollIntoViewIfNeeded();
+  if (!isMobile) {
+    await page.clock.runFor(1000);
+    await expect
+      .poll(async () =>
+        Math.abs(
+          (await page.locator('.landing-hero-copy').boundingBox()).y -
+            (await page.locator('.hero-demo-stack').boundingBox()).y,
+        ),
+      )
+      .toBeLessThan(2);
+  }
+  await page.getByRole('button', { name: 'Show employee request' }).click();
+  await page.clock.runFor(10500);
+  const panel = page.locator('.hero-employee-panel');
+  await expect(panel.locator('.hero-form-submit')).toContainText('Request Submitted');
+  await expect(panel.locator('.hero-request-details')).not.toBeVisible();
+  await page.clock.runFor(3500);
+  const record = panel.locator('.hero-request-details');
+  await expect(record).toBeVisible();
+  const width = await record.evaluate((element) => element.offsetWidth);
+  const parentWidth = await panel
+    .locator('.hero-request-workbench')
+    .evaluate((element) => element.clientWidth);
+  expect(Math.abs(width - parentWidth)).toBeLessThan(2);
+  await expect(record).toContainText('REQ-000001');
+});
+
+test('workflow panels reveal together with staggered motion and coding-tool links load', async ({
+  page,
+}) => {
+  await page.goto('/');
+  const workflow = page.locator('.marketing-workflow-diagram');
+  await workflow.scrollIntoViewIfNeeded();
+  await expect(workflow).toHaveClass(/is-visible/);
+  await expect(workflow.locator('.marketing-workflow-prompt')).toContainText(
+    'Build a laptop request',
+  );
+  const panels = workflow.locator('li');
+  await expect(panels).toHaveCount(4);
+  await expect(panels.first()).toHaveCSS('animation-name', 'workflow-step-rise');
+  const delays = await panels.evaluateAll((items) =>
+    items.map((item) => parseFloat(getComputedStyle(item).animationDelay)),
+  );
+  expect(delays[0]).toBeGreaterThan(0.4);
+  expect(delays[3]).toBeGreaterThan(delays[0]);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect(panels.first()).toHaveCSS('animation-name', 'none');
+  const governance = page.locator('.marketing-governance');
+  await expect(governance.locator('.marketing-feature-checklist li')).toHaveCount(6);
+  await expect(governance).not.toContainText(/0[1-3]/);
+  for (const [name, href] of [
+    ['Cursor', 'https://cursor.com/docs/agent/overview'],
+    ['GitHub Copilot', 'https://github.com/features/copilot/'],
+  ]) {
+    const link = page.getByRole('link', { name, exact: true });
+    await expect(link).toHaveAttribute('href', href);
+    expect(
+      await link.locator('img').evaluate((image) => image.complete && image.naturalWidth > 0),
+    ).toBe(true);
+  }
+  const approval = page.locator('.lifecycle-approval');
+  await approval.scrollIntoViewIfNeeded();
+  const positions = await page
+    .locator(
+      '.lifecycle-approval > span:nth-child(2), .lifecycle-workflow-trigger > span:nth-child(2)',
+    )
+    .evaluateAll((items) => items.map((item) => item.getBoundingClientRect().x));
+  expect(Math.max(...positions) - Math.min(...positions)).toBeLessThan(2);
+});
+
+test('hero demos advance only the panel currently in front', async ({ page }) => {
+  await page.clock.install();
+  await page.goto('/');
+  await expect(page.locator('html')).toHaveClass(/app-ready/);
+  await page.locator('.hero-demo-stack').scrollIntoViewIfNeeded();
+  await page.clock.runFor(1000);
+  const builder = page.locator('.hero-conversation-visual:not(.hero-employee-panel)');
+  const employee = page.locator('.hero-employee-panel');
+  await expect(employee.locator('.hero-employee-message')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Show employee request' }).click();
+  const pausedBuilder = await builder.innerHTML();
+  await page.clock.runFor(4500);
+  expect(await builder.innerHTML()).toBe(pausedBuilder);
+  await expect(employee.locator('.hero-employee-message')).toBeVisible();
+  await page.getByRole('button', { name: 'Show workflow builder' }).click();
+  const pausedEmployee = await employee.innerHTML();
+  await page.clock.runFor(2000);
+  expect(await employee.innerHTML()).toBe(pausedEmployee);
+  await expect(builder.locator('.hero-agent-activity')).toBeVisible();
+});

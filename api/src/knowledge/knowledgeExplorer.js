@@ -1,3 +1,4 @@
+import { articleListMetadata } from './articleListMetadata.js';
 import { ObjectId } from 'mongodb';
 import { queryString } from '../shared/queryValues.js';
 import { listResponse } from '../shared/listQuery.js';
@@ -6,6 +7,8 @@ import { canReadAuthoredArticle } from './knowledgeAccess.js';
 import { topicPath } from './topicHierarchy.js';
 
 export async function knowledgeDirectory(store, user, query) {
+  if (query.q !== undefined && (typeof query.q !== 'string' || query.q.length > 200))
+    deny('Invalid list query.', 400);
   for (const key of ['base', 'topic'])
     if (
       query[key] !== undefined &&
@@ -71,7 +74,7 @@ export async function knowledgeDirectory(store, user, query) {
     query.topic &&
     allowedTopics.find((topic) => topic.id === query.topic && effectiveBase(topic) === baseId);
   if ((baseId && !base) || (query.topic && !topic)) deny('Knowledge folder not found.', 404);
-  const nodes = !base
+  let nodes = !base
     ? allowedBases.map((base) => ({
         id: base.id,
         type: 'base',
@@ -112,10 +115,48 @@ export async function knowledgeDirectory(store, user, query) {
             status: article.status || 'Draft',
           })),
       ];
+  if (query.q?.trim()) {
+    nodes = [
+      ...allowedBases.map((item) => ({
+        id: item.id,
+        type: 'base',
+        name: item.name,
+        description: item.description,
+        baseId: item.id,
+        depth: 0,
+        editable: !!item.editable,
+      })),
+      ...allowedTopics.map((item) => ({
+        id: item.id,
+        type: 'topic',
+        name: item.name,
+        description: item.description,
+        baseId: effectiveBase(item),
+        parentTopicId: item.parentTopicId || '',
+        depth: topicPath(topics, item.id)?.length || 1,
+        editable: user.role === 'admin',
+      })),
+      ...visible.map((article) => ({
+        id: String(article._id),
+        type: 'article',
+        name: article.title,
+        baseId: article.base,
+        topicId: article.topicIds?.[0] || '',
+        status: article.status || 'Draft',
+      })),
+    ];
+  }
   const result = listResponse(
     { query: { ...query, list: '1', sort: 'Name', direction: 'asc' } },
     nodes,
     { Name: (item) => `${item.type === 'article' ? '1' : '0'}${item.name}` },
+  );
+  const metadata = await articleListMetadata(
+    store,
+    visible.filter((article) => result.rows.some((row) => row.id === String(article._id))),
+  );
+  result.rows = result.rows.map((row) =>
+    row.type === 'article' ? { ...row, ...metadata.get(row.id) } : row,
   );
   const path = base
     ? [

@@ -1273,7 +1273,8 @@ h1 {
 .homepage {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  align-items: center;
+  align-items: start;
+  align-content: start;
   gap: 64px;
   max-width: 1280px;
   margin: auto;
@@ -1301,6 +1302,7 @@ h1 {
 .landing-hero-copy {
   position: relative;
   z-index: 1;
+  align-self: start;
 }
 .homepage h1 {
   font-size: clamp(40px, 5.3vw, 72px);
@@ -3578,16 +3580,20 @@ html:not(.app-ready)
 .hero-request-details {
   display: none;
   min-width: 0;
-  border-left: 1px solid #2c3c52;
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  background: #0b111b;
+  border-left: 0;
   overflow-y: auto;
   color: #d1dced;
 }
 .has-record {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
 }
 .has-record .hero-request-details {
   display: block;
-  animation: hero-record-reveal 500ms ease both;
+  animation: hero-record-reveal 650ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 .hero-example-tabs {
   display: flex;
@@ -3650,10 +3656,10 @@ html:not(.app-ready)
 }
 @keyframes hero-record-reveal {
   from {
-    opacity: 0;
+    transform: translateX(100%);
   }
   to {
-    opacity: 1;
+    transform: translateX(0);
   }
 }
 @media (max-width: 600px) {
@@ -3661,7 +3667,7 @@ html:not(.app-ready)
     padding: 14px;
   }
   .hero-request-workbench.has-record {
-    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    grid-template-columns: minmax(0, 1fr);
   }
   .hero-example-record {
     padding: 10px;
@@ -4437,5 +4443,167 @@ html:not(.app-ready)
     font-size: 13px;
     line-height: 1.7;
     margin-bottom: 0;
+  }
+}
+.lifecycle-app-header > .marketing-agent-mark {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+}
+.lifecycle-app-header strong {
+  min-width: 0;
+}
+.lifecycle-context {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #8997ad;
+  font-size: 9px;
+  line-height: 1.5;
+}
+.lifecycle-context > .icon {
+  font-size: 13px;
+  flex-shrink: 0;
+}
+.lifecycle-form > div:has(.lifecycle-self-label) {
+  justify-content: flex-start;
+  gap: 7px;
+}
+.lifecycle-self-label {
+  margin-left: auto;
+  color: #8997ad;
+  font-size: 9px;
+}
+.lifecycle-highlights {
+  list-style: none;
+  padding: 0;
+  margin: 20px 0 0;
+  display: grid;
+  gap: 10px;
+  color: #acb8cd;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.lifecycle-highlights li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.lifecycle-highlights .icon {
+  font-size: 14px;
+  color: #a5b4fc;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+@media (max-width: 650px) {
+  .lifecycle-highlights {
+    gap: 6px;
+    margin-top: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .marketing-workflow-diagram.is-visible li {
+    animation: workflow-step-rise 650ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: var(--workflow-step-delay, 0ms);
+  }
+}
+@keyframes workflow-step-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.marketing-feature-checklist {
+  display: grid;
+  gap: 12px;
+  list-style: none;
+  padding: 0;
+  margin: 20px 0 0;
+  color: #c5d0df;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.marketing-feature-checklist li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.marketing-feature-checklist .icon {
+  color: #818cf8;
+  margin-top: 2px;
+}
+
+.lifecycle-approval,
+.lifecycle-workflow-trigger {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) 20px;
+  column-gap: 10px;
+}
+.lifecycle-workflow-trigger > .icon:first-child {
+  justify-self: center;
+  width: 18px;
+  height: 18px;
+  font-size: 18px;
+}
+.lifecycle-avatar {
+  flex: none;
+}
+.lifecycle-avatar > .icon {
+  width: 18px;
+  height: 18px;
+  font-size: 18px;
+}
+.lifecycle-approval > .icon:last-child,
+.lifecycle-workflow-trigger > .icon:last-child {
+  justify-self: center;
+  margin-left: 0;
+  width: 18px;
+  height: 18px;
+  font-size: 18px;
+}
+
+.hero-conversation-visual.is-back *,
+.hero-conversation-visual.is-back *::before,
+.hero-conversation-visual.is-back *::after {
+  animation-play-state: paused !important;
+}
+
+.marketing-workflow-diagram .marketing-workflow-prompt {
+  max-width: 88%;
+  margin: 4px 0 20px auto;
+  padding: 12px 16px;
+  border: 1px solid #818cf840;
+  border-radius: 14px 14px 4px 14px;
+  background: #818cf814;
+  color: #d9e0ef;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.marketing-workflow-response {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 18px;
+  color: #b9c5db;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.marketing-workflow-response .marketing-agent-mark {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .marketing-workflow-diagram.is-visible .marketing-workflow-prompt {
+    animation: workflow-step-rise 550ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .marketing-workflow-diagram.is-visible .marketing-workflow-response {
+    animation: workflow-step-rise 550ms cubic-bezier(0.22, 1, 0.36, 1) 400ms both;
   }
 }

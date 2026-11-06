@@ -39,6 +39,7 @@ export async function ensureArticleAuthoringDraft(store, user, chat, draft) {
     {
       $setOnInsert: {
         title: clean.title || 'Untitled Article',
+        createdBy: user.id,
         body: clean.body || '<p></p>',
         summary: '',
         status: 'Draft',

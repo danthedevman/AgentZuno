@@ -1,10 +1,10 @@
+import ProfileAvatar from '../../../components/identity/ProfileAvatar.jsx';
 import { For, Show, createEffect, createResource, createSignal, onCleanup } from 'solid-js';
 import { useSearchParams } from '@solidjs/router';
 import { useSession } from '../../../context/SessionContext.jsx';
 import { useWorkspace } from '../../../context/WorkspaceContext.jsx';
 import { api } from '../../../services/api.js';
 import A from '../../../components/WorkspaceLink.jsx';
-import ActionMenu from '../../../components/ActionMenu.jsx';
 import Breadcrumbs from '../../../components/Breadcrumbs.jsx';
 import ListPagination from '../../../components/ListPagination.jsx';
 import KnowledgeExplorer from '../../../components/knowledge/KnowledgeExplorer.jsx';
@@ -14,6 +14,7 @@ import ArticleReadPage from './ArticleReadPage.jsx';
 import Skeleton from '../../../components/Skeleton.jsx';
 import ToastMessage from '../../../components/ToastMessage.jsx';
 import Icon from '../../../components/Icon.jsx';
+import TooltipRegion from '../../../components/TooltipRegion.jsx';
 
 export default function KnowledgeCenterPage() {
   const { preferences, savePreferences, session } = useSession();
@@ -21,6 +22,14 @@ export default function KnowledgeCenterPage() {
   const canManage = () => !access.error && access()?.role === 'admin';
   const [query, setQuery] = useSearchParams();
   const [revision, setRevision] = createSignal(0);
+  const [collapseRevision, setCollapseRevision] = createSignal(0);
+  const [folderSearch, setFolderSearch] = createSignal('');
+  const [appliedFolderSearch, setAppliedFolderSearch] = createSignal('');
+  createEffect(() => {
+    const value = folderSearch();
+    const timer = setTimeout(() => setAppliedFolderSearch(value), 200);
+    onCleanup(() => clearTimeout(timer));
+  });
   const [page, setPage] = createSignal(1);
   const [search, setSearch] = createSignal('');
   const [applied, setApplied] = createSignal('');
@@ -84,12 +93,11 @@ export default function KnowledgeCenterPage() {
     });
     setMobileView('content');
   }
-  function editFolder() {
-    if (!folder()) return;
+  function editFolder(node) {
     setEditor({
-      kind: folder().type,
-      record: { ...folder(), knowledgeBaseId: query.base },
-      baseId: query.base,
+      kind: node.type,
+      record: { ...node, knowledgeBaseId: node.baseId },
+      baseId: node.baseId,
     });
   }
   function addTopic(node) {
@@ -99,20 +107,6 @@ export default function KnowledgeCenterPage() {
       parentTopicId: node ? (node.type === 'topic' ? node.id : '') : query.topic || '',
     });
   }
-  const actions = () => [
-    { label: 'Add Knowledge Base', onClick: () => setEditor({ kind: 'base' }) },
-    ...(query.base && (folder()?.depth || 0) < 3
-      ? [{ label: 'Add Topic', onClick: () => addTopic() }]
-      : []),
-    ...(folder()?.editable
-      ? [
-          {
-            label: `Edit ${folder().type === 'base' ? 'Knowledge Base' : 'Topic'}`,
-            onClick: editFolder,
-          },
-        ]
-      : []),
-  ];
   async function saved(record) {
     const current = editor();
     await refresh();
@@ -158,35 +152,73 @@ export default function KnowledgeCenterPage() {
             <A class="workspace-button small" href={articleLink()}>
               Add Article
             </A>
-            <ActionMenu label="Knowledge actions" items={actions()} />
           </Show>
         </div>
       </header>
       <div class="knowledge-workspace-body" data-mobile-view={mobileView()}>
         <nav class="knowledge-explorer-sidebar" aria-label="Knowledge explorer">
-          <div class="knowledge-explorer-heading">
-            <span>Knowledge Bases</span>
-            <Show when={canManage()}>
-              <button
-                type="button"
-                class="workspace-button secondary small icon-only"
-                aria-label="Add Knowledge Base"
-                title="Add Knowledge Base"
-                onClick={() => setEditor({ kind: 'base' })}
+          <TooltipRegion>
+            <div class="knowledge-explorer-heading">
+              <label class="workspace-search knowledge-folder-search">
+                <Icon name="search" />
+                <input
+                  type="search"
+                  aria-label="Search knowledge folders"
+                  placeholder="Search folders…"
+                  maxlength="200"
+                  value={folderSearch()}
+                  onInput={(event) => setFolderSearch(event.currentTarget.value)}
+                />
+              </label>
+              <div
+                class="knowledge-tree-actions"
+                role="group"
+                aria-label="Knowledge folder actions"
               >
-                <Icon name="plus" />
-              </button>
-            </Show>
-          </div>
-          <KnowledgeExplorer
-            selected={selected()}
-            ancestors={ancestors()}
-            revision={revision()}
-            onSelect={select}
-            canManage={canManage()}
-            onAddTopic={addTopic}
-            articleLink={articleLink}
-          />
+                <Show when={canManage()}>
+                  <button
+                    type="button"
+                    class="workspace-button secondary small icon-only"
+                    aria-label="Add Knowledge Base"
+                    data-tooltip="Add Knowledge Base"
+                    onClick={() => setEditor({ kind: 'base' })}
+                  >
+                    <Icon name="folder-add" />
+                  </button>
+                </Show>
+                <button
+                  type="button"
+                  class="workspace-button secondary small icon-only"
+                  aria-label="Refresh knowledge folders"
+                  data-tooltip="Refresh knowledge folders"
+                  onClick={() => setRevision((value) => value + 1)}
+                >
+                  <Icon name="refresh" />
+                </button>
+                <button
+                  type="button"
+                  class="workspace-button secondary small icon-only"
+                  aria-label="Collapse all knowledge folders"
+                  data-tooltip="Collapse all knowledge folders"
+                  onClick={() => setCollapseRevision((value) => value + 1)}
+                >
+                  <Icon name="collapse" />
+                </button>
+              </div>
+            </div>
+            <KnowledgeExplorer
+              search={appliedFolderSearch()}
+              selected={selected()}
+              ancestors={ancestors()}
+              revision={revision()}
+              collapseRevision={collapseRevision()}
+              onSelect={select}
+              canManage={canManage()}
+              onAddTopic={addTopic}
+              onEditFolder={editFolder}
+              articleLink={articleLink}
+            />
+          </TooltipRegion>
         </nav>
         <KnowledgeResizeHandle
           storageKey={`agentzuno-knowledge-width-${session()?.user?.id}-${session()?.user?.workspaceId}`}
@@ -286,12 +318,44 @@ export default function KnowledgeCenterPage() {
                                 }}
                               >
                                 <strong>{article.name}</strong>
+                                <span class="knowledge-article-metadata">
+                                  <span class="knowledge-article-author">
+                                    <ProfileAvatar name={article.author?.name} />
+                                    <span>
+                                      {article.author?.label || 'Author'}:{' '}
+                                      {article.author?.name || 'Unavailable'}
+                                    </span>
+                                  </span>
+                                  <Show
+                                    when={
+                                      article.updatedAt &&
+                                      Number.isFinite(new Date(article.updatedAt).getTime())
+                                    }
+                                  >
+                                    <time datetime={article.updatedAt}>
+                                      Updated{' '}
+                                      {new Date(article.updatedAt).toLocaleDateString(undefined, {
+                                        month: 'short',
+                                        day: 'numeric',
+                                        year: 'numeric',
+                                      })}
+                                    </time>
+                                  </Show>
+                                </span>
                                 <Show when={article.summary}>
                                   <p>{article.summary}</p>
                                 </Show>
                               </A>
                               <Show when={article.status}>
-                                <span class="activity-status">{article.status}</span>
+                                <span
+                                  class="activity-status"
+                                  data-tone={
+                                    article.status === 'Published' ? 'positive' : 'informational'
+                                  }
+                                >
+                                  <span class="activity-status-dot" />
+                                  {article.status}
+                                </span>
                               </Show>
                             </article>
                           )}

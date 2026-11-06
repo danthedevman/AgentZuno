@@ -9,6 +9,8 @@ import { createIntegrationStore } from '../src/storage/integrationStore.js';
 import { createKnowledgeTopics } from '../src/knowledge/knowledgeTopics.js';
 import { canReadAuthoredArticle } from '../src/knowledge/knowledgeAccess.js';
 import { knowledgeDirectory } from '../src/knowledge/knowledgeExplorer.js';
+import { createContentStore } from '../src/knowledge/contentStore.js';
+import { createContentController } from '../src/controllers/knowledge/contentController.js';
 
 async function verify(database) {
   const store = createIntegrationStore(database);
@@ -19,6 +21,9 @@ async function verify(database) {
     role: 'admin',
     name: 'Owner',
   };
+  await store
+    .collection('users')
+    .insertOne({ id: owner.id, name: 'Morgan Writer', email: 'private@example.test' });
   const create = createKnowledgeTopics(store);
   const input = {
     name: 'Support',
@@ -68,6 +73,9 @@ async function verify(database) {
     workspaceId: owner.workspaceId,
     title: 'Access Salesforce',
     body: '<p>Use the portal.</p>',
+    createdBy: owner.id,
+    summary: 'Access instructions.',
+    updatedAt: '2026-11-06T12:00:00.000Z',
     status: 'Published',
     base: owner.workspaceId,
     topicIds: [leaf.id],
@@ -88,11 +96,23 @@ async function verify(database) {
   const files = await knowledgeDirectory(store, owner, { base: owner.workspaceId, topic: leaf.id });
   assert.equal(files.rows[0].name, article.title);
   assert.equal(files.rows[0].body, undefined);
+  assert.deepEqual(files.rows[0].author, { name: 'Morgan Writer', label: 'Author' });
+  assert.equal(files.rows[0].summary, 'Access instructions.');
+  assert.equal(files.rows[0].updatedAt, article.updatedAt);
+  assert.ok(!JSON.stringify(files).includes('private@example.test'));
+  assert.equal((await knowledgeDirectory(store, owner, { q: 'salesforce' })).rows[0].id, leaf.id);
+  assert.equal(
+    (await knowledgeDirectory(store, owner, { q: article.title })).rows[0].id,
+    String(article._id),
+  );
+  assert.deepEqual((await knowledgeDirectory(store, foreign, { q: article.title })).rows, []);
   for (const query of [
     { base: { $ne: null } },
     { base: owner.workspaceId, topic: [] },
     { page: ['1'] },
     { q: { $regex: '.*' } },
+    { q: ['Support'] },
+    { q: 'a'.repeat(201) },
   ])
     await assert.rejects(knowledgeDirectory(store, owner, query), { status: 400 });
   await assert.rejects(knowledgeDirectory(store, foreign, { base: owner.workspaceId }), {
@@ -126,6 +146,7 @@ async function verify(database) {
   });
   assert.equal(await canReadAuthoredArticle(store, reader, article), false);
   assert.deepEqual((await knowledgeDirectory(store, reader, {})).rows, []);
+  assert.deepEqual((await knowledgeDirectory(store, reader, { q: article.title })).rows, []);
   await store
     .collection('knowledgePermissions')
     .updateOne({ _id: restricted }, { $set: { mode: 'workspace' } });
@@ -144,6 +165,37 @@ async function verify(database) {
     .updateOne({ _id: new ObjectId(root.id) }, { $set: { parentTopicId: leaf.id } });
   assert.equal(await canReadAuthoredArticle(store, reader, article), false);
   assert.deepEqual((await knowledgeDirectory(store, reader, {})).rows, []);
+  assert.deepEqual((await knowledgeDirectory(store, reader, { q: article.title })).rows, []);
+  const controller = createContentController(null, createContentStore(undefined, database));
+  let saved, status;
+  const response = {
+    status(value) {
+      status = value;
+      return this;
+    },
+    json(value) {
+      saved = value;
+    },
+  };
+  await controller.saveRecord(
+    {
+      params: { type: 'knowledge-base' },
+      user: owner,
+      body: { name: 'Scoped base', workspaceId: foreign.workspaceId, ownerId: foreign.id },
+    },
+    response,
+  );
+  assert.equal(status, 201);
+  assert.equal(saved.workspaceId, owner.workspaceId);
+  assert.ok((await knowledgeDirectory(store, owner, {})).rows.some((row) => row.id === saved.id));
+  assert.ok(
+    !(await knowledgeDirectory(store, foreign, {})).rows.some((row) => row.id === saved.id),
+  );
+  await controller.saveRecord(
+    { params: { type: 'knowledge-base' }, user: owner, body: { name: { $ne: null } } },
+    response,
+  );
+  assert.equal(status, 400);
   await store.close();
 }
 test('knowledge folders enforce hierarchy and inherited access', () =>

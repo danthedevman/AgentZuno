@@ -7,11 +7,14 @@ export default function HeroWorkflowBackground() {
   let isVisible = false;
   const [panel, setPanel] = createSignal(0);
   let reducedMotion = false;
-  const [stage, setStage] = createSignal(0);
+  const [stages, setStages] = createSignal([0, 0]);
+  const stage = () => stages()[0];
+  const setStage = (value) =>
+    setStages((previous) => previous.map((item, index) => (index === panel() ? value : item)));
   const timers = [];
   createEffect(() => {
     const current = stage();
-    if (!current) return;
+    if (!current || panel() !== 0) return;
     requestAnimationFrame(() =>
       transcript?.scrollTo({
         top: transcript.scrollHeight,
@@ -38,7 +41,7 @@ export default function HeroWorkflowBackground() {
   };
   onMount(() => {
     reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reducedMotion) setStage(11);
+    if (reducedMotion) setStages([11, 11]);
     const observer = new IntersectionObserver(
       ([entry]) => {
         isVisible = entry.isIntersecting;
@@ -224,7 +227,7 @@ export default function HeroWorkflowBackground() {
             </div>
           </div>
         </div>
-        <HeroEmployeeRequest stage={panel() === 1 ? stage() : 0} active={panel() === 1} />
+        <HeroEmployeeRequest stage={stages()[1]} active={panel() === 1} />
       </div>
     </div>
   );

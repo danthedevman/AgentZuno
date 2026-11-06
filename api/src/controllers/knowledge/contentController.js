@@ -204,6 +204,7 @@ export function createContentController(auth, store, designer = {}) {
     const values = {
       workspaceId: request.user.workspaceId,
       isAuthoringDraft: false,
+      ...(!existing ? { createdBy: request.helpdeskUser?.id || request.user.id } : {}),
       attachmentIds: [...new Set(attachmentIds)],
       title: title.trim(),
       status,

@@ -33,10 +33,17 @@ export default function WorkflowDiagram() {
         <Icon name="workflow" />
         <strong>Laptop Request</strong>
       </header>
+      <p class="marketing-workflow-prompt">
+        Build a laptop request with manager approval and a task for Desktop Support.
+      </p>
+      <div class="marketing-workflow-response">
+        <Icon name="agent" class="marketing-agent-mark" />
+        <span>Here’s your laptop request workflow.</span>
+      </div>
       <ol>
         <For each={steps}>
-          {(step) => (
-            <li>
+          {(step, index) => (
+            <li style={{ '--workflow-step-delay': `${850 + index() * 140}ms` }}>
               <span class="marketing-diagram-icon">
                 <Icon name={step.icon} />
               </span>

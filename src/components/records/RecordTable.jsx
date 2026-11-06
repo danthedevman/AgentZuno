@@ -71,7 +71,9 @@ function RecordRow(props) {
             >
               <span class="record-mobile-field-label">{column.label}</span>
             </Show>
-            {column.render ? column.render(props.record) : props.record[column.key]}
+            {column.render
+              ? column.render(props.record, { card: props.card })
+              : props.record[column.key]}
           </Dynamic>
         )}
       </For>
@@ -95,6 +97,8 @@ export default function RecordTable(props) {
   const cardView = () => view() === 'cards';
   function changeView(value) {
     setView(value);
+    setSelected([]);
+    props.onViewChange?.(value);
     try {
       localStorage.setItem(preferenceKey(), value);
     } catch {
@@ -111,7 +115,7 @@ export default function RecordTable(props) {
   const [selected, setSelected] = createSignal([]);
   const [deleting, setDeleting] = createSignal(false);
   const [exporting, setExporting] = createSignal(false);
-  async function exportRecords(format) {
+  async function exportRecords(format, selectedOnly = false) {
     if (exporting()) return;
     setExporting(true);
     try {
@@ -122,7 +126,10 @@ export default function RecordTable(props) {
         direction: sort().direction,
       };
       if (props.source === '/api/helpdesk/audit') query.until = new Date().toISOString();
-      const records = props.source ? await loadExportRows(api, props.source, query) : [...rows()];
+      const available = props.source ? await loadExportRows(api, props.source, query) : [...rows()];
+      const records = selectedOnly
+        ? available.filter((row) => selected().includes(row.id))
+        : available;
       await api('/api/helpdesk/exports', {
         method: 'POST',
         body: JSON.stringify({
@@ -146,14 +153,19 @@ export default function RecordTable(props) {
   }
 
   const deletable = (row) => !row.sourceConnectionId && /^[a-f0-9]{24}$/.test(row.id);
-  const selectedRows = () => rows().filter((row) => deletable(row) && selected().includes(row.id));
+  const selectedRows = () => rows().filter((row) => selected().includes(row.id));
+  const canSelect = () =>
+    props.selectable !== false &&
+    !props.columns.some((column) => column.headerStart) &&
+    (!!props.source || canDelete());
+  const selectable = (row) => typeof row.id === 'string' && !!row.id;
   function toggle(id, checked) {
     setSelected((ids) =>
       checked ? [...new Set([...ids, id])] : ids.filter((item) => item !== id),
     );
   }
   async function deleteSelected() {
-    const targets = selectedRows();
+    const targets = selectedRows().filter(deletable);
     if (!canDelete() || !targets.length || deleting()) return;
     const names = targets
       .slice(0, 5)
@@ -192,7 +204,7 @@ export default function RecordTable(props) {
   const columns = () => {
     const isUpdated = (column) => /^(updated|updatedAt)$/i.test(column.key || column.label);
     return [
-      ...(canDelete()
+      ...(!cardView() && canSelect()
         ? [
             {
               key: 'selection',
@@ -202,19 +214,19 @@ export default function RecordTable(props) {
               headerStart: () => (
                 <input
                   type="checkbox"
-                  aria-label="Select all deletable records on this page"
-                  disabled={deleting() || result.loading || !rows().some(deletable)}
+                  aria-label="Select all records on this page"
+                  disabled={deleting() || result.loading || !rows().some(selectable)}
                   checked={
-                    !!rows().filter(deletable).length &&
+                    !!rows().filter(selectable).length &&
                     rows()
-                      .filter(deletable)
+                      .filter(selectable)
                       .every((row) => selected().includes(row.id))
                   }
                   onChange={(event) =>
                     setSelected(
                       event.currentTarget.checked
                         ? rows()
-                            .filter(deletable)
+                            .filter(selectable)
                             .map((row) => row.id)
                         : [],
                     )
@@ -222,7 +234,7 @@ export default function RecordTable(props) {
                 />
               ),
               render: (row) => (
-                <Show when={deletable(row)}>
+                <Show when={selectable(row)}>
                   <input
                     type="checkbox"
                     aria-label={`Select ${row.title || row.name || row.number || 'record'}`}
@@ -397,29 +409,6 @@ export default function RecordTable(props) {
           </Show>
           {props.toolbarFilters}
           {props.toolbarActions}
-          <Show when={canDelete() && selectedRows().length}>
-            <div class="record-toolbar-bulk" role="region" aria-label="Selected records">
-              <span aria-live="polite">{selectedRows().length} Selected</span>
-              <button
-                class="workspace-button secondary small icon-only"
-                aria-label={deleting() ? 'Deleting selected records' : 'Delete Selected'}
-                title="Delete selected records"
-                disabled={deleting() || result.loading}
-                onClick={deleteSelected}
-              >
-                <Icon name={deleting() ? 'loading' : 'delete'} />
-              </button>
-              <button
-                class="workspace-button secondary small icon-only"
-                aria-label="Clear Selection"
-                title="Clear selection"
-                disabled={deleting()}
-                onClick={() => setSelected([])}
-              >
-                <Icon name="close" />
-              </button>
-            </div>
-          </Show>
           <div class="record-toolbar-actions">
             <Show when={props.source && columns().some((column) => column.sortable !== false)}>
               <Dropdown
@@ -468,6 +457,46 @@ export default function RecordTable(props) {
               />
             </Show>
           </div>
+        </div>
+      </Show>
+      <Show when={!cardView() && (selectedRows().length || props.selectionActions)}>
+        <div class="record-selection-toolbar">
+          {props.selectionActions}
+          <Show when={!cardView() && selectedRows().length}>
+            <div class="record-toolbar-bulk" role="region" aria-label="Selected records">
+              <span aria-live="polite">{selectedRows().length} Selected</span>
+              <Show when={canDelete() && selectedRows().some(deletable)}>
+                <button
+                  class="workspace-button secondary small icon-only"
+                  aria-label={deleting() ? 'Deleting selected records' : 'Delete Selected'}
+                  title="Delete selected records"
+                  disabled={deleting() || result.loading}
+                  onClick={deleteSelected}
+                >
+                  <Icon name={deleting() ? 'loading' : 'delete'} />
+                </button>
+              </Show>
+              <button
+                type="button"
+                class="workspace-button secondary small icon-only"
+                aria-label="Export selected records"
+                title="Export selected CSV"
+                disabled={exporting()}
+                onClick={() => exportRecords('csv', true)}
+              >
+                <Icon name="download" />
+              </button>
+              <button
+                class="workspace-button secondary small icon-only"
+                aria-label="Clear Selection"
+                title="Clear selection"
+                disabled={deleting()}
+                onClick={() => setSelected([])}
+              >
+                <Icon name="close" />
+              </button>
+            </div>
+          </Show>
         </div>
       </Show>
       <Show when={result.error}>

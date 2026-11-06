@@ -1,3 +1,4 @@
+import { articleListMetadata } from '../../knowledge/articleListMetadata.js';
 import { knowledgeDirectory } from '../../knowledge/knowledgeExplorer.js';
 import { ObjectId } from 'mongodb';
 import { deny, helpdeskScope, requireRole } from '../../identity/helpdeskRoles.js';
@@ -194,15 +195,17 @@ export function createKnowledgeAccessController(store) {
               updatedAt: item.updatedAt,
             }))
         : [];
-    response.json({
-      bases,
-      topics,
-      articles: listResponse(
-        { ...request, query: { ...request.query, list: '1', sort: 'Title', direction: 'asc' } },
-        articles,
-        { Title: 'title', Summary: 'summary' },
-      ),
-    });
+    const articleList = listResponse(
+      { ...request, query: { ...request.query, list: '1', sort: 'Title', direction: 'asc' } },
+      articles,
+      { Title: 'title', Summary: 'summary' },
+    );
+    const metadata = await articleListMetadata(
+      store,
+      visible.filter((article) => articleList.rows.some((row) => row.id === String(article._id))),
+    );
+    articleList.rows = articleList.rows.map((row) => ({ ...row, ...metadata.get(row.id) }));
+    response.json({ bases, topics, articles: articleList });
   };
   const getKnowledgeDirectory = async (request, response) =>
     response.json(await knowledgeDirectory(store, request.helpdeskUser, request.query));

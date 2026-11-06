@@ -31,11 +31,14 @@ export default function InboxList(props) {
     >
       <RecordTable
         onEmptyChange={props.onEmptyChange}
+        onViewChange={(view) => {
+          if (view === 'cards') props.onSelectAll(false);
+        }}
         label="Inbox"
         emptyAction={{ label: 'Start Chat', href: '/workspace/chat' }}
         query={props.query}
         onQueryChange={props.onQueryChange}
-        toolbarActions={
+        selectionActions={
           <Show when={props.selectedIds?.length || props.busyIds?.length}>
             <div class="inbox-selection-actions" role="group" aria-label="Selected inbox items">
               <span role="status">
@@ -77,14 +80,16 @@ export default function InboxList(props) {
                 onChange={props.onSelectAll}
               />
             ),
-            render: (item) => (
+            render: (item, context) => (
               <div class="inbox-table-subject">
-                <SelectionCheckbox
-                  label={`Select ${item.title}`}
-                  checked={props.selectedIds?.includes(item.id)}
-                  disabled={props.loading || !!props.busyIds?.length}
-                  onChange={(checked) => props.onSelect(item.id, checked)}
-                />
+                <Show when={!context?.card}>
+                  <SelectionCheckbox
+                    label={`Select ${item.title}`}
+                    checked={props.selectedIds?.includes(item.id)}
+                    disabled={props.loading || !!props.busyIds?.length}
+                    onChange={(checked) => props.onSelect(item.id, checked)}
+                  />
+                </Show>
                 <A
                   class="article-table-title"
                   href={

@@ -805,9 +805,10 @@ test('knowledge folders support three topic levels, inline articles, and resizin
   const folder = tree.getByRole('treeitem', { name: 'Access', exact: true });
   await folder.getByRole('link', { name: 'Access', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Access', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Knowledge actions' }).click();
-  await expect(page.getByRole('menuitem', { name: 'Add Topic', exact: true })).toHaveCount(0);
-  await page.keyboard.press('Escape');
+  await expect(page.getByText('Author: Alex Morgan', { exact: true })).toBeVisible();
+  await expect(page.locator('.knowledge-article-metadata time')).toContainText('Updated');
+  await expect(page.getByRole('button', { name: 'Knowledge actions' })).toHaveCount(0);
+  await expect(folder.getByRole('button', { name: 'Add topic in Access' })).toHaveCount(0);
   if (isMobile) await page.getByRole('button', { name: 'Browse knowledge folders' }).click();
   await tree
     .getByRole('treeitem', { name: `Explorer guide ${suffix}`, exact: true })
@@ -1157,6 +1158,29 @@ test('knowledge explorer creates bases and topics and opens articles in the sele
     .addCookies([{ name: 'browser_test', value: '1', url: 'http://127.0.0.1:4180' }]);
   await page.goto('/workspace/222222222222222222222222/knowledge');
   const explorer = page.getByRole('navigation', { name: 'Knowledge explorer' });
+  const toolbar = explorer.getByRole('group', { name: 'Knowledge folder actions' });
+  await expect(toolbar).toHaveCSS('opacity', '1');
+  for (const label of [
+    'Add Knowledge Base',
+    'Refresh knowledge folders',
+    'Collapse all knowledge folders',
+  ]) {
+    await expect(toolbar.getByRole('button', { name: label, exact: true })).toHaveAttribute(
+      'data-tooltip',
+      label,
+    );
+  }
+  const refresh = toolbar.getByRole('button', { name: 'Refresh knowledge folders' });
+  if (!isMobile) await refresh.hover();
+  else await refresh.focus();
+  await expect(page.getByRole('tooltip')).toHaveText('Refresh knowledge folders');
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('tooltip')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Knowledge actions' })).toHaveCount(0);
+  const header = await page.locator('.knowledge-workspace-heading').boundingBox();
+  const main = await page.locator('.workspace-main').boundingBox();
+  expect(Math.abs(header.x - main.x)).toBeLessThan(2);
+  expect(Math.abs(header.width - main.width)).toBeLessThan(2);
   await explorer.getByRole('button', { name: 'Add Knowledge Base', exact: true }).click();
   let dialog = page.getByRole('dialog', { name: 'Add Knowledge Base' });
   const name = `Inline guides ${testInfo.project.name}`;
@@ -1166,8 +1190,18 @@ test('knowledge explorer creates bases and topics and opens articles in the sele
   const baseId = new URL(page.url()).searchParams.get('base');
   expect(baseId).toMatch(/^[a-f0-9]{24}$/);
   if (isMobile) await page.getByRole('button', { name: 'Browse knowledge folders' }).click();
-  await explorer.getByRole('button', { name: `Create in ${name}`, exact: true }).click();
-  await explorer.getByRole('menuitem', { name: 'Add Topic', exact: true }).click();
+  if (!isMobile) await explorer.getByRole('treeitem', { name, exact: true }).hover();
+  const editBase = explorer.getByRole('button', { name: `Edit ${name}`, exact: true });
+  await editBase.click();
+  dialog = page.getByRole('dialog', { name: 'Edit Knowledge Base', exact: true });
+  await expect(dialog.getByRole('textbox', { name: 'Name', exact: true })).toHaveValue(name);
+  await dialog.getByRole('button', { name: 'Close dialog' }).click();
+  await expect(dialog).toHaveCount(0);
+  const createTopic = explorer.getByRole('button', { name: `Add topic in ${name}`, exact: true });
+  const actionBounds = await createTopic.boundingBox();
+  expect(actionBounds.height).toBeLessThanOrEqual(28);
+  expect(actionBounds.width).toBeLessThanOrEqual(28);
+  await createTopic.click();
   dialog = page.getByRole('dialog', { name: 'Add Topic', exact: true });
   await dialog.getByRole('textbox', { name: 'Name', exact: true }).fill('Getting started');
   await dialog.getByRole('button', { name: 'Save', exact: true }).click();
@@ -1175,10 +1209,89 @@ test('knowledge explorer creates bases and topics and opens articles in the sele
   const topicId = new URL(page.url()).searchParams.get('topic');
   expect(topicId).toMatch(/^[a-f0-9]{24}$/);
   if (isMobile) await page.getByRole('button', { name: 'Browse knowledge folders' }).click();
-  await explorer.getByRole('button', { name: 'Create in Getting started', exact: true }).click();
-  const link = explorer.getByRole('menuitem', { name: 'Add Article', exact: true });
+  if (!isMobile)
+    await explorer.getByRole('treeitem', { name: 'Getting started', exact: true }).hover();
+  await explorer.getByRole('button', { name: 'Edit Getting started', exact: true }).click();
+  dialog = page.getByRole('dialog', { name: 'Edit Topic', exact: true });
+  await expect(dialog.getByRole('textbox', { name: 'Name', exact: true })).toHaveValue(
+    'Getting started',
+  );
+  await dialog.getByRole('button', { name: 'Close dialog' }).click();
+  const folderSearch = explorer.getByRole('searchbox', { name: 'Search knowledge folders' });
+  await folderSearch.fill('Getting started');
+  await expect(explorer.getByRole('treeitem', { name, exact: true })).toHaveCount(0);
+  await expect(explorer.locator('[role=treeitem][aria-selected=true]')).toBeVisible();
+  await expect(explorer.locator('[role=treeitem][aria-selected=true]')).toHaveAttribute(
+    'aria-label',
+    'Getting started',
+  );
+  await folderSearch.clear();
+  await expect(explorer.getByRole('treeitem', { name, exact: true })).toBeVisible();
+  if (!isMobile)
+    await explorer.getByRole('treeitem', { name: 'Getting started', exact: true }).hover();
+  const link = explorer.getByRole('link', { name: 'Add article in Getting started', exact: true });
   await expect(link).toHaveAttribute('href', new RegExp(`base=${baseId}.*topic=${topicId}`));
   await link.click();
   await expect(page).toHaveURL(new RegExp(`/create/article\\?base=${baseId}&topic=${topicId}`));
-  await expect(page.getByRole('heading', { name: 'New Article', exact: true })).toBeVisible();
+  if (isMobile)
+    await page
+      .getByRole('group', { name: 'Conversation view' })
+      .getByRole('button', { name: 'Article', exact: true })
+      .click();
+  await expect(page.getByRole('textbox', { name: 'Title', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: `Remove ${name}`, exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Remove Getting started', exact: true }),
+  ).toBeVisible();
+});
+
+test('table selection stays in tables and record headers keep their actions visible', async ({
+  page,
+}, testInfo) => {
+  await page
+    .context()
+    .addCookies([{ name: 'browser_test', value: '1', url: 'http://127.0.0.1:4180' }]);
+  const created = await page.request.post('/api/helpdesk/data/tables/ref-application/records', {
+    data: { values: { name: `Selection fixture ${testInfo.project.name}` } },
+  });
+  expect(created.ok(), await created.text()).toBe(true);
+  for (const route of ['inbox', 'workflows', 'data/ref-application']) {
+    await page.goto(`/workspace/222222222222222222222222/${route}`);
+    await page.getByRole('button', { name: 'Cards', exact: true }).click();
+    await expect(page.locator('.record-card').first()).toBeVisible();
+    await expect(page.locator('.record-card input[type="checkbox"]')).toHaveCount(0);
+    if (route === 'inbox')
+      expect(
+        (await page.locator('.record-card .inbox-table-subject > a').first().boundingBox()).width,
+      ).toBeGreaterThan(150);
+    await page.getByRole('button', { name: 'Table', exact: true }).click();
+    await expect(page.locator('.record-table input[type="checkbox"]').first()).toBeVisible();
+    await page.locator('.record-table input[type="checkbox"]').first().check();
+    await expect(page.locator('.record-table tbody input[type="checkbox"]').first()).toBeChecked();
+    const selection = page.locator('.record-selection-toolbar');
+    await expect(selection).toBeVisible();
+    const selectionBounds = await selection.boundingBox();
+    const checkboxBounds = await page
+      .locator('.record-table thead input[type="checkbox"]')
+      .first()
+      .boundingBox();
+    expect(selectionBounds.y + selectionBounds.height).toBeLessThanOrEqual(checkboxBounds.y);
+    await page.getByRole('button', { name: 'Cards', exact: true }).click();
+    await expect(selection).not.toBeVisible();
+  }
+  await page.goto('/workspace/222222222222222222222222/data/ref-application/records/new');
+  const button = page.getByRole('button', { name: 'Save Record', exact: true });
+  await expect(button).toBeVisible();
+  const title = page.getByRole('heading', { name: 'Add Record', exact: true });
+  const crumbs = page.getByRole('navigation', { name: 'Page location', exact: true });
+  expect(Math.abs((await title.boundingBox()).x - (await crumbs.boundingBox()).x)).toBeLessThan(2);
+  expect(
+    (await page.getByRole('textbox', { name: 'Name', exact: true }).boundingBox()).y -
+      (await title.boundingBox()).y,
+  ).toBeLessThan(140);
+  await page.evaluate(() => {
+    document.querySelector('.workspace-main').scrollTop = 600;
+    window.scrollTo(0, 600);
+  });
+  await expect(button).toBeInViewport();
 });

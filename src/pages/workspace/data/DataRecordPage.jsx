@@ -1,6 +1,6 @@
 import DataRecordDeletion from '../../../components/data/DataRecordDeletion.jsx';
 import RecordActivity from '../../../components/records/RecordActivity.jsx';
-import BackLink from '../../../components/BackLink.jsx';
+import Breadcrumbs from '../../../components/Breadcrumbs.jsx';
 import Skeleton from '../../../components/Skeleton.jsx';
 import { For, Show, createEffect, createResource, createSignal } from 'solid-js';
 import { useNavigate, useParams } from '@solidjs/router';
@@ -94,40 +94,81 @@ export default function DataRecordPage() {
           </Show>
         }
       >
-        <BackLink href={`/workspace/data/${params.id}`}>
-          {(!table.error && table()?.name) || 'Data Table'}
-        </BackLink>
-        <RecordHeader
-          title={isNew() ? 'Add Record' : recordTitle()}
-          context={!isNew() && table()?.name !== recordTitle() ? table()?.name : undefined}
-        >
-          <Show when={!isEditing() && !record.error && record()}>
-            <button
-              type="button"
-              class="workspace-button secondary small"
-              onClick={() => setEditing(true)}
-            >
-              Edit
-            </button>
-          </Show>
-          <Show
-            when={
-              !isNew() &&
-              !isEditing() &&
-              !table.error &&
-              table() &&
-              !table().sourceManaged &&
-              !record.error &&
-              record()
-            }
+        <div class="data-record-topbar">
+          <Breadcrumbs
+            items={[
+              { label: 'Data Tables', href: '/workspace/data' },
+              {
+                label: (!table.error && table()?.name) || 'Data Table',
+                href: `/workspace/data/${params.id}`,
+              },
+              { label: isNew() ? 'Add Record' : recordTitle() },
+            ]}
+          />
+          <RecordHeader
+            title={isNew() ? 'Add Record' : recordTitle()}
+            context={!isNew() && table()?.name !== recordTitle() ? table()?.name : undefined}
           >
-            <DataRecordDeletion
-              tableId={params.id}
-              recordId={params.recordId}
-              version={record().version}
-            />
-          </Show>
-        </RecordHeader>
+            <Show when={isEditing()}>
+              <div class="helpdesk-actions">
+                <button
+                  type="submit"
+                  form="data-record-form"
+                  class="workspace-button"
+                  disabled={saving() || table.loading}
+                >
+                  {saving() ? 'Saving…' : 'Save Record'}
+                </button>
+                <Show
+                  when={!isNew()}
+                  fallback={
+                    <A class="workspace-button secondary" href={`/workspace/data/${params.id}`}>
+                      Cancel
+                    </A>
+                  }
+                >
+                  <button
+                    type="button"
+                    class="workspace-button secondary"
+                    disabled={saving()}
+                    onClick={() => {
+                      setValues({ ...record().values });
+                      setEditing(false);
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </Show>
+              </div>
+            </Show>
+            <Show when={!isEditing() && !record.error && record()}>
+              <button
+                type="button"
+                class="workspace-button secondary small"
+                onClick={() => setEditing(true)}
+              >
+                Edit
+              </button>
+            </Show>
+            <Show
+              when={
+                !isNew() &&
+                !isEditing() &&
+                !table.error &&
+                table() &&
+                !table().sourceManaged &&
+                !record.error &&
+                record()
+              }
+            >
+              <DataRecordDeletion
+                tableId={params.id}
+                recordId={params.recordId}
+                version={record().version}
+              />
+            </Show>
+          </RecordHeader>
+        </div>
         <Show when={table.error || record.error}>
           <ToastMessage tone="error">{table.error?.message || record.error?.message}</ToastMessage>
         </Show>
@@ -161,6 +202,7 @@ export default function DataRecordPage() {
             </A>
           </Show>
           <RecordForm
+            id="data-record-form"
             fields={table().fields}
             values={values()}
             detailsOnly={!isEditing()}
@@ -169,35 +211,7 @@ export default function DataRecordPage() {
             includeDemo={Boolean(record()?.demoDatasetId)}
             onChange={(key, value) => setValues((previous) => ({ ...previous, [key]: value }))}
             onSubmit={save}
-          >
-            <Show when={isEditing()}>
-              <div class="helpdesk-actions">
-                <button class="workspace-button" disabled={saving()}>
-                  {saving() ? 'Saving…' : 'Save Record'}
-                </button>
-                <Show
-                  when={!isNew()}
-                  fallback={
-                    <A class="workspace-button secondary" href={`/workspace/data/${params.id}`}>
-                      Cancel
-                    </A>
-                  }
-                >
-                  <button
-                    type="button"
-                    class="workspace-button secondary"
-                    disabled={saving()}
-                    onClick={() => {
-                      setValues({ ...record().values });
-                      setEditing(false);
-                    }}
-                  >
-                    Cancel
-                  </button>
-                </Show>
-              </div>
-            </Show>
-          </RecordForm>
+          />
           <Show when={!isNew()}>
             <RecordActivity kind="data" recordId={params.recordId} tableId={params.id} />
           </Show>

@@ -4,6 +4,7 @@ import Icon from '../Icon.jsx';
 export default function HeroEmployeeRequest(props) {
   let transcript;
   createEffect(() => {
+    if (!props.active) return;
     props.stage;
     requestAnimationFrame(() => {
       if (transcript) transcript.scrollTop = transcript.scrollHeight;
@@ -23,7 +24,7 @@ export default function HeroEmployeeRequest(props) {
         </span>
         <span>MacBook Request</span>
       </header>
-      <div class="hero-request-workbench" classList={{ 'has-record': props.stage >= 8 }}>
+      <div class="hero-request-workbench" classList={{ 'has-record': props.stage >= 9 }}>
         <div class="hero-request-chat">
           <div ref={transcript} class="hero-request-transcript">
             <Show when={props.stage >= 1}>
