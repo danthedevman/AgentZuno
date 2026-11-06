@@ -1,3 +1,4 @@
+import { deleteKnowledgeFolder } from '../../knowledge/deleteKnowledgeFolder.js';
 import { articleListMetadata } from '../../knowledge/articleListMetadata.js';
 import { knowledgeDirectory } from '../../knowledge/knowledgeExplorer.js';
 import { ObjectId } from 'mongodb';
@@ -25,14 +26,16 @@ export function createKnowledgeAccessController(store) {
       resourceId: request.params.id,
     });
     response.json(
-      policy
-        ? {
-            mode: policy.mode,
-            userIds: policy.userIds,
-            roles: policy.roles,
-            version: policy.version,
-          }
-        : { mode: 'inherit', userIds: [], roles: [], version: 0 },
+      request.params.kind === 'base' && request.params.id === user.workspaceId
+        ? { mode: 'workspace', userIds: [], roles: [], version: policy?.version || 0, locked: true }
+        : policy
+          ? {
+              mode: policy.mode,
+              userIds: policy.userIds,
+              roles: policy.roles,
+              version: policy.version,
+            }
+          : { mode: 'inherit', userIds: [], roles: [], version: 0 },
     );
   };
   const putKnowledgePermissionsKindId = async (request, response) => {
@@ -52,6 +55,12 @@ export function createKnowledgeAccessController(store) {
       value.roles.some((role) => !['agent', 'user', 'read-only'].includes(role))
     )
       deny('Invalid knowledge permissions.', 400);
+    if (
+      request.params.kind === 'base' &&
+      request.params.id === user.workspaceId &&
+      (value.mode !== 'workspace' || value.userIds.length || value.roles.length)
+    )
+      deny('The General knowledge base must remain available to all workspace members.', 400);
     const members = await store
       .collection('helpdeskMembers')
       .find({ ...helpdeskScope(user), active: true, userId: { $in: value.userIds } })
@@ -162,16 +171,19 @@ export function createKnowledgeAccessController(store) {
       .toArray();
     const name = (id, fallback) =>
       references.find((record) => record._id.toHexString() === id)?.name || fallback;
-    const bases = [...new Set(visible.map((item) => item.base))].map((id) => ({
-      id,
-      name: name(id, 'General'),
-      count: visible.filter((item) => item.base === id).length,
-      description: references.find((record) => record._id.toHexString() === id)?.description || '',
-      articles: visible
-        .filter((item) => item.base === id)
-        .slice(0, 3)
-        .map((item) => ({ id: item._id.toHexString(), title: item.title })),
-    }));
+    const bases = [...new Set([user.workspaceId, ...visible.map((item) => item.base)])].map(
+      (id) => ({
+        id,
+        name: name(id, 'General'),
+        count: visible.filter((item) => item.base === id).length,
+        description:
+          references.find((record) => record._id.toHexString() === id)?.description || '',
+        articles: visible
+          .filter((item) => item.base === id)
+          .slice(0, 3)
+          .map((item) => ({ id: item._id.toHexString(), title: item.title })),
+      }),
+    );
     const inBase = visible.filter(
       (item) => !request.query.base || item.base === request.query.base,
     );
@@ -214,5 +226,15 @@ export function createKnowledgeAccessController(store) {
     putKnowledgePermissionsKindId,
     getKnowledgeCenter,
     getKnowledgeDirectory,
+    deleteFolder: async (request, response) =>
+      response.json(
+        await deleteKnowledgeFolder(
+          store,
+          request.helpdeskUser,
+          request.params.kind,
+          request.params.id,
+          request.body,
+        ),
+      ),
   };
 }

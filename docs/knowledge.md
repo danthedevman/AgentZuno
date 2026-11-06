@@ -14,10 +14,12 @@ See [Roles & Features](roles-and-features.md) for the broader role guide. Knowle
 ## Organize bases and topics
 
 1. Open **Knowledge**. The left explorer contains knowledge bases, topic folders, and articles. Expand folders with their chevrons or the arrow keys.
-2. As an Admin, choose **Knowledge actions → Add Knowledge Base** to create a base, such as IT Support.
-3. Select the base and choose **Knowledge actions → Add Topic**. Select a topic and repeat to add subtopics, up to three topic levels. A new topic inherits its folder's base; parent placement is set when it is created.
+2. As an Admin, choose **Add Knowledge Base** beside the explorer search to create a base, such as IT Support.
+3. Hover or keyboard-focus a base folder and choose **Add Topic**. Use the same action on a topic to add subtopics, up to three topic levels. A new topic inherits its folder's base; parent placement is set when it is created.
 4. Select a folder to browse its contents. Select an article in the explorer to read it on the right, with attachments beside the content. **Add Article** opens the chat editor with the selected base/topic already filled in.
-5. Rename a folder or change its description and access with **Knowledge actions → Edit Knowledge Base** or **Edit Topic**. Quick-edit forms save their permissions with the record.
+5. Hover or keyboard-focus a base or topic folder and choose its edit pencil to change its name, description, or access. Quick-edit forms save their permissions with the record.
+
+Top-level topics appear as compact cards. Inside a topic, its subtopics appear as pills above the article list. Search the explorer to find permitted bases, topics, or articles. Admins can hover or keyboard-focus an article row to reveal its edit pencil; the reader also places **Edit Article** beside its breadcrumbs.
 
 Drag the divider to resize the explorer between 220 and 420 pixels, while retaining space for the article. Keyboard users can focus the divider and use the arrow keys, Home, or End. On phones, use **Browse knowledge folders** to switch between the explorer and content.
 
@@ -58,3 +60,5 @@ The Admin agent can also reference permitted knowledge while preparing workflows
 Review permissions on the base, topic, and article. Select the intended people or groups, save the changes, and check with an appropriate user role. A published status makes content eligible for reading; it does not override access restrictions.
 
 Private files uploaded into a support conversation remain scoped to that conversation. They are not automatically shared knowledge. Attachments on an article follow the article's authorized access checks.
+
+The default General base is available to all workspace members and can be renamed or edited by the owning administrator, but cannot be deleted or restricted. Topic and article restrictions still apply, and external agents still need explicit base grants. Edit a base or topic in the right-side panel. Other folders offer confirmed deletion when empty; first move any articles/subtopics and remove source connections. Empty explorer folders reveal Add article on hover or keyboard focus, with the action always visible on touch devices.

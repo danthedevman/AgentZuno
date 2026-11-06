@@ -32,7 +32,6 @@ const navigation = [
   ['/workspace/dashboard', 'home', 'Dashboard'],
   ['/workspace/chat', 'chat', 'Chat'],
   ['/workspace/inbox', 'inbox', 'Inbox'],
-  ['/workspace/catalog', 'catalog', 'Catalog'],
   ['/workspace/knowledge', 'book-pen', 'Knowledge'],
   ['/workspace/workflows', 'workflow', 'Workflows'],
   ['/workspace/data', 'data', 'Data Tables'],
@@ -174,7 +173,6 @@ function WorkspaceShell(props) {
         return !access.error && ['admin', 'agent'].includes(access()?.role);
       if (
         path.endsWith('/dashboard') ||
-        path.endsWith('/catalog') ||
         path.endsWith('/requests') ||
         path.endsWith('/chat') ||
         path.endsWith('/knowledge')

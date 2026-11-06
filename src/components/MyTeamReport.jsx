@@ -16,10 +16,10 @@ export default function MyTeamReport(props) {
       <Show when={summary.error}>
         <ToastMessage tone="error">{summary.error.message}</ToastMessage>
       </Show>
-      <div class="my-work-metrics">
+      <div class="knowledge-metrics">
         <For each={['total', 'active', 'unassigned', 'groups']}>
           {(key) => (
-            <section class="my-work-metric">
+            <article class="knowledge-metric">
               <span>
                 {
                   {
@@ -33,7 +33,7 @@ export default function MyTeamReport(props) {
               <Show when={summary()} fallback={<Skeleton lines={1} />}>
                 <strong>{summary()[key]}</strong>
               </Show>
-            </section>
+            </article>
           )}
         </For>
       </div>
@@ -55,6 +55,11 @@ export default function MyTeamReport(props) {
         {(kind) => (
           <RecordTable
             label={kind === 'groups' ? 'Assignment Groups' : 'Team Work Items'}
+            cardColumns={
+              kind === 'groups'
+                ? ['Group', 'Members', 'Active', 'Updated']
+                : ['Request', 'Status', 'Assignment Group', 'Updated']
+            }
             source="/api/helpdesk/my-team"
             sourceParams={{ kind }}
             refreshKey={props.refreshKey}

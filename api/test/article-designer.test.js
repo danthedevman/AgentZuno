@@ -242,10 +242,13 @@ test(
         canApprove: false,
       });
       const member = { ...employee, workspaceId: admin.workspaceId };
-      assert.equal((await call(member, '/helpdesk/knowledge-center')).body.bases.length, 0);
+      assert.equal(
+        (await call(member, '/helpdesk/knowledge-center')).body.bases[0].id,
+        admin.workspaceId,
+      );
       assert.equal(
         (await call(member, '/helpdesk/knowledge-center?q=Newer')).body.articles.total,
-        0,
+        1,
       );
       const basePolicy = await call(
         admin,

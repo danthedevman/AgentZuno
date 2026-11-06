@@ -51,7 +51,7 @@ export interface WorkflowDefinition {
   };
   version: 1;
   name: string;
-  trigger: { departmentId?: string; department?: Department; phrases: string[] };
+  trigger: { departmentId?: string; department?: Department; phrases?: string[] };
   steps: WorkflowStep[];
   form?: RequestForm;
   routing?: RoutingRule[];

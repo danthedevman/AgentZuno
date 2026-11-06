@@ -49,3 +49,7 @@ Eligible approvers receive an Inbox item. Review the request and choose **Approv
 ## If something is missing
 
 An empty Inbox may mean no work is currently assigned to your groups. Ask an Admin to check your group membership and the workflow's assignment. If a mention suggestion is missing, check that the person is active and has access to the record. Selecting a different role or mentioning a person cannot bypass these checks.
+
+## Request selection
+
+The configured support provider infers intent from permitted published workflow names, descriptions and forms, then selects the exact workflow through a typed tool. Trigger phrases are not required or pattern-matched. Ambiguous requests need a clarification; an incidental mention or status question should not offer a new form. The server checks workspace, current permissions, department, publication and revision before exposing or submitting a selected form. A selection only prepares review: the user must explicitly submit before any workflow action runs.

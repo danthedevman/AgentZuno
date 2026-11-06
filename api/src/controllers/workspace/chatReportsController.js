@@ -73,6 +73,9 @@ export function createChatReportsController(store) {
     if (typeof id !== 'string' || !/^[a-f0-9]{24}$/.test(id)) deny('Invalid chat.', 400);
     const chat = await store.collection('chats').findOne({ ...filter, _id: new ObjectId(id) });
     if (!chat) deny('Chat not found.', 404);
+    const author = await store
+      .collection('users')
+      .findOne({ id: queryString(chat.ownerId, 80) }, { projection: { name: 1 } });
     const result = await auditOperation(
       store,
       req.helpdeskUser,
@@ -82,6 +85,18 @@ export function createChatReportsController(store) {
         id: String(chat._id),
         title: chat.title || 'Chat',
         status: chat.status,
+        user: author?.name || 'Workspace User',
+        channel:
+          chat.helpdeskPurpose === 'slack-support'
+            ? 'Slack'
+            : chat.helpdeskPurpose === 'teams-support'
+              ? 'Teams'
+              : chat.helpdeskPurpose === 'email-support'
+                ? 'Email'
+                : 'Portal',
+        assistant: chat.assistantType === 'admin' ? 'Admin Agent' : 'Support Agent',
+        createdAt: chat.createdAt,
+        updatedAt: chat.updatedAt,
         messages: visibleChatMessages(chat).map((message) => ({
           id: message.id,
           role: message.role,

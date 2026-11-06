@@ -1,23 +1,26 @@
+import TooltipRegion from '../../../components/TooltipRegion.jsx';
 import DataRecordDeletion from '../../../components/data/DataRecordDeletion.jsx';
 import RecordActivity from '../../../components/records/RecordActivity.jsx';
 import Breadcrumbs from '../../../components/Breadcrumbs.jsx';
 import Skeleton from '../../../components/Skeleton.jsx';
-import { For, Show, createEffect, createResource, createSignal } from 'solid-js';
+import { Show, createEffect, createResource, createSignal } from 'solid-js';
 import { useNavigate, useParams } from '@solidjs/router';
 import { api } from '../../../services/api.js';
 import { useWorkspace } from '../../../context/WorkspaceContext.jsx';
 import { useWorkspacePath } from '../../../services/workspaceRoutes.js';
 import { useToasts } from '../../../context/ToastContext.jsx';
-import RecordHeader from '../../../components/records/RecordHeader.jsx';
 import RecordForm from '../../../components/records/RecordForm.jsx';
 import ToastMessage from '../../../components/ToastMessage.jsx';
 import A from '../../../components/WorkspaceLink.jsx';
-import RecordTable from '../../../components/records/RecordTable.jsx';
+import SplitResizeHandle from '../../../components/SplitResizeHandle.jsx';
+import { useSession } from '../../../context/SessionContext.jsx';
 export default function DataRecordPage() {
   const params = useParams();
   const navigate = useNavigate();
   const path = useWorkspacePath();
   const { access } = useWorkspace();
+  const { session } = useSession();
+  let selectPanel;
   const { notify } = useToasts();
   const isAdmin = () => !access.error && access()?.role === 'admin';
   const isNew = () => params.recordId === 'new';
@@ -33,10 +36,20 @@ export default function DataRecordPage() {
     if (params.id === 'ref-task')
       navigate(path(`/workspace/tasks/${params.recordId}`), { replace: true });
   });
+  const relatedFields = () =>
+    (!record.error &&
+      table()?.fields.filter((field) => {
+        if (field.type !== 'reference') return false;
+        const value = record()?.values?.[field.id];
+        return Array.isArray(value)
+          ? value.length > 0
+          : typeof value === 'string' && !!value.trim();
+      })) ||
+    [];
   const [values, setValues] = createSignal({});
   const [saving, setSaving] = createSignal(false);
   const [editing, setEditing] = createSignal(false);
-  const isEditing = () => isNew() || editing();
+  const isEditing = () => isNew() || (editing() && !table()?.sourceManaged);
   const recordTitle = () => {
     const saved = !record.error && record()?.values;
     const keys = ['name', 'title', 'number', 'assetTag', 'hostname', 'code'];
@@ -85,7 +98,7 @@ export default function DataRecordPage() {
     }
   }
   return (
-    <section class="reading-page data-record-page">
+    <section class="reading-page data-record-page data-record-workspace">
       <Show
         when={isAdmin()}
         fallback={
@@ -105,10 +118,18 @@ export default function DataRecordPage() {
               { label: isNew() ? 'Add Record' : recordTitle() },
             ]}
           />
-          <RecordHeader
-            title={isNew() ? 'Add Record' : recordTitle()}
-            context={!isNew() && table()?.name !== recordTitle() ? table()?.name : undefined}
-          >
+          <h1 class="sr-only">{isNew() ? 'Add Record' : recordTitle()}</h1>
+          <div class="helpdesk-actions">
+            <Show when={!isNew() && !record.error && record()?.sourceHref}>
+              <A
+                class="workspace-button secondary small"
+                href={record().sourceHref}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Open Original Record →
+              </A>
+            </Show>
             <Show when={isEditing()}>
               <div class="helpdesk-actions">
                 <button
@@ -142,13 +163,26 @@ export default function DataRecordPage() {
               </div>
             </Show>
             <Show when={!isEditing() && !record.error && record()}>
-              <button
-                type="button"
-                class="workspace-button secondary small"
-                onClick={() => setEditing(true)}
-              >
-                Edit
-              </button>
+              <TooltipRegion>
+                <span
+                  class="source-record-edit"
+                  tabindex={table()?.sourceManaged ? 0 : undefined}
+                  aria-label={table()?.sourceManaged ? 'Why editing is unavailable' : undefined}
+                  data-tooltip={table()?.sourceManaged ? 'Edit on the original record.' : undefined}
+                >
+                  <button
+                    type="button"
+                    class="workspace-button secondary small"
+                    disabled={!!table()?.sourceManaged}
+                    onClick={() => {
+                      setEditing(true);
+                      selectPanel?.('left');
+                    }}
+                  >
+                    Edit
+                  </button>
+                </span>
+              </TooltipRegion>
             </Show>
             <Show
               when={
@@ -167,76 +201,78 @@ export default function DataRecordPage() {
                 version={record().version}
               />
             </Show>
-          </RecordHeader>
+          </div>
         </div>
         <Show when={table.error || record.error}>
           <ToastMessage tone="error">{table.error?.message || record.error?.message}</ToastMessage>
         </Show>
-        <Show when={table.loading || (!isNew() && record.loading)}>
-          <div class="data-record-loading" aria-label="Loading record fields" aria-busy="true">
-            <Skeleton label="Loading table name" lines={1} />
-            <div class="data-record-fields record-property-list">
-              <For each={Array.from({ length: 8 })}>
-                {() => (
-                  <div class="data-field-skeleton">
-                    <Skeleton label="Loading field label" lines={1} />
-                    <Skeleton label="Loading field" lines={1} />
-                  </div>
-                )}
-              </For>
+        <div class="data-record-workbench resizable-split">
+          <section class="data-record-properties" aria-label="Record properties">
+            <div class="data-record-properties-scroll">
+              <Show when={table.loading || (!isNew() && record.loading)}>
+                <Skeleton label="Loading record fields" lines={8} />
+              </Show>
+              <Show when={!table.error && table() && (isNew() || (!record.error && record()))}>
+                <RecordForm
+                  id="data-record-form"
+                  showDescriptionBlocks={false}
+                  fields={table().fields}
+                  values={values()}
+                  detailsOnly={!isEditing()}
+                  readOnly={!isEditing()}
+                  readOnlyFields={table().readOnlyFields}
+                  includeDemo={Boolean(record()?.demoDatasetId)}
+                  onChange={(key, value) =>
+                    setValues((previous) => ({ ...previous, [key]: value }))
+                  }
+                  onSubmit={save}
+                />
+              </Show>
             </div>
-            <div class="helpdesk-actions">
-              <Skeleton label="Loading actions" lines={1} />
-            </div>
-          </div>
-        </Show>
-        <Show when={!table.error && table() && (isNew() || (!record.error && record()))}>
-          <Show when={record()?.sourceHref}>
-            <A
-              class="workspace-button secondary small"
-              href={record().sourceHref}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Open Original Record →
-            </A>
-          </Show>
-          <RecordForm
-            id="data-record-form"
-            fields={table().fields}
-            values={values()}
-            detailsOnly={!isEditing()}
-            readOnly={!isEditing()}
-            readOnlyFields={table().readOnlyFields}
-            includeDemo={Boolean(record()?.demoDatasetId)}
-            onChange={(key, value) => setValues((previous) => ({ ...previous, [key]: value }))}
-            onSubmit={save}
+          </section>
+          <SplitResizeHandle
+            storageKey={`data-record-form-activity-${session()?.user?.id}-${params.workspaceId}`}
+            initialRatio={62}
+            minRightWidth={320}
+            maxRightWidth={640}
+            initialPanel="left"
+            leftLabel="Form"
+            rightLabel="Activity"
+            ariaLabel="Resize record panels"
+            switcherLabel="Record view"
+            onPanelReady={(select) => {
+              selectPanel = select;
+            }}
           />
-          <Show when={!isNew()}>
-            <RecordActivity kind="data" recordId={params.recordId} tableId={params.id} />
-          </Show>
-          <Show when={!isNew() && params.id === 'ref-catalog-category'}>
-            <section class="category-related-workflows">
-              <h2>Related Workflows</h2>
-              <RecordTable
-                label="Related Workflows"
-                source={`/api/helpdesk/data/tables/ref-catalog-category/records/${params.recordId}/workflows`}
-                emptyText="No workflows use this category"
-                emptyAction={{ label: 'New Workflow', href: '/workspace/workflows/new' }}
-                columns={[
-                  {
-                    label: 'Workflow',
-                    render: (item) => (
-                      <A href={`/workspace/workflows/${item.id}/edit`}>{item.name}</A>
-                    ),
-                  },
-                  { label: 'Status', render: (item) => item.status },
-                  { label: 'Updated', render: (item) => new Date(item.updatedAt).toLocaleString() },
-                ]}
-              />
-            </section>
-          </Show>
-        </Show>
+          <aside class="data-record-timeline" aria-label="Record activity">
+            <RecordActivity
+              kind="data"
+              recordId={params.recordId}
+              tableId={params.id}
+              isNew={isNew()}
+              relatedContent={() => (
+                <Show
+                  when={relatedFields().length}
+                  fallback={
+                    <p class="field-help">
+                      {isNew()
+                        ? 'Save this record to see related records.'
+                        : 'No related records linked.'}
+                    </p>
+                  }
+                >
+                  <RecordForm
+                    fields={relatedFields()}
+                    values={record()?.values || {}}
+                    detailsOnly
+                    readOnly
+                    includeDemo={Boolean(record()?.demoDatasetId)}
+                  />
+                </Show>
+              )}
+            />
+          </aside>
+        </div>
       </Show>
     </section>
   );

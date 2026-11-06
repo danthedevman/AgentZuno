@@ -80,34 +80,6 @@ export function createAdminDataController(store, chats) {
     if (!record) deny('Record not found.', 404);
     response.json(record);
   };
-  const getDataTablesRefCatalogCategoryRecordsRecordIdWorkflows = async (request, response) => {
-    const user = request.helpdeskUser;
-    const records = await service.records(user, 'ref-catalog-category');
-    if (!records.some((record) => String(record.id) === request.params.recordId))
-      deny('Category not found.', 404);
-    const workflows = await store
-      .collection('helpdeskWorkflows')
-      .find({
-        ...helpdeskScope(user),
-        $or: [
-          { 'definition.settings.category': request.params.recordId },
-          { 'publishedConfig.definition.settings.category': request.params.recordId },
-        ],
-      })
-      .toArray();
-    response.json(
-      listResponse(
-        request,
-        workflows.map((record) => ({
-          id: String(record._id),
-          name: record.name,
-          status: record.enabled ? 'Published' : 'Draft',
-          updatedAt: record.updatedAt,
-        })),
-        { Workflow: 'name', Status: 'status', Updated: (item) => Date.parse(item.updatedAt) },
-      ),
-    );
-  };
   const deleteDataTablesId = async (request, response) => {
     const raw =
       /^[a-f0-9]{24}$/.test(request.params.id) &&
@@ -251,7 +223,6 @@ export function createAdminDataController(store, chats) {
     getDataTablesIdOptions,
     getDataTablesIdRecords,
     getDataTablesIdRecordsRecordId,
-    getDataTablesRefCatalogCategoryRecordsRecordIdWorkflows,
     deleteDataTablesId,
     postDataTablesIdRecords,
     putDataTablesIdRecordsRecordId,

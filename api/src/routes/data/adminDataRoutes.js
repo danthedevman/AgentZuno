@@ -11,10 +11,7 @@ export function installAdminDataRoutes(app, store, chats) {
     '/api/helpdesk/data/tables/:id/records/:recordId',
     controller.getDataTablesIdRecordsRecordId,
   );
-  app.get(
-    '/api/helpdesk/data/tables/ref-catalog-category/records/:recordId/workflows',
-    controller.getDataTablesRefCatalogCategoryRecordsRecordIdWorkflows,
-  );
+
   app.delete('/api/helpdesk/data/tables/:id', controller.deleteDataTablesId);
   app.post('/api/helpdesk/data/tables/:id/records', controller.postDataTablesIdRecords);
   app.put(

@@ -53,6 +53,9 @@ async function verify(db) {
   assert.ok(!JSON.stringify(value).includes('Private fixture message'));
   await controller.get(request, response);
   assert.equal(value.messages[0].text, 'Private fixture message');
+  assert.equal(value.channel, 'Slack');
+  assert.equal(value.assistant, 'Support Agent');
+  assert.equal(new Date(value.createdAt).getTime(), chat.createdAt.getTime());
   assert.ok(!JSON.stringify(value).includes('excluded-secret'));
   assert.equal(
     await db.collection('governanceAudit').countDocuments({ action: 'admin-chat-transcript-read' }),

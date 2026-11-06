@@ -1,3 +1,5 @@
+import { createRequire } from 'node:module';
+const { ObjectId } = createRequire(new URL('../api/package.json', import.meta.url))('mongodb');
 import { randomBytes } from 'node:crypto';
 import { createApi } from '../api/src/app.js';
 import { createMemoryDatabase } from '../api/src/storage/memory.js';
@@ -59,6 +61,103 @@ const seeded = await nativeFetch('http://127.0.0.1:4181/api/helpdesk/demo/settin
   body: JSON.stringify({ action: 'load', industry: 'tech', enableApprovals: true }),
 });
 if (!seeded.ok) throw new Error(await seeded.text());
+if (process.env.UPDATE_README_SCREENSHOTS) {
+  const scope = { ownerId: user.id, workspaceId: user.workspaceId };
+  const now = new Date();
+  for (const [index, title] of [
+    'IT demo: Register an AI tool',
+    'IT demo: Replacement laptop',
+    'IT demo: VPN access help',
+  ].entries())
+    await database.collection('chats').insertOne({
+      _id: new ObjectId(`33333333333333333333333${index + 1}`),
+      ...scope,
+      providerOwnerId: user.id,
+      requestId: `readme-demo-${index}`,
+      title,
+      status: 'completed',
+      helpdeskPurpose: 'support',
+      assistantType: 'support',
+      createdAt: now,
+      updatedAt: now,
+      messages: [
+        {
+          id: `demo-user-${index}`,
+          role: 'user',
+          text:
+            index === 2
+              ? 'I cannot connect to the VPN from my home network.'
+              : index === 1
+                ? 'I need a replacement laptop for development.'
+                : 'Please register the AI tool our IT team uses for code review.',
+          status: 'completed',
+          createdAt: now,
+        },
+        {
+          id: `demo-agent-${index}`,
+          role: 'assistant',
+          text:
+            index === 2
+              ? 'Check your VPN client connection and multifactor prompt. I can help you submit an IT support request if it still fails.'
+              : index === 1
+                ? 'Your laptop request is ready for manager review.'
+                : 'The registration request was submitted and linked to the AI tool record.',
+          status: 'completed',
+          createdAt: now,
+        },
+      ],
+    });
+  const workflow = await database.collection('helpdeskWorkflows').findOne(scope);
+  const request = await database.collection('helpdeskRequests').findOne(scope);
+  const audit = {
+    ...scope,
+    _id: '44444444-4444-4444-8444-444444444444',
+    workflowId: String(workflow._id),
+    workflowName: workflow.name,
+    workflowRunId: '5'.repeat(64),
+    stepId: 'register-device',
+    toolName: 'createDataRecord',
+    toolCallId: 'demo-tool-call-001',
+    responseId: 'demo-response-001',
+    rootAuditId: '44444444-4444-4444-8444-444444444440',
+    parentAuditId: '44444444-4444-4444-8444-444444444440',
+    requestAuditId: '44444444-4444-4444-8444-444444444440',
+    requestId: String(request._id),
+    actorId: user.id,
+    actorType: 'user',
+    role: 'admin',
+    actualRole: 'admin',
+    isImpersonating: false,
+    triggerType: 'workflow-step',
+    triggerLabel: 'Submitted laptop request form',
+    action: 'workflow.data.create',
+    method: 'POST',
+    target: '/data/devices/records',
+    resourceId: '666666666666666666666666',
+    outcome: 'completed',
+    statusCode: 201,
+    startedAt: new Date(now.getTime() - 350),
+    completedAt: now,
+    versionBefore: 0,
+    versionAfter: 1,
+    matchedCount: 0,
+    modifiedCount: 0,
+    insertedCount: 1,
+    deletedCount: 0,
+    recordCount: 0,
+    changedFields: ['model', 'requestedFor', 'request'],
+  };
+  await database.collection('governanceAudit').insertOne(audit);
+  await database.collection('governanceAudit').insertOne({
+    ...audit,
+    _id: audit.rootAuditId,
+    parentAuditId: undefined,
+    action: 'workflow.execution',
+    toolName: 'runWorkflow',
+    toolCallId: 'demo-run-001',
+    changedFields: ['status'],
+  });
+}
 let closing = false;
 async function close() {
   if (closing) return;

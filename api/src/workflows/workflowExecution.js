@@ -493,8 +493,54 @@ export function createWorkflowExecution(store, fetcher = fetch) {
         },
       });
       const latest = await runs().findOne(filter);
-      if (latest?.status === 'running')
+      if (latest?.status === 'running') {
+        const automatic =
+          !run.definition.steps.some((step) =>
+            ['route', 'handoff', 'task.create', 'task.wait'].includes(step.action),
+          ) &&
+          !(run.definition.routing || []).length &&
+          latest.steps.some(
+            (step) =>
+              ['data.create', 'data.update'].includes(step.action) && step.status === 'complete',
+          ) &&
+          !latest.steps.some(
+            (step) => step.action === 'approval' && step.result?.approved === false,
+          );
+        if (automatic) {
+          await authorize(run);
+          const eventId = `${run._id}:complete`;
+          await auditOperation(
+            store,
+            { ...(await authorize(run)), ownerId: run.ownerId },
+            'workflow.request.completed',
+            `/requests/${run.requestId}`,
+            () =>
+              store.collection('helpdeskRequests').updateOne(
+                {
+                  ...scope,
+                  _id: request._id,
+                  submissionState: 'submitted',
+                  status: { $in: ['open', 'waiting-for-approval'] },
+                  'events.workflowStepId': { $ne: eventId },
+                },
+                {
+                  $set: { status: 'resolved', updatedAt: new Date() },
+                  $inc: { version: 1 },
+                  $push: {
+                    events: {
+                      type: 'workflow-completed',
+                      workflowStepId: eventId,
+                      actorId: run.actorId,
+                      at: new Date(),
+                    },
+                  },
+                },
+              ),
+            workflowAuditDetails(run),
+          );
+        }
         await runs().updateOne(filter, { $set: { status: 'complete', completedAt: new Date() } });
+      }
     } catch (error) {
       const latest = await runs().findOne(filter);
       if (latest?.status === 'running')

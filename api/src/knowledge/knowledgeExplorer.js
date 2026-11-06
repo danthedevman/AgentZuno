@@ -31,10 +31,15 @@ export async function knowledgeDirectory(store, user, query) {
     })
     .toArray();
   const bases = [
-    { id: user.workspaceId, name: 'General', description: 'Your workspace knowledge.' },
+    {
+      id: user.workspaceId,
+      name: 'General',
+      description: 'Your workspace knowledge.',
+      editable: user.role === 'admin',
+    },
     ...records
       .filter((row) => row.type === 'knowledge-base')
-      .map((row) => ({ ...row, id: String(row._id), editable: true })),
+      .map((row) => ({ ...row, id: String(row._id), editable: user.role === 'admin' })),
   ];
   const baseMap = new Map(bases.map((base) => [base.id, base]));
   const topics = records
@@ -60,7 +65,10 @@ export async function knowledgeDirectory(store, user, query) {
   const allowedTopics =
     user.role === 'admin' ? topics : topics.filter((topic) => visibleTopicIds.has(topic.id));
   const allowedBases = [...baseMap.values()].filter(
-    (base) => user.role === 'admin' || visible.some((article) => article.base === base.id),
+    (base) =>
+      base.id === user.workspaceId ||
+      user.role === 'admin' ||
+      visible.some((article) => article.base === base.id),
   );
   const effectiveBase = (topic) =>
     topic.knowledgeBaseId ||

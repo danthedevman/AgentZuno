@@ -11,7 +11,6 @@ import { installMyWorkRoutes } from '../workspace/myWorkRoutes.js';
 
 import { installBulkDeletionRoutes } from '../records/bulkDeletionRoutes.js';
 import { installSmtpRoutes } from '../channels/smtpSettingsRoutes.js';
-import { installCatalogImageRoutes } from '../workflows/catalogImagesRoutes.js';
 import { installGroupRoutes } from '../identity/groupsRoutes.js';
 
 import { installChatAttachmentRoutes } from '../chat/chatAttachmentsRoutes.js';
@@ -34,8 +33,6 @@ export function installHelpdeskRoutes(app, store, service) {
   installRecentViewRoutes(app, store, service);
   installGroupRoutes(app, store);
   installSmtpRoutes(app, store);
-  installCatalogImageRoutes(app, store);
-  app.get('/api/helpdesk/catalog', controller.getCatalog);
   app.get('/api/helpdesk/support/conversations', controller.getSupportConversations);
   app.post('/api/helpdesk/support/conversations', controller.postSupportConversations);
   app.post(

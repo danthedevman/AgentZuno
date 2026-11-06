@@ -21,6 +21,7 @@ export function installKnowledgeAccessRoutes(app, store) {
     '/api/helpdesk/knowledge-permissions/:kind/:id',
     controller.putKnowledgePermissionsKindId,
   );
+  app.post('/api/helpdesk/knowledge-folders/:kind/:id/delete', controller.deleteFolder);
   app.get('/api/helpdesk/knowledge-center', controller.getKnowledgeCenter);
   app.get('/api/helpdesk/knowledge-directory', controller.getKnowledgeDirectory);
 }

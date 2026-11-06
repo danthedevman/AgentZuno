@@ -209,8 +209,7 @@ test(
       assert.equal(inbox.status, 200, JSON.stringify(inbox.body));
       assert.ok(inbox.body.total > 0);
       const catalog = await call('/api/helpdesk/catalog', null, first.cookie);
-      assert.equal(catalog.status, 200, JSON.stringify(catalog.body));
-      assert.ok(catalog.body.length > 0);
+      assert.equal(catalog.status, 404);
       const removed = await call(
         '/api/helpdesk/demo/settings',
         { action: 'remove', industry: 'tech', confirmed: true },

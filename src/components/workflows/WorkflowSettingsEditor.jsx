@@ -1,39 +1,11 @@
 import { assignmentGroupOptions } from '../../utils/assignmentGroups.js';
-import { createResource, createSignal, For, Show, onMount, onCleanup } from 'solid-js';
+import { createResource, For, Show } from 'solid-js';
 import { api } from '../../services/api.js';
 import ReferenceLookup from '../ReferenceLookup.jsx';
 import Toggle from '../Toggle.jsx';
 import A from '../WorkspaceLink.jsx';
 import Dropdown from '../Dropdown.jsx';
-import CatalogItemImage from '../CatalogItemImage.jsx';
-import { useToasts } from '../../context/ToastContext.jsx';
-import { confirmAction } from '../../services/confirmations.js';
 export default function WorkflowSettingsEditor(props) {
-  const { notify } = useToasts();
-  const [uploading, setUploading] = createSignal(false);
-  async function upload(file) {
-    if (!file) return;
-    if (
-      file.size > 5 * 1024 * 1024 ||
-      !['image/png', 'image/jpeg', 'image/webp'].includes(file.type)
-    ) {
-      notify({ tone: 'error', message: 'Choose a PNG, JPEG, or WebP image up to 5 MB' });
-      return;
-    }
-    setUploading(true);
-    try {
-      const saved = await api('/api/helpdesk/catalog-images', {
-        method: 'POST',
-        headers: { 'Content-Type': file.type },
-        body: file,
-      });
-      update({ catalogImageId: saved.id });
-    } catch (error) {
-      notify({ tone: 'error', message: error.message });
-    } finally {
-      setUploading(false);
-    }
-  }
   const [departments] = createResource(() =>
     api(
       `/api/helpdesk/data/tables/ref-department/options${props.includeDemo ? '?includeDemo=1' : ''}`,
@@ -42,19 +14,9 @@ export default function WorkflowSettingsEditor(props) {
   const [queues] = createResource(() =>
     api(`/api/helpdesk/queues?reference=1${props.includeDemo ? '&includeDemo=1' : ''}`),
   );
-  const [categories, { refetch: refreshCategories }] = createResource(() =>
-    api(
-      `/api/helpdesk/data/tables/ref-catalog-category/options${props.includeDemo ? '?includeDemo=1' : ''}`,
-    ),
-  );
   const [applications, { refetch: refreshApplications }] = createResource(() =>
     api('/api/helpdesk/data/tables/ref-application/options'),
   );
-  onMount(() => {
-    const refresh = () => refreshCategories();
-    window.addEventListener('focus', refresh);
-    onCleanup(() => window.removeEventListener('focus', refresh));
-  });
   const settings = () => props.value?.settings || {};
   const update = (changes) =>
     props.onChange({ ...props.value, settings: { ...settings(), ...changes } });
@@ -120,24 +82,8 @@ export default function WorkflowSettingsEditor(props) {
           });
         }}
       />
-      <div class="preference-row">
-        <span>Display in Catalog</span>
-        <button
-          type="button"
-          class="toggle-switch"
-          role="switch"
-          aria-label="Display in Catalog"
-          aria-checked={props.value.displayInCatalog || false}
-          disabled={props.disabled}
-          onClick={() =>
-            props.onChange({ ...props.value, displayInCatalog: !props.value.displayInCatalog })
-          }
-        >
-          <span />
-        </button>
-      </div>
       <label>
-        Catalog Description
+        Description
         <textarea
           maxlength="500"
           rows="3"
@@ -146,78 +92,6 @@ export default function WorkflowSettingsEditor(props) {
           onInput={(event) => update({ description: event.currentTarget.value })}
         />
       </label>
-      <Show when={props.value.displayInCatalog}>
-        <label>
-          Catalog Item Icon
-          <Dropdown
-            ariaLabel="Catalog item icon"
-            value={settings().catalogIcon || 'catalog'}
-            disabled={props.disabled}
-            options={[
-              'catalog',
-              'laptop',
-              'software',
-              'phone',
-              'help',
-              'book',
-              'users',
-              'task',
-            ].map((value) => ({ value, label: value[0].toUpperCase() + value.slice(1) }))}
-            onChange={(catalogIcon) => update({ catalogIcon })}
-          />
-        </label>
-        <div class="catalog-image-settings">
-          <CatalogItemImage imageId={settings().catalogImageId} icon={settings().catalogIcon} />
-          <label>
-            Catalog Image
-            <input
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              disabled={props.disabled || uploading()}
-              onChange={(event) => upload(event.currentTarget.files?.[0])}
-            />
-          </label>
-          <Show when={uploading()}>
-            <span role="status">Uploading image…</span>
-          </Show>
-          <Show when={settings().catalogImageId}>
-            <button
-              class="workspace-button secondary small"
-              type="button"
-              disabled={props.disabled}
-              onClick={async () => {
-                if (
-                  await confirmAction(
-                    'Remove this image from the catalog item?',
-                    'Remove Catalog Image',
-                    'Remove',
-                  )
-                )
-                  update({ catalogImageId: '' });
-              }}
-            >
-              Use Icon Instead
-            </button>
-          </Show>
-        </div>
-        <div class="catalog-category-field">
-          <ReferenceLookup
-            label="Catalog Category"
-            value={settings().category || ''}
-            options={categories() || []}
-            disabled={props.disabled || categories.loading}
-            onChange={(category) => update({ category })}
-          />
-          <A
-            class="workspace-button secondary small"
-            href="/workspace/data/ref-catalog-category/records/new"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Add Category →
-          </A>
-        </div>
-      </Show>
       <ReferenceLookup
         label="Default Assignment Group"
         value={route()?.params.queueName || ''}

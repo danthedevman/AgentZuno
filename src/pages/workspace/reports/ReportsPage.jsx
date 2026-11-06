@@ -65,10 +65,7 @@ export default function ReportsPage() {
       : report() === 'workflows'
         ? [{ label: 'View Workflows', href: '/workspace/workflows' }]
         : report() === 'knowledge'
-          ? [
-              { label: 'Knowledge Bases', href: '/workspace/knowledge' },
-              { label: 'Articles', href: '/workspace/knowledge?view=articles' },
-            ]
+          ? [{ label: 'Open Knowledge', href: '/workspace/knowledge' }]
           : report() === 'audit' && access()?.role === 'admin'
             ? [{ label: 'Workspace Settings', href: '/workspace/settings' }]
             : [{ label: 'My Work', href: '/workspace/my-work' }];
@@ -125,7 +122,7 @@ export default function ReportsPage() {
                       onChange={(value) => setQuery({ days: value })}
                       options={['7', '30', '90'].map((value) => ({
                         value,
-                        label: `Last ${value} Days`,
+                        label: `Last ${value} days`,
                       }))}
                     />
                   </Show>
@@ -202,80 +199,98 @@ export default function ReportsPage() {
                       />
                     </Suspense>
                   </Show>
-                  <Show keyed when={report()}>
-                    {(kind) => (
-                      <RecordTable
-                        label={kind === 'workflows' ? 'Workflow Execution' : 'Agent Activity'}
-                        source={`/api/helpdesk/reports/${kind}`}
-                        sourceParams={{ days: days() }}
-                        rows={[]}
-                        emptyText="No activity recorded in this period."
-                        defaultSort={
-                          kind === 'workflows' ? { key: 'Runs', direction: 'desc' } : undefined
-                        }
-                        columns={(kind === 'workflows'
-                          ? [
-                              { label: 'Workflow', key: 'name' },
-                              { label: 'Runs', key: 'runs' },
-                              { label: 'Completed', key: 'completed' },
-                              { label: 'Failed', key: 'failed' },
-                              { label: 'Awaiting Approval', key: 'awaitingApproval' },
-                            ]
-                          : [
-                              { label: 'Agent', key: 'name' },
-                              { label: 'Conversations', key: 'conversations' },
-                              { label: 'Completed Responses', key: 'completed' },
-                              { label: 'Failed Responses', key: 'failed' },
-                            ]
-                        ).map(({ key, ...column }) => ({ ...column, render: (item) => item[key] }))}
-                      />
-                    )}
-                  </Show>
+                  <div class="report-records">
+                    <Show keyed when={report()}>
+                      {(kind) => (
+                        <RecordTable
+                          label={kind === 'workflows' ? 'Workflow Execution' : 'Agent Activity'}
+                          cardColumns={
+                            kind === 'workflows'
+                              ? ['Workflow', 'Runs', 'Completed', 'Failed']
+                              : [
+                                  'Agent',
+                                  'Conversations',
+                                  'Completed Responses',
+                                  'Failed Responses',
+                                ]
+                          }
+                          source={`/api/helpdesk/reports/${kind}`}
+                          sourceParams={{ days: days() }}
+                          rows={[]}
+                          emptyText="No activity recorded in this period."
+                          defaultSort={
+                            kind === 'workflows' ? { key: 'Runs', direction: 'desc' } : undefined
+                          }
+                          columns={(kind === 'workflows'
+                            ? [
+                                { label: 'Workflow', key: 'name' },
+                                { label: 'Runs', key: 'runs' },
+                                { label: 'Completed', key: 'completed' },
+                                { label: 'Failed', key: 'failed' },
+                                { label: 'Awaiting Approval', key: 'awaitingApproval' },
+                              ]
+                            : [
+                                { label: 'Agent', key: 'name' },
+                                { label: 'Conversations', key: 'conversations' },
+                                { label: 'Completed Responses', key: 'completed' },
+                                { label: 'Failed Responses', key: 'failed' },
+                              ]
+                          ).map(({ key, ...column }) => ({
+                            ...column,
+                            render: (item) => item[key],
+                          }))}
+                        />
+                      )}
+                    </Show>
+                  </div>
                 </Show>
                 <Show when={report() === 'audit'}>
-                  <div class="audit-report-filters">
-                    <ReferenceLookup
-                      label="Workflow"
-                      placeholder="All Workflows"
-                      value={query.workflowId || ''}
-                      options={[
-                        ...(auditWorkflows.error ? [] : auditWorkflows() || []),
-                        ...(selectedWorkflow() &&
-                        !(auditWorkflows() || []).some(
-                          (item) => item.value === selectedWorkflow().value,
-                        )
-                          ? [selectedWorkflow()]
-                          : []),
-                      ]}
-                      onSearch={setWorkflowSearch}
-                      onChange={(value) => {
-                        setSelectedWorkflow(
-                          (auditWorkflows() || []).find((item) => item.value === value),
-                        );
-                        setQuery({ workflowId: value || undefined });
-                      }}
-                    />
-                    <Dropdown
-                      ariaLabel="Event trigger"
-                      value={query.triggerType || ''}
-                      options={[
-                        { value: '', label: 'All Triggers' },
-                        ...[
-                          'admin-chat',
-                          'support-chat',
-                          'request-submission',
-                          'workflow-step',
-                          'approval-decision',
-                          'workflow-configuration',
-                          'record-update',
-                          'api-request',
-                        ].map((value) => ({ value, label: displayLabel(value) })),
-                      ]}
-                      onChange={(value) => setQuery({ triggerType: value || undefined })}
-                    />
-                  </div>
                   <RecordTable
                     label="Audit Logs"
+                    toolbarFilters={
+                      <div class="audit-report-filters">
+                        <ReferenceLookup
+                          label="Workflow"
+                          placeholder="All Workflows"
+                          value={query.workflowId || ''}
+                          options={[
+                            ...(auditWorkflows.error ? [] : auditWorkflows() || []),
+                            ...(selectedWorkflow() &&
+                            !(auditWorkflows() || []).some(
+                              (item) => item.value === selectedWorkflow().value,
+                            )
+                              ? [selectedWorkflow()]
+                              : []),
+                          ]}
+                          onSearch={setWorkflowSearch}
+                          onChange={(value) => {
+                            setSelectedWorkflow(
+                              (auditWorkflows() || []).find((item) => item.value === value),
+                            );
+                            setQuery({ workflowId: value || undefined });
+                          }}
+                        />
+                        <Dropdown
+                          ariaLabel="Event trigger"
+                          value={query.triggerType || ''}
+                          options={[
+                            { value: '', label: 'All Triggers' },
+                            ...[
+                              'admin-chat',
+                              'support-chat',
+                              'request-submission',
+                              'workflow-step',
+                              'approval-decision',
+                              'workflow-configuration',
+                              'record-update',
+                              'api-request',
+                            ].map((value) => ({ value, label: displayLabel(value) })),
+                          ]}
+                          onChange={(value) => setQuery({ triggerType: value || undefined })}
+                        />
+                      </div>
+                    }
+                    cardColumns={['Event', 'Actor', 'Outcome', 'Time']}
                     onRowClick={(item) => navigate(path(`/workspace/reports/audit/${item.id}`))}
                     refreshKey={refreshKey()}
                     source="/api/helpdesk/audit"
@@ -288,73 +303,33 @@ export default function ReportsPage() {
                     emptyText="No audit logs in this period."
                     columns={[
                       {
-                        label: 'Time',
-                        render: (item) =>
-                          new Date(item.startedAt || item.completedAt).toLocaleString(),
-                      },
-                      {
-                        label: 'Actor',
-                        render: (item) => item.actorId || item.actorType || 'System',
-                      },
-                      { label: 'Action', render: (item) => item.action || item.method },
-                      {
-                        label: 'Workflow',
-                        render: (item) =>
-                          item.workflowId ? (
-                            <A
-                              href={`/workspace/workflows/${item.workflowId}/edit`}
-                              onClick={(event) => event.stopPropagation()}
-                            >
-                              {item.workflowName || 'Open Workflow'}
-                            </A>
-                          ) : (
-                            '—'
-                          ),
-                      },
-                      {
-                        label: 'Trigger',
+                        label: 'Event',
+                        sortKey: 'Action',
                         render: (item) => (
-                          <span>
-                            {displayLabel(item.triggerType || 'Recorded Operation')}
+                          <span class="report-event">
+                            <strong>{item.action || item.method}</strong>
                             <small class="record-secondary">
-                              {item.triggerLabel || item.action || item.method}
+                              {item.workflowName || item.target}
                             </small>
                           </span>
                         ),
                       },
                       {
-                        label: 'Target',
+                        label: 'Actor',
                         render: (item) => (
                           <span>
-                            {item.target}
-                            <Show when={item.resourceId}>
-                              <small class="record-secondary">{item.resourceId}</small>
-                            </Show>
-                            <Show when={item.changedFields?.length}>
-                              <small class="record-secondary">
-                                {item.changedFields.join(', ')}
-                              </small>
-                            </Show>
+                            {item.actorName || displayLabel(item.actorType || 'Account')}
+                            <small class="record-secondary">
+                              {displayLabel(item.role || 'System')}
+                            </small>
                           </span>
                         ),
                       },
                       { label: 'Outcome', render: (item) => displayLabel(item.outcome) },
                       {
-                        label: 'Role',
-                        render: (item) => (
-                          <span>
-                            {displayLabel(item.role || 'System')}
-                            <Show when={item.isImpersonating}>
-                              <small class="record-secondary">
-                                Impersonated by {displayLabel(item.actualRole)}
-                              </small>
-                            </Show>
-                          </span>
-                        ),
-                      },
-                      {
-                        label: 'Version',
-                        render: (item) => item.versionAfter ?? item.versionBefore ?? '—',
+                        label: 'Time',
+                        render: (item) =>
+                          new Date(item.startedAt || item.completedAt).toLocaleString(),
                       },
                     ]}
                   />

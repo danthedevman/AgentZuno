@@ -82,13 +82,17 @@ export default function KnowledgePermissions(props) {
         </Show>
         <Dropdown
           ariaLabel="Knowledge access"
-          disabled={props.disabled || saving()}
+          disabled={props.disabled || saving() || policy()?.locked}
           value={mode()}
-          options={[
-            { value: 'inherit', label: props.kind === 'base' ? 'Admins Only' : 'Inherit' },
-            { value: 'workspace', label: 'Workspace Members' },
-            { value: 'restricted', label: 'Selected Users' },
-          ]}
+          options={
+            policy()?.locked
+              ? [{ value: 'workspace', label: 'Workspace Members' }]
+              : [
+                  { value: 'inherit', label: props.kind === 'base' ? 'Admins Only' : 'Inherit' },
+                  { value: 'workspace', label: 'Workspace Members' },
+                  { value: 'restricted', label: 'Selected Users' },
+                ]
+          }
           onChange={(value) => {
             setMode(value);
             props.onChange?.();

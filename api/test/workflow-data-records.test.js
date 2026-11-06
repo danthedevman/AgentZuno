@@ -1,3 +1,5 @@
+import { createChatService } from '../src/chat/chat.js';
+import { createHelpdeskService } from '../src/requests/helpdesk.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ObjectId, MongoClient } from 'mongodb';
@@ -56,6 +58,103 @@ async function verify(database) {
   const store = { collection: database.collection.bind(database), ready: async () => {} },
     data = createAdminData(store),
     operations = createDataRecordOperations(store);
+  const registrationTable = await data.saveTable(actors.Admin, null, {
+    definition: {
+      name: 'Test Records',
+      description: 'AI tool registrations',
+      fields: [
+        { id: 'name', label: 'AI tool name', type: 'text', required: true },
+        { id: 'description', label: 'Description', type: 'text', required: true },
+        {
+          id: 'request',
+          label: 'Request',
+          type: 'reference',
+          referenceTable: 'ref-request',
+          required: true,
+        },
+      ],
+    },
+  });
+  const registrationDefinition = {
+    version: 1,
+    name: 'Register AI tool',
+    trigger: { department: 'it' },
+    form: {
+      title: 'Register AI tool',
+      fields: [
+        { id: 'tool-name', label: 'AI tool name', type: 'text', required: true },
+        { id: 'description', label: 'Description', type: 'textarea', required: true },
+      ],
+    },
+    steps: [
+      {
+        id: 'register-tool',
+        action: 'data.create',
+        params: {
+          tableId: registrationTable.id,
+          fields: ['name', 'description', 'request'],
+        },
+      },
+    ],
+  };
+  const registrationSource = `import {defineWorkflow} from '@agentzuno/workflows';
+    export default defineWorkflow({...${JSON.stringify(registrationDefinition)}, async run(ctx) {
+      await ctx.data.create('register-tool', {tableId:'${registrationTable.id}',
+        values:{name:String(ctx.answers['tool-name']),description:String(ctx.answers.description),request:String(ctx.request.id)}});
+    }});`;
+  const registration = await createHelpdeskWorkflows(store, {}).save(actors.Admin, null, {
+    source: registrationSource,
+    enabled: true,
+    intent: 'publish',
+  });
+  assert.equal(registration.queueName, '');
+  const registrationChats = createChatService(store, async () => {});
+  const registrationService = createHelpdeskService(store, registrationChats);
+  const registrationChat = await registrationService.createSupport(actors.Employee, {
+    requestId: crypto.randomUUID(),
+    workflowId: registration.id,
+  });
+  const registrationOffer = await registrationService.getSupport(
+    actors.Employee,
+    registrationChat.id,
+  );
+  const registrationTicket = await registrationService.submitForm(
+    actors.Employee,
+    registrationChat.id,
+    {
+      workflowId: registration.id,
+      workflowVersion: registration.version,
+      offerId: registrationOffer.responseId,
+      answers: { 'tool-name': 'Example AI', description: 'Draft internal documentation' },
+    },
+  );
+  const registrationRequest = await database.collection('helpdeskRequests').findOne({
+    ...scope,
+    _id: new ObjectId(registrationTicket.id),
+  });
+  assert.equal(registrationRequest.status, 'open');
+  assert.equal(registrationRequest.queueName, '');
+  const registrationExecutor = createWorkflowExecution(store);
+  const registrationRunId = await registrationExecutor.ensureRun(registrationRequest);
+  await registrationExecutor.process(registrationRunId);
+  const registrationRun = await store
+    .collection('workflowRuns')
+    .findOne({ _id: registrationRunId });
+  assert.equal(registrationRun.status, 'complete', JSON.stringify(registrationRun));
+  const registered = await data.records(actors.Admin, registrationTable.id);
+  assert.equal(registered.length, 1);
+  assert.deepEqual(registered[0].values, {
+    name: 'Example AI',
+    description: 'Draft internal documentation',
+    request: String(registrationRequest._id),
+  });
+  assert.equal(
+    (await store.collection('helpdeskRequests').findOne({ _id: registrationRequest._id })).status,
+    'resolved',
+  );
+  assert.equal(await store.collection('helpdeskTasks').countDocuments({ ...scope }), 0);
+  await registrationExecutor.process(registrationRunId);
+  assert.equal((await data.records(actors.Admin, registrationTable.id)).length, 1);
   const created = await operations.mutate(
     actors.Admin,
     'ref-asset',

@@ -93,15 +93,20 @@ export default function KnowledgeCenterPage() {
     });
     setMobileView('content');
   }
+  let editorController;
+  async function openEditor(next) {
+    if (editor() && !(await editorController?.beforeClose())) return;
+    setEditor(next);
+  }
   function editFolder(node) {
-    setEditor({
+    openEditor({
       kind: node.type,
       record: { ...node, knowledgeBaseId: node.baseId },
       baseId: node.baseId,
     });
   }
   function addTopic(node) {
-    setEditor({
+    openEditor({
       kind: 'topic',
       baseId: node?.baseId || query.base,
       parentTopicId: node ? (node.type === 'topic' ? node.id : '') : query.topic || '',
@@ -121,6 +126,14 @@ export default function KnowledgeCenterPage() {
   const loading = () =>
     applied() ? results.loading && !results.latest : directory.loading && !directory.latest;
   const total = () => (applied() ? results()?.articles?.total || 0 : data()?.total || 0);
+  const breadcrumbItems = () => [
+    { label: 'Knowledge', href: '/workspace/knowledge' },
+    ...(folder()?.path || []).map((item) => ({
+      label: item.name,
+      href: `/workspace/knowledge?base=${encodeURIComponent(item.baseId)}${item.type === 'topic' ? `&topic=${encodeURIComponent(item.id)}` : ''}`,
+    })),
+    applied() && { label: 'Search Results' },
+  ];
   return (
     <section class="knowledge-workspace">
       <header class="knowledge-workspace-heading">
@@ -181,7 +194,7 @@ export default function KnowledgeCenterPage() {
                     class="workspace-button secondary small icon-only"
                     aria-label="Add Knowledge Base"
                     data-tooltip="Add Knowledge Base"
-                    onClick={() => setEditor({ kind: 'base' })}
+                    onClick={() => openEditor({ kind: 'base' })}
                   >
                     <Icon name="folder-add" />
                   </button>
@@ -224,18 +237,8 @@ export default function KnowledgeCenterPage() {
           storageKey={`agentzuno-knowledge-width-${session()?.user?.id}-${session()?.user?.workspaceId}`}
         />
         <div class="knowledge-explorer-reader">
-          <Show when={query.base || query.topic || query.article || applied()}>
-            <Breadcrumbs
-              label="Knowledge location"
-              items={[
-                { label: 'Knowledge', href: '/workspace/knowledge' },
-                ...(folder()?.path || []).map((item) => ({
-                  label: item.name,
-                  href: `/workspace/knowledge?base=${encodeURIComponent(item.baseId)}${item.type === 'topic' ? `&topic=${encodeURIComponent(item.id)}` : ''}`,
-                })),
-                applied() && { label: 'Search Results' },
-              ]}
-            />
+          <Show when={(query.base || query.topic || applied()) && (!query.article || applied())}>
+            <Breadcrumbs label="Knowledge location" items={breadcrumbItems()} />
           </Show>
           <Show
             when={query.article && !applied()}
@@ -256,10 +259,19 @@ export default function KnowledgeCenterPage() {
                   when={loading()}
                   fallback={
                     <>
-                      <div class="help-center-grid">
+                      <div
+                        class="help-center-grid"
+                        classList={{ 'knowledge-subtopics': !!query.topic }}
+                      >
                         <For each={rows().filter((row) => row.type !== 'article')}>
                           {(node) => (
-                            <article class="help-center-base-card">
+                            <article
+                              class="help-center-base-card"
+                              classList={{
+                                'help-center-topic-card': node.type === 'topic',
+                                'knowledge-subtopic-pill': node.type === 'topic' && !!query.topic,
+                              }}
+                            >
                               <div class="help-center-card-heading">
                                 <A
                                   class="help-center-base-title"
@@ -279,19 +291,23 @@ export default function KnowledgeCenterPage() {
                                   {node.name}
                                 </A>
                               </div>
-                              <Show when={node.description}>
+                              <Show
+                                when={node.description && !(node.type === 'topic' && query.topic)}
+                              >
                                 <p>{node.description}</p>
                               </Show>
-                              <span class="help-center-card-chevron" aria-hidden="true">
-                                <Icon name="chevron-right" />
-                              </span>
+                              <Show when={!(node.type === 'topic' && query.topic)}>
+                                <span class="help-center-card-chevron" aria-hidden="true">
+                                  <Icon name="chevron-right" />
+                                </span>
+                              </Show>
                             </article>
                           )}
                         </For>
                         <Show when={canManage() && !query.base && !applied()}>
                           <button
                             class="help-center-add-card"
-                            onClick={() => setEditor({ kind: 'base' })}
+                            onClick={() => openEditor({ kind: 'base' })}
                           >
                             <Icon name="add" />
                             <span>Add Knowledge Base</span>
@@ -384,6 +400,7 @@ export default function KnowledgeCenterPage() {
                 >
                   <div
                     class="help-center-grid"
+                    classList={{ 'knowledge-subtopics': !!query.topic }}
                     role="status"
                     aria-label="Loading knowledge bases"
                     aria-busy="true"
@@ -392,6 +409,10 @@ export default function KnowledgeCenterPage() {
                       {() => (
                         <div
                           class="help-center-base-card help-center-base-skeleton"
+                          classList={{
+                            'help-center-topic-card': !!query.base,
+                            'knowledge-subtopic-pill': !!query.topic,
+                          }}
                           aria-hidden="true"
                         >
                           <span class="skeleton-line" />
@@ -405,22 +426,32 @@ export default function KnowledgeCenterPage() {
               </>
             }
           >
-            <ArticleReadPage embedded articleId={query.article} />
+            <ArticleReadPage
+              embedded
+              articleId={query.article}
+              breadcrumbItems={breadcrumbItems()}
+            />
           </Show>
         </div>
+        <Show when={editor()} keyed>
+          {(current) => (
+            <KnowledgeQuickEditor
+              controller={(value) => (editorController = value)}
+              kind={current.kind}
+              record={current.record}
+              baseId={current.baseId}
+              parentTopicId={current.parentTopicId}
+              onClose={() => setEditor(null)}
+              onSaved={saved}
+              onDeleted={async () => {
+                setQuery({ base: undefined, topic: undefined, article: undefined });
+                await refresh();
+                setRevision((value) => value + 1);
+              }}
+            />
+          )}
+        </Show>
       </div>
-      <Show when={editor()} keyed>
-        {(current) => (
-          <KnowledgeQuickEditor
-            kind={current.kind}
-            record={current.record}
-            baseId={current.baseId}
-            parentTopicId={current.parentTopicId}
-            onClose={() => setEditor(null)}
-            onSaved={saved}
-          />
-        )}
-      </Show>
     </section>
   );
 }

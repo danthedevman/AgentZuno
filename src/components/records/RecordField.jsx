@@ -35,6 +35,7 @@ export default function RecordField(props) {
     <Switch>
       <Match when={props.detailsOnly}>
         <RecordValue
+          showIcon={false}
           label={props.field.label}
           value={displayValue()}
           href={

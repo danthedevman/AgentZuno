@@ -7,6 +7,8 @@ import { createPostgresDatabase } from '../src/storage/postgres.js';
 import { postgresConnection } from '../src/storage/configuration.js';
 import { createIntegrationStore } from '../src/storage/integrationStore.js';
 import { createKnowledgeTopics } from '../src/knowledge/knowledgeTopics.js';
+import { deleteKnowledgeFolder } from '../src/knowledge/deleteKnowledgeFolder.js';
+import { createKnowledgeAccessController } from '../src/controllers/knowledge/knowledgeAccessController.js';
 import { canReadAuthoredArticle } from '../src/knowledge/knowledgeAccess.js';
 import { knowledgeDirectory } from '../src/knowledge/knowledgeExplorer.js';
 import { createContentStore } from '../src/knowledge/contentStore.js';
@@ -145,7 +147,10 @@ async function verify(database) {
     roles: [],
   });
   assert.equal(await canReadAuthoredArticle(store, reader, article), false);
-  assert.deepEqual((await knowledgeDirectory(store, reader, {})).rows, []);
+  assert.deepEqual(
+    (await knowledgeDirectory(store, reader, {})).rows.map((row) => row.id),
+    [owner.workspaceId],
+  );
   assert.deepEqual((await knowledgeDirectory(store, reader, { q: article.title })).rows, []);
   await store
     .collection('knowledgePermissions')
@@ -164,9 +169,14 @@ async function verify(database) {
     .collection('records')
     .updateOne({ _id: new ObjectId(root.id) }, { $set: { parentTopicId: leaf.id } });
   assert.equal(await canReadAuthoredArticle(store, reader, article), false);
-  assert.deepEqual((await knowledgeDirectory(store, reader, {})).rows, []);
+  assert.deepEqual(
+    (await knowledgeDirectory(store, reader, {})).rows.map((row) => row.id),
+    [owner.workspaceId],
+  );
   assert.deepEqual((await knowledgeDirectory(store, reader, { q: article.title })).rows, []);
-  const controller = createContentController(null, createContentStore(undefined, database));
+  const controller = createContentController(null, createContentStore(undefined, database), {
+    integrations: store,
+  });
   let saved, status;
   const response = {
     status(value) {
@@ -196,6 +206,80 @@ async function verify(database) {
     response,
   );
   assert.equal(status, 400);
+  const accessController = createKnowledgeAccessController(store);
+  const generalRequest = { helpdeskUser: owner, params: { kind: 'base', id: owner.workspaceId } };
+  await accessController.getKnowledgePermissionsKindId(generalRequest, response);
+  assert.equal(saved.mode, 'workspace');
+  assert.equal(saved.locked, true);
+  await assert.rejects(
+    accessController.putKnowledgePermissionsKindId(
+      {
+        ...generalRequest,
+        body: { mode: 'restricted', userIds: [], roles: [], version: saved.version },
+      },
+      response,
+    ),
+    { status: 400 },
+  );
+  await controller.saveRecord(
+    {
+      params: { type: 'knowledge-base', id: owner.workspaceId },
+      user: owner,
+      body: { name: 'Team Knowledge', description: 'Shared guidance' },
+    },
+    response,
+  );
+  await controller.getRecordsTypeId(
+    { params: { type: 'knowledge-base', id: owner.workspaceId }, user: owner },
+    response,
+  );
+  assert.equal(saved.isDefault, true);
+  assert.equal(saved.name, 'Team Knowledge');
+  const general = (await knowledgeDirectory(store, reader, {})).rows.filter(
+    (row) => row.id === owner.workspaceId,
+  );
+  assert.equal(general.length, 1);
+  assert.equal(general[0].name, 'Team Knowledge');
+  await assert.rejects(
+    deleteKnowledgeFolder(store, owner, 'base', owner.workspaceId, {
+      confirmed: true,
+      name: 'Team Knowledge',
+    }),
+    { status: 403 },
+  );
+  const empty = await create(owner, { ...input, name: 'Empty topic' });
+  await assert.rejects(
+    deleteKnowledgeFolder(store, reader, 'topic', empty.id, { confirmed: true, name: empty.name }),
+    { status: 403 },
+  );
+  await assert.rejects(
+    deleteKnowledgeFolder(store, foreign, 'topic', empty.id, { confirmed: true, name: empty.name }),
+    { status: 404 },
+  );
+  await assert.rejects(deleteKnowledgeFolder(store, owner, 'topic', { $ne: null }, {}), {
+    status: 404,
+  });
+  await assert.rejects(
+    deleteKnowledgeFolder(store, owner, 'topic', empty.id, { confirmed: true, name: 'Old name' }),
+    { status: 409 },
+  );
+  await assert.rejects(
+    deleteKnowledgeFolder(store, owner, 'topic', leaf.id, { confirmed: true, name: leaf.name }),
+    { status: 409 },
+  );
+  assert.equal(
+    (
+      await deleteKnowledgeFolder(store, owner, 'topic', empty.id, {
+        confirmed: true,
+        name: empty.name,
+      })
+    ).deleted,
+    true,
+  );
+  await assert.rejects(
+    deleteKnowledgeFolder(store, owner, 'topic', empty.id, { confirmed: true, name: empty.name }),
+    { status: 404 },
+  );
   await store.close();
 }
 test('knowledge folders enforce hierarchy and inherited access', () =>

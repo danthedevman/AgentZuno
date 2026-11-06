@@ -74,7 +74,8 @@ test('workflow SDK validates plans and requires authorization, approval, auditin
   await runWorkflow(definition, event, { ...context, workflowId: 'workflow-2' });
   assert.equal(calls.length, 4);
   assert.equal(
-    (await runWorkflow(definition, { ...event, text: 'VPN issue' }, context)).status,
+    (await runWorkflow(definition, { ...event, department: 'hr', text: 'VPN issue' }, context))
+      .status,
     'not-matched',
   );
 });

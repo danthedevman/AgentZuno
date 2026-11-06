@@ -141,7 +141,6 @@ export function installApplicationMiddleware(app, { auth, integrations, customDo
       (request.method === 'PUT' && request.path === '/api/helpdesk/smtp') ||
       (request.method === 'PUT' && request.path === '/api/helpdesk/audit-retention') ||
       (request.method === 'POST' && request.path === '/api/helpdesk/smtp/test') ||
-      (request.method === 'POST' && request.path === '/api/helpdesk/catalog-images') ||
       (['POST', 'PUT'].includes(request.method) &&
         /^\/api\/helpdesk\/groups(?:\/[a-f0-9]{24})?$/.test(request.path)) ||
       invitationWrite ||
@@ -163,7 +162,7 @@ export function installApplicationMiddleware(app, { auth, integrations, customDo
       (['POST', 'PUT'].includes(request.method) &&
         /^\/api\/helpdesk\/queues(?:\/[a-f0-9]{24})?$/.test(request.path)) ||
       (['POST', 'PUT'].includes(request.method) &&
-        /^\/api\/helpdesk\/data\/(?:tables(?:\/(?:ref-(?:department|location|organization|division|cost-center|asset|asset-model|application|vendor|contract|service|license|catalog-category|user|queue|group|workflow|task|request)|[a-f0-9]{24})(?:\/records(?:\/[a-f0-9]{24})?)?)?|conversations(?:\/[a-f0-9]{24}\/messages)?)$/.test(
+        /^\/api\/helpdesk\/data\/(?:tables(?:\/(?:ref-(?:department|location|organization|division|cost-center|asset|asset-model|application|vendor|contract|service|license|user|queue|group|workflow|task|request)|[a-f0-9]{24})(?:\/records(?:\/[a-f0-9]{24})?)?)?|conversations(?:\/[a-f0-9]{24}\/messages)?)$/.test(
           request.path,
         )) ||
       (request.method === 'PUT' &&
@@ -194,6 +193,10 @@ export function installApplicationMiddleware(app, { auth, integrations, customDo
         )) ||
       (request.method === 'POST' &&
         /^\/api\/helpdesk\/channels\/(slack|teams|gmail|outlook)\/disconnect$/.test(
+          request.path,
+        )) ||
+      (request.method === 'POST' &&
+        /^\/api\/helpdesk\/knowledge-folders\/(base|topic)\/[a-f0-9]{24}\/delete$/.test(
           request.path,
         )) ||
       (request.method === 'POST' && request.path === '/api/helpdesk/members') ||

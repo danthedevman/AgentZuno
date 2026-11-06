@@ -88,9 +88,8 @@ export default function HeroWorkflowBackground() {
               hidden={stage() < 1}
               classList={{ 'is-visible': stage() >= 1 }}
             >
-              Build a MacBook request workflow for the catalog. Ask for manager approval, open a
-              Jira issue for Desktop Support, and message the user in Slack when the request is
-              complete.
+              Build a MacBook request workflow. Ask for manager approval, open a Jira issue for
+              Desktop Support, and message the user in Slack when the request is complete.
             </div>
             <div
               class="hero-agent-activity"
@@ -106,7 +105,7 @@ export default function HeroWorkflowBackground() {
                     'Designing the request form',
                     'Adding manager approval',
                     'Connecting Jira and Slack steps',
-                    'Preparing the catalog item',
+                    'Preparing the request workflow',
                   ]}
                 >
                   {(label, index) => (
@@ -151,9 +150,7 @@ export default function HeroWorkflowBackground() {
                 </div>
               </div>
               <div class="hero-form-submit" classList={{ 'is-submitted': stage() >= 7 }}>
-                <span>
-                  {stage() >= 7 ? 'Display in Catalog · Enabled' : 'Preparing Catalog Item'}
-                </span>
+                <span>{stage() >= 7 ? 'Request Form · Ready' : 'Preparing Request Form'}</span>
                 <Icon name={stage() >= 7 ? 'check' : 'arrow'} />
               </div>
             </div>

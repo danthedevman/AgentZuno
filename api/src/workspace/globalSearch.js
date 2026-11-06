@@ -123,22 +123,6 @@ export async function searchWorkspace(store, user, term, helpdesk) {
         workflow.name,
         `/workspace/workflows/${workflow._id}/edit`,
       );
-    else {
-      const published = workflow.publishedConfig || workflow;
-      if (
-        published.definition?.form &&
-        published.definition.displayInCatalog &&
-        canUseWorkflow(published.definition, user) &&
-        (await matchesWorkflowDepartment(store, user, published.definition))
-      )
-        push(
-          workflow,
-          'Catalog Item',
-          'catalog',
-          published.name,
-          `/workspace/catalog?q=${encodeURIComponent(published.name)}`,
-        );
-    }
   }
   for (const [values, type, icon, path] of [
     [files, 'File', 'file', 'files'],

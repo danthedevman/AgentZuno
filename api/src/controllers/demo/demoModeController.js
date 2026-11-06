@@ -137,19 +137,6 @@ export function createDemoModeController(store, service) {
           createdAt: now,
           updatedAt: now,
         });
-        const category = await put(
-          'workforceReferences',
-          'category',
-          {
-            type: 'catalog-category',
-            name: `Demo ${examples.name}`,
-            description: 'Demo catalog items',
-            version: 1,
-            createdAt: now,
-            updatedAt: now,
-          },
-          true,
-        );
         const base = await put('records', 'base', {
           type: 'knowledge-base',
           name: `Demo ${examples.name} Knowledge`,
@@ -212,11 +199,8 @@ export function createDemoModeController(store, service) {
               department: 'general',
               phrases: [item.name.toLowerCase(), `demo ${item.name.toLowerCase()}`],
             },
-            displayInCatalog: true,
             settings: {
-              category,
               description: `${item.details}. Demo data`,
-              catalogIcon: 'catalog',
             },
             form: item.form || {
               title: item.name,
@@ -310,7 +294,7 @@ export function createDemoModeController(store, service) {
             );
           }
         }
-        await seedDemoApproval(store, service, scope, user, tag, groupName, category, put);
+        await seedDemoApproval(store, service, scope, user, tag, groupName, put);
         for (const request of await store
           .collection('helpdeskRequests')
           .find({ ...scope, demoDatasetId: dataset })

@@ -373,6 +373,12 @@ export default function DocsPage() {
                 caption="Task properties, due dates, Comments, and Work Notes"
               />
             </Show>
+            <Show when={page().id === 'knowledge'}>
+              <DocsScreenshot
+                src="/help/docs-knowledge-explorer-dark.png"
+                caption="The Knowledge explorer with IT support topics, subtopic pills, and articles using fictional demo content"
+              />
+            </Show>
             <Show when={page().id === 'getting-started'}>
               <DocsScreenshot
                 src="/help/docs-database-setup.png"

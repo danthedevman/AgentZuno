@@ -347,13 +347,12 @@ export default function RecordTable(props) {
   const sortOptions = () =>
     columns()
       .filter((column) => column.sortable !== false)
-      .flatMap((column) =>
-        ['asc', 'desc'].map((direction) => ({
-          value: `${key(column)}:${direction}`,
-          label: `${column.label} · ${direction === 'asc' ? 'Ascending' : 'Descending'}`,
-          sort: { key: key(column), direction },
-        })),
-      );
+      .map((column) => ({
+        value: key(column),
+        label: column.label,
+        ariaLabel: `${column.label}${sort().key === key(column) ? `, ${sort().direction === 'asc' ? 'ascending' : 'descending'}` : ''}`,
+        column,
+      }));
   function changeSort(column) {
     if (!props.source) return;
     setPage(1);
@@ -410,18 +409,23 @@ export default function RecordTable(props) {
           {props.toolbarFilters}
           {props.toolbarActions}
           <div class="record-toolbar-actions">
-            <Show when={props.source && columns().some((column) => column.sortable !== false)}>
+            <Show
+              when={
+                cardView() && props.source && columns().some((column) => column.sortable !== false)
+              }
+            >
               <Dropdown
                 ariaLabel="Sort records by"
-                icon="sort"
+                icon={sort().direction === 'asc' ? 'sort-up' : 'sort-down'}
+                selectedIcon={sort().direction === 'asc' ? 'sort-up' : 'sort-down'}
+                allowSingleOption
                 iconOnly
-                value={`${sort().key || key(columns().find((column) => column.sortable !== false))}:${sort().direction}`}
+                value={sort().key || key(columns().find((column) => column.sortable !== false))}
                 options={sortOptions()}
                 onChange={(value) => {
                   const option = sortOptions().find((option) => option.value === value);
                   if (option) {
-                    setPage(1);
-                    setSort(option.sort);
+                    changeSort(option.column);
                   }
                 }}
               />
@@ -603,7 +607,14 @@ export default function RecordTable(props) {
                         <RecordRow
                           card
                           record={record}
-                          columns={columns()}
+                          columns={
+                            cardView() && props.cardColumns
+                              ? columns().filter(
+                                  (column) =>
+                                    !column.label || props.cardColumns.includes(column.label),
+                                )
+                              : columns()
+                          }
                           onOpen={props.onRowClick}
                         />
                       )}

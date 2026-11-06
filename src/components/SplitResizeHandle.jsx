@@ -1,16 +1,25 @@
 import { createSignal, onMount, onCleanup } from 'solid-js';
 export default function SplitResizeHandle(props) {
   let handle, container;
-  const [mobilePanel, setMobilePanel] = createSignal('left');
+  const [mobilePanel, setMobilePanel] = createSignal(props.initialPanel || 'left');
   function selectPanel(panel) {
     setMobilePanel(panel);
     container?.setAttribute('data-mobile-panel', panel);
   }
-  const [ratio, setRatio] = createSignal(42);
+  const [ratio, setRatio] = createSignal(props.initialRatio || 42);
+  const [bounds, setBounds] = createSignal({ minimum: 25, maximum: 70 });
   function apply(value) {
     const width = container?.getBoundingClientRect().width || 1200;
-    const minimum = Math.max(25, (280 / width) * 100);
-    const maximum = Math.max(minimum, Math.min(70, ((width - 320) / width) * 100));
+    const minimum = Math.max(
+      25,
+      (280 / width) * 100,
+      props.maxRightWidth ? ((width - props.maxRightWidth) / width) * 100 : 0,
+    );
+    const maximum = Math.max(
+      minimum,
+      Math.min(70, ((width - (props.minRightWidth || 320)) / width) * 100),
+    );
+    setBounds({ minimum, maximum });
     const next = Math.max(minimum, Math.min(maximum, value));
     setRatio(next);
     container?.style.setProperty('--split-left', `${next}%`);
@@ -20,12 +29,18 @@ export default function SplitResizeHandle(props) {
   }
   onMount(() => {
     container = handle.parentElement;
-    selectPanel('left');
+    selectPanel(props.initialPanel || 'left');
     props.onPanelReady?.(selectPanel);
-    if (window.matchMedia('(max-width: 900px)').matches) return;
+    const desktop = () => !window.matchMedia('(max-width: 900px)').matches;
+    if (desktop()) apply(props.initialRatio || 42);
+    const observer = new ResizeObserver(() => {
+      if (desktop()) apply(ratio());
+    });
+    observer.observe(container);
+    onCleanup(() => observer.disconnect());
     try {
       const saved = Number(localStorage.getItem(`agentzuno-split-${props.storageKey || 'chat'}`));
-      if (saved >= 25 && saved <= 70) apply(saved);
+      if (desktop() && saved >= 25 && saved < 100) apply(saved);
     } catch {}
   });
   onCleanup(() => container?.classList.remove('is-resizing'));
@@ -35,10 +50,10 @@ export default function SplitResizeHandle(props) {
         ref={handle}
         class="split-resize-handle"
         role="separator"
-        aria-label="Resize conversation panels"
+        aria-label={props.ariaLabel || 'Resize conversation panels'}
         aria-orientation="vertical"
-        aria-valuemin="25"
-        aria-valuemax="70"
+        aria-valuemin={Math.round(bounds().minimum)}
+        aria-valuemax={Math.round(bounds().maximum)}
         aria-valuenow={Math.round(ratio())}
         tabindex="0"
         onKeyDown={(event) => {
@@ -46,9 +61,9 @@ export default function SplitResizeHandle(props) {
             event.preventDefault();
             apply(
               event.key === 'Home'
-                ? 25
+                ? bounds().minimum
                 : event.key === 'End'
-                  ? 70
+                  ? bounds().maximum
                   : ratio() + (event.key === 'ArrowRight' ? 2 : -2),
             );
           }
@@ -73,13 +88,17 @@ export default function SplitResizeHandle(props) {
         }}
         onLostPointerCapture={() => container?.classList.remove('is-resizing')}
       />
-      <div class="mobile-panel-switcher" role="group" aria-label="Conversation view">
+      <div
+        class="mobile-panel-switcher"
+        role="group"
+        aria-label={props.switcherLabel || 'Conversation view'}
+      >
         <button
           type="button"
           aria-pressed={mobilePanel() === 'left'}
           onClick={() => selectPanel('left')}
         >
-          Chat
+          {props.leftLabel || 'Chat'}
         </button>
         <button
           type="button"

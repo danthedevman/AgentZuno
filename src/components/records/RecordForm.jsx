@@ -9,11 +9,12 @@ export default function RecordForm(props) {
     <ValidatedForm
       id={props.id}
       class="create-form record-surface record-property-sheet"
+      data-mode={props.detailsOnly ? 'details' : 'edit'}
       onSubmit={props.onSubmit}
     >
       <Index each={sections()}>
         {(section) => (
-          <section class="record-section" aria-label={section().title}>
+          <section id={section().id} class="record-section" aria-label={section().title}>
             <Show when={section().title}>
               <h2>{section().title}</h2>
             </Show>
@@ -24,6 +25,7 @@ export default function RecordForm(props) {
                     classList={{
                       'record-description-block':
                         props.detailsOnly &&
+                        props.showDescriptionBlocks !== false &&
                         (field().descriptionBlock ?? isMultilineField(field())),
                     }}
                   >

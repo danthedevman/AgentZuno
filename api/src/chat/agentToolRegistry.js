@@ -1,3 +1,7 @@
+import {
+  requestWorkflowChoices,
+  selectedRequestWorkflow,
+} from '../workflows/requestWorkflowSelection.js';
 import { createKnowledgeTopics, knowledgeStructure } from '../knowledge/knowledgeTopics.js';
 import { queryString } from '../shared/queryValues.js';
 import { prepareChannelRequestDraft } from '../channels/channelRequestForms.js';
@@ -35,6 +39,32 @@ const definition = (name, description, parameters, kind, execute) => ({
 });
 const empty = object({});
 const tools = [
+  definition(
+    'listRequestWorkflows',
+    'List published request workflows available to the current person. Infer intent from their names, descriptions, and forms. Ask one clarification when ambiguous; no trigger phrases or keyword matching are required.',
+    empty,
+    'support-request',
+    async ({ store, actor }) => ({ workflows: await requestWorkflowChoices(store, actor) }),
+  ),
+  definition(
+    'offerRequestForm',
+    'Offer the published workflow form that fits the person’s intent. Use an exact workflowId from listRequestWorkflows. This only displays a form for review; it never submits a request or executes actions. Use only for a new request, not status questions or cancelled requests.',
+    object({ workflowId: text(24) }),
+    'portal-request',
+    async ({ store, actor }, input) => {
+      const workflow = await selectedRequestWorkflow(store, actor, input.workflowId);
+      return {
+        proposal: {
+          kind: 'requestForm',
+          workflowId: workflow.workflowId,
+          workflowVersion: workflow.workflowVersion,
+        },
+        message:
+          'The authorized request form will appear after your response. The user must explicitly submit it.',
+        form: workflow.form,
+      };
+    },
+  ),
   definition(
     'getMyAccess',
     'Read the current user’s tracked application access and pending access requests before suggesting duplicate access. This does not grant or revoke access.',
@@ -184,9 +214,9 @@ const tools = [
   ),
   definition(
     'prepareChannelRequest',
-    'Collect request answers from conversation using published field IDs. Merge answers supplied so far and ask only for missing required fields. This prepares a review and Submit Request button; never claim submission before the person confirms.',
+    'Choose the exact workflowId from listRequestWorkflows, then collect request answers from conversation using published field IDs. Merge answers supplied so far and ask only for missing required fields. This prepares a review and Submit Request button; never claim submission before the person confirms.',
     object({
-      workflowId: nullable(text(24)),
+      workflowId: text(24),
       answers: {
         type: 'array',
         maxItems: 20,
@@ -464,6 +494,12 @@ async function availableTools(context) {
   return tools.filter(
     (tool) =>
       tool.kind === 'read' ||
+      (['support-request', 'portal-request'].includes(tool.kind) &&
+        chat.assistantType === 'support' &&
+        actor.role !== 'read-only' &&
+        (tool.kind === 'portal-request'
+          ? chat.helpdeskPurpose === 'support'
+          : ['support', 'slack-support', 'teams-support'].includes(chat.helpdeskPurpose))) ||
       (admin && tool.kind === 'knowledge') ||
       (tool.kind === 'channel-request' &&
         chat.assistantType === 'support' &&

@@ -119,6 +119,25 @@ test(
         null,
       );
       await workflows.save(admin, workflow.id, { ...input, version: 1, enabled: true });
+      async function selectForm(version) {
+        const currentChat = await store
+          .collection('chats')
+          .findOne({ _id: new ObjectId(conversation.id) });
+        await store.collection('chats').updateOne(
+          { _id: currentChat._id },
+          {
+            $set: {
+              'messages.$[reply].proposals.requestForm': {
+                kind: 'requestForm',
+                workflowId: workflow.id,
+                workflowVersion: version,
+              },
+            },
+          },
+          { arrayFilters: [{ 'reply.id': currentChat.responseId }] },
+        );
+      }
+      await selectForm(2);
       const offered = service.safeSupport(
         await service.getSupport(user, conversation.id),
       ).requestForm;
@@ -140,6 +159,7 @@ test(
       );
       await workflows.save(admin, workflow.id, { ...input, version: 2, enabled: true });
       await assert.rejects(service.submitForm(user, conversation.id, payload), { status: 409 });
+      await selectForm(3);
       const ticket = await service.submitForm(user, conversation.id, {
         ...payload,
         workflowVersion: 3,
@@ -187,6 +207,22 @@ test(
           },
         },
       );
+      await store.collection('chats').updateOne(
+        { _id: new ObjectId(conversation.id) },
+        {
+          $push: {
+            messages: {
+              id: nextResponse,
+              role: 'assistant',
+              status: 'complete',
+              text: 'Review your next request.',
+              proposals: {
+                requestForm: { kind: 'requestForm', workflowId: workflow.id, workflowVersion: 3 },
+              },
+            },
+          },
+        },
+      );
       const nextForm = service.safeSupport(
         await service.getSupport(user, conversation.id),
       ).requestForm;
@@ -210,15 +246,15 @@ test(
       );
       assert.equal((await service.getSupport(user, conversation.id)).requests.length, 2);
       assert.equal((await service.reviewTicket(user, ticket.id)).chatId, conversation.id);
-      assert.deepEqual(await service.catalog(user), []);
-      const catalogDefinition = { ...definition, displayInCatalog: true };
+      assert.equal((await service.requestableWorkflows(user)).length, 1);
+      const catalogDefinition = definition;
       await workflows.save(admin, workflow.id, {
         ...input,
         definition: catalogDefinition,
         version: 3,
         enabled: true,
       });
-      assert.equal((await service.catalog(user)).length, 1);
+      assert.equal((await service.requestableWorkflows(user)).length, 1);
       const catalogChat = await service.createSupport(user, {
         requestId: randomUUID(),
         workflowId: workflow.id,

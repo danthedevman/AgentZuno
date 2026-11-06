@@ -1,3 +1,5 @@
+import { Dynamic } from 'solid-js/web';
+import KnowledgeEditorPanel from './KnowledgeEditorPanel.jsx';
 import { Show, createResource, createEffect, createSignal } from 'solid-js';
 import WorkspaceModal from '../WorkspaceModal.jsx';
 import RecordForm from '../records/RecordForm.jsx';
@@ -39,6 +41,7 @@ export default function KnowledgeQuickEditor(props) {
     window.dispatchEvent(new Event('agentzuno-form-saved'));
     return true;
   }
+  props.controller?.({ beforeClose });
   async function save(event) {
     event.preventDefault();
     if (saving() || record.loading || record.error || !permissions()?.ready) return;
@@ -77,8 +80,40 @@ export default function KnowledgeQuickEditor(props) {
       setSaving(false);
     }
   }
+  async function remove() {
+    if (saving() || !record() || record().isDefault) return;
+    const name = record().name;
+    if (
+      !(await confirmAction(
+        `Delete “${name}”? Move any articles and subtopics first.`,
+        `Delete ${noun}`,
+        'Delete',
+        { requiredText: name },
+      ))
+    )
+      return;
+    setSaving(true);
+    setError('');
+    try {
+      await api(`/api/helpdesk/knowledge-folders/${props.kind}/${savedId()}/delete`, {
+        method: 'POST',
+        body: JSON.stringify({ confirmed: true, name }),
+        deferSavedEvent: true,
+      });
+      setDirty(false);
+      window.dispatchEvent(new Event('agentzuno-form-saved'));
+      await props.onDeleted?.();
+      notify({ tone: 'success', message: `${noun} deleted.` });
+      props.onClose();
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setSaving(false);
+    }
+  }
   return (
-    <WorkspaceModal
+    <Dynamic
+      component={props.record ? KnowledgeEditorPanel : WorkspaceModal}
       title={`${props.record ? 'Edit' : 'Add'} ${noun}`}
       onClose={props.onClose}
       beforeClose={beforeClose}
@@ -137,6 +172,16 @@ export default function KnowledgeQuickEditor(props) {
             >
               {saving() ? 'Saving…' : 'Save'}
             </button>
+            <Show when={props.record && record() && !record().isDefault}>
+              <button
+                type="button"
+                class="workspace-button secondary"
+                disabled={saving()}
+                onClick={remove}
+              >
+                Delete
+              </button>
+            </Show>
             <button
               type="button"
               class="workspace-button secondary"
@@ -150,6 +195,6 @@ export default function KnowledgeQuickEditor(props) {
           </div>
         </RecordForm>
       </Show>
-    </WorkspaceModal>
+    </Dynamic>
   );
 }

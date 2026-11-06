@@ -418,32 +418,23 @@ h1 {
   outline: 2px solid #c8e3ff;
   outline-offset: 4px;
 }
-[data-required-label='true'] {
+[data-requirement-label='true'] {
   position: relative;
 }
-.required-marker {
+.field-requirement {
   position: absolute;
-  left: -14px;
-  top: 0.5lh;
   transform: translateY(-50%);
-  height: 1lh;
-  align-items: center;
-  display: inline-flex;
-  font-family: Arial, sans-serif;
-  font-size: inherit;
+  visibility: hidden;
+  width: max-content;
+  font-family: inherit;
+  font-size: 11px;
   font-weight: 400;
-  line-height: inherit;
-  color: #93a1b5;
+  line-height: 1.4;
+  color: var(--workspace-muted, #93a1b5);
+  white-space: nowrap;
   pointer-events: none;
 }
-.required-symbol {
-  position: relative;
-  top: 0.14em;
-  font-size: 1.45em;
-  line-height: 1;
-  font-weight: 600;
-}
-[data-field-invalid='true'] .required-marker {
+[data-field-invalid='true'] .field-requirement {
   color: #ef6575;
 }
 @media (forced-colors: active) {
@@ -452,10 +443,10 @@ h1 {
     color: CanvasText;
     border-color: CanvasText;
   }
-  .required-marker {
+  .field-requirement {
     color: CanvasText;
   }
-  [data-field-invalid='true'] .required-marker {
+  [data-field-invalid='true'] .field-requirement {
     color: Highlight;
   }
 }
@@ -1278,7 +1269,7 @@ h1 {
   gap: 64px;
   max-width: 1280px;
   margin: auto;
-  padding: 100px 48px;
+  padding: 48px;
   text-align: left;
   overflow: visible;
 }
@@ -1636,7 +1627,7 @@ h1 {
 @media (max-width: 700px) {
   .homepage {
     grid-template-columns: minmax(0, 1fr);
-    padding: 110px 24px 56px;
+    padding: 32px 24px 56px;
     gap: 40px;
     min-height: 0;
   }

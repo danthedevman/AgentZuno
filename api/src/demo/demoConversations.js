@@ -98,7 +98,7 @@ export async function prepareDemoMembership(store, scope, user, tag, groupName, 
       },
     );
 }
-export async function seedDemoApproval(store, service, scope, user, tag, groupName, category, put) {
+export async function seedDemoApproval(store, service, scope, user, tag, groupName, put) {
   const now = new Date(),
     employeeId = idFor(scope, tag.demoDatasetId, 'employee');
   await store.collection('users').updateOne(
@@ -138,11 +138,8 @@ export async function seedDemoApproval(store, service, scope, user, tag, groupNa
     version: 1,
     name: 'Demo: Equipment Approval',
     trigger: { department: 'general', phrases: ['demo equipment approval'] },
-    displayInCatalog: true,
     settings: {
-      category,
       description: 'Demo equipment request with an approval and internal assignment',
-      catalogIcon: 'task',
     },
     form: {
       title: 'Demo Equipment Approval',
@@ -195,7 +192,7 @@ export async function seedDemoApproval(store, service, scope, user, tag, groupNa
     tag,
     workflowId,
     config,
-    `Build a demo equipment request form. Ask me to approve it with a required rejection comment, then route it to ${groupName}. Display it in the catalog.`,
+    `Build a demo equipment request form. Ask me to approve it with a required rejection comment, then route it to ${groupName}.`,
   );
   const requestKey = idFor(scope, tag.demoDatasetId, 'approval-request');
   let record = await store

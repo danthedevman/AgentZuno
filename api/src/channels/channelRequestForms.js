@@ -2,7 +2,7 @@ import { validateFormAnswers } from '../../sdk/workflows/index.js';
 import { createHash, randomUUID } from 'node:crypto';
 import { ObjectId } from 'mongodb';
 import { createHelpdeskService } from '../requests/helpdesk.js';
-import { matchHelpdeskWorkflow } from '../workflows/helpdeskWorkflows.js';
+import { selectedRequestWorkflow } from '../workflows/requestWorkflowSelection.js';
 import { workflowReferenceOptions } from '../workflows/workflowReferences.js';
 import { resolveHelpdeskUser, helpdeskScope, deny } from '../identity/helpdeskRoles.js';
 import { queryString } from '../shared/queryValues.js';
@@ -33,15 +33,19 @@ export function createChannelRequestForms(store, chats) {
     )
       deny();
     const actor = await currentActor(user);
-    const matched = await matchHelpdeskWorkflow(
-      store,
-      actor,
-      null,
-      text.slice(-32000),
-      true,
-      draft?.workflowId || null,
-    );
-    if (!matched?.form) return null;
+    if (!draft?.workflowId) return null;
+    let matched;
+    try {
+      matched = await selectedRequestWorkflow(
+        store,
+        actor,
+        draft.workflowId,
+        draft.workflowVersion,
+      );
+    } catch (error) {
+      if ([400, 403, 404, 409].includes(error.status)) return null;
+      throw error;
+    }
     const item = (await service.requestableWorkflows(actor)).find(
       (row) => row.id === matched.workflowId,
     );
@@ -377,19 +381,7 @@ export async function prepareChannelRequestDraft(store, chat, actor, input) {
     deny('Choose a valid workflow.', 400);
   if (!Array.isArray(input.answers) || input.answers.length > 20)
     deny('Provide up to 20 answers.', 400);
-  const matched = await matchHelpdeskWorkflow(
-    store,
-    actor,
-    null,
-    chat.messages
-      .filter((message) => message.role === 'user')
-      .map((message) => message.text)
-      .join('\n')
-      .slice(-32000),
-    true,
-    input.workflowId,
-  );
-  if (!matched?.form) deny('No permitted published request matches yet.', 404);
+  const matched = await selectedRequestWorkflow(store, actor, input.workflowId);
   const previous = chat.messages
     .filter((message) => message.proposals?.channelRequest?.workflowId === matched.workflowId)
     .at(-1)?.proposals.channelRequest;

@@ -10,7 +10,7 @@ import { defineWorkflow } from '@agentzuno/workflows';
 export default defineWorkflow({
   version: 1,
   name: 'Laptop Order',
-  trigger: { phrases: ['laptop', 'request a mac'] },
+  trigger: {},
   steps: [{ id: 'desktop', action: 'route', params: { queueName: 'Desktop Support' } }],
   form: {
     title: 'Laptop Order',
@@ -62,13 +62,13 @@ MongoDB stores authoritative runs, frozen inputs, source hashes, revisions, leas
 
 Await each action sequentially and keep stable unique step IDs. Parallel effects, arbitrary npm dependencies, ServiceNow/Jira executors, arbitrary network access, schedules, custom approval expiry and general long-running timers are not implemented. A waiting approval releases compute; its decision requeues the immutable run. The original declarative `runWorkflow` helper remains available for integrations that supply their own host callbacks, but the app uses the TypeScript runtime described here.
 
-Catalog discovery is opt-in through `displayInCatalog: true`. Publish a workflow with a form to make it available to its permitted audience. Opening a Catalog item loads its published form in a new support chat; it does not run the workflow. Explicit submission starts execution with that request’s frozen answers. Each offer submits once and requests retain their originating chat ID.
+Request discovery uses the configured support provider’s understanding of intent. `listRequestWorkflows` exposes only permitted published workflow names, descriptions and form schemas; `offerRequestForm` selects an exact workflow ID for portal review, and `prepareChannelRequest` prepares Slack/Teams review. Trigger phrases are optional legacy metadata and are not pattern-matched for discovery. Without a configured provider, chat does not infer a form. Names and `settings.description` should describe when to use the workflow. Ambiguous requests should prompt one clarification. The server rechecks grants, workspace, department, publication and revision before displaying or submitting a form. Selection never executes a workflow; explicit submission starts it. The offline SDK’s `matchesWorkflow` helper checks department eligibility for an already selected workflow and does not classify text.
 
-Optional `settings` metadata supports `description` (500 characters), `category` (80), `submissionMessage` (500), `timeoutSeconds` (integer 5–60) and `maxConcurrentRuns` (integer 1–10). Published catalog metadata and receipts use these values. Durable execution enforces the timeout and scoped MongoDB concurrency leases in addition to worker-wide capacity. Approval waits release compute and concurrency slots.
+Optional `settings` metadata supports `description` (500 characters), `category` (80), `submissionMessage` (500), `timeoutSeconds` (integer 5–60) and `maxConcurrentRuns` (integer 1–10). Published workflow descriptions and receipts use these values. Durable execution enforces the timeout and scoped MongoDB concurrency leases in addition to worker-wide capacity. Approval waits release compute and concurrency slots.
 
 Approval steps support user, group (any one eligible member), and requester-manager targets. Use `when.departmentIds` and/or typed form-value conditions to request approval only when applicable. Set `requireRejectionComment: true` on an approval step when a rejection must include a comment. The backend resolves current membership and manager assignments and enforces the requirement.
 
-Workflow department scope references the configured Departments Data table through `trigger.departmentId`. Omit it for Any Department. The API validates that the record belongs to the current workspace, and discovery, catalog submission, and workflow execution recheck the requester's current profile reference. The SDK validates reference format; it cannot verify database ownership offline. The deprecated `trigger.department` string remains readable for older workflows and events; it is not an organization department reference. New workflows should use `departmentId`.
+Workflow department scope references the configured Departments Data table through `trigger.departmentId`. Omit it for Any Department. The API validates that the record belongs to the current workspace, and discovery, form submission, and workflow execution recheck the requester's current profile reference. The SDK validates reference format; it cannot verify database ownership offline. The deprecated `trigger.department` string remains readable for older workflows and events; it is not an organization department reference. New workflows should use `departmentId`.
 
 ## Reference fields
 
@@ -85,3 +85,5 @@ Use the configured Data table ID for other sources. Admin chat receives availabl
 Declare a `task.create` step with an existing assignment group's `queueName`, a title, and a description. Call `await ctx.tasks.create('step-id', { queueName: 'App Support', title: 'Set up the board', description: String(ctx.answers.justification) })` using the same step ID and group as the manifest. Route the parent request first when both should go to that group.
 
 The server creates the task only for a submitted request after checking the published workflow grant and current requester access. Retries reuse the same task. A published task action does not give employees permission to create or close tasks through ordinary request APIs.
+
+Automatic registration workflows can omit routing and fulfillment tasks. Use an explicit `data.create` manifest with the target table and allowed field IDs, then call `ctx.data.create` after form submission. A reference field targeting `ref-request` can store `String(ctx.request.id)` to link the created row to its originating request. The runtime uses the same typed record service as Admin tools and rechecks the publishing administrator and current action grants. A successful data create/update workflow without routing or fulfillment resolves its request automatically; paused, rejected, or failed workflows do not. Completed mutations reuse their durable receipt on replay.

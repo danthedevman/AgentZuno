@@ -55,34 +55,6 @@ export function createHelpdeskController(store, service) {
         ));
     response.json({ enabled: !!provider });
   };
-  const getCatalog = async (request, response) => {
-    const items = await service.catalog(request.helpdeskUser);
-    if (
-      request.query.category !== undefined &&
-      (typeof request.query.category !== 'string' || request.query.category.length > 80)
-    )
-      fail('Invalid category.');
-    const result = listResponse(
-      request,
-      items
-        .filter((item) => !request.query.category || item.categoryId === request.query.category)
-        .map(({ form, ...item }) => item),
-      {
-        Workflow: (item) => `${item.name} ${item.description || ''}`,
-        Category: 'category',
-        Updated: (item) => Date.parse(item.updatedAt),
-      },
-    );
-    if (request.query.list === '1')
-      result.categories = [
-        ...new Map(
-          items
-            .filter((item) => item.categoryId && item.category)
-            .map((item) => [item.categoryId, { id: item.categoryId, name: item.category }]),
-        ).values(),
-      ].sort((a, b) => a.name.localeCompare(b.name));
-    response.json(result);
-  };
   const getSupportConversations = async (request, response) => {
     const user = request.helpdeskUser;
     const filter = {
@@ -465,7 +437,6 @@ export function createHelpdeskController(store, service) {
   return {
     useApiHelpdesk,
     getAiStatus,
-    getCatalog,
     getSupportConversations,
     postSupportConversations,
     postSupportConversationsIdForm,

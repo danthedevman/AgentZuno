@@ -21,18 +21,27 @@ export default function ValidatedForm(props) {
   function alignMarkers() {
     cancelAnimationFrame(markerFrame);
     markerFrame = requestAnimationFrame(() => {
-      for (const marker of form.querySelectorAll('.required-marker')) {
-        const label = marker.closest('[data-required-label="true"]');
+      for (const marker of form.querySelectorAll('.field-requirement')) {
+        const label = marker.closest('[data-requirement-label="true"]');
         if (!label) continue;
-        const text = [...label.childNodes].find(
-          (node) => node.nodeType === Node.TEXT_NODE && node.textContent.trim(),
-        );
+        const walker = document.createTreeWalker(label, NodeFilter.SHOW_TEXT, {
+          acceptNode: (node) =>
+            node.textContent.trim() &&
+            !node.parentElement.closest('.field-requirement, .icon, button, input, textarea')
+              ? NodeFilter.FILTER_ACCEPT
+              : NodeFilter.FILTER_REJECT,
+        });
+        const text = walker.nextNode();
         if (!text) continue;
         const range = document.createRange();
         range.selectNodeContents(text);
         const line = range.getBoundingClientRect();
-        if (line.height)
-          marker.style.top = `${line.top - label.getBoundingClientRect().top + line.height / 2}px`;
+        if (line.height) {
+          const bounds = label.getBoundingClientRect();
+          marker.style.top = `${line.top - bounds.top + line.height / 2}px`;
+          marker.style.left = `${line.right - bounds.left + 6}px`;
+          marker.style.visibility = 'visible';
+        }
       }
     });
   }
@@ -69,10 +78,11 @@ export default function ValidatedForm(props) {
       const label = labelNode(field);
       if (!label) continue;
       const isRequired = field.required || field.dataset.required === 'true';
-      if (isRequired && !labels.has(label)) {
+      if (!labels.has(label)) {
         labels.add(label);
-        label.dataset.requiredLabel = 'true';
-        required.push({ label, field });
+        label.dataset.requirementLabel = 'true';
+        label.dataset.requiredLabel = String(isRequired);
+        required.push({ label, field, required: !!isRequired });
       }
       label.dataset.fieldInvalid = field.getAttribute('aria-invalid') === 'true' ? 'true' : 'false';
       if (field.dataset.required === 'true') field.setAttribute('aria-required', 'true');
@@ -80,12 +90,16 @@ export default function ValidatedForm(props) {
     for (const previous of markers())
       if (!labels.has(previous.label)) {
         delete previous.label.dataset.requiredLabel;
+        delete previous.label.dataset.requirementLabel;
         delete previous.label.dataset.fieldInvalid;
       }
     const previous = markers();
     if (
       previous.length !== required.length ||
-      required.some((item, index) => item.field !== previous[index].field)
+      required.some(
+        (item, index) =>
+          item.field !== previous[index].field || item.required !== previous[index].required,
+      )
     )
       setMarkers(required);
     alignMarkers();
@@ -101,6 +115,9 @@ export default function ValidatedForm(props) {
     });
     resizeObserver = new ResizeObserver(alignMarkers);
     resizeObserver.observe(form);
+    document.fonts?.ready.then(() => {
+      if (form.isConnected) alignMarkers();
+    });
   });
   function fieldLabel(field) {
     const label =
@@ -224,8 +241,8 @@ export default function ValidatedForm(props) {
       <For each={markers()}>
         {(marker) => (
           <Portal mount={marker.label}>
-            <span class="required-marker" aria-hidden="true">
-              <span class="required-symbol">*</span>
+            <span class="field-requirement" aria-hidden="true">
+              {marker.required ? 'Required' : 'Optional'}
             </span>
           </Portal>
         )}

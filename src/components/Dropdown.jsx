@@ -17,12 +17,13 @@ export default function Dropdown(props) {
   const [activeIndex, setActiveIndex] = createSignal(0);
   const [localValue, setLocalValue] = createSignal(props.defaultValue);
   const options = () => props.options || [];
+  const canOpen = () => options().length > 1 || (props.allowSingleOption && options().length === 1);
   const value = () => props.value ?? localValue() ?? options()[0]?.value ?? '';
   const label = (value) =>
     options().find((option) => option.value === value)?.label || props.placeholder || 'Select';
 
   function open() {
-    if (props.disabled || props.readOnly || options().length < 2) return;
+    if (props.disabled || props.readOnly || !canOpen()) return;
     setActiveIndex(
       Math.max(
         0,
@@ -39,7 +40,7 @@ export default function Dropdown(props) {
   }
 
   function handleKeyDown(event) {
-    if (props.readOnly || options().length < 2) return;
+    if (props.readOnly || !canOpen()) return;
     if (event.key === 'Escape' || event.key === 'Tab') {
       setIsOpen(false);
       if (event.key === 'Escape') event.preventDefault();
@@ -95,7 +96,7 @@ export default function Dropdown(props) {
       <input type="hidden" name={props.name} value={value()} disabled={props.disabled} />
       <button
         disabled={props.disabled || !options().length}
-        aria-readonly={props.readOnly || options().length < 2}
+        aria-readonly={props.readOnly || !canOpen()}
         class="category-trigger"
         type="button"
         role="combobox"
@@ -136,6 +137,7 @@ export default function Dropdown(props) {
                 role="option"
                 id={`${id}-${index()}`}
                 aria-selected={value() === option.value}
+                aria-label={option.ariaLabel || option.label}
                 classList={{ 'category-option': true, 'is-active': activeIndex() === index() }}
                 onPointerMove={() => setActiveIndex(index())}
                 onMouseDown={(event) => event.preventDefault()}
@@ -148,7 +150,7 @@ export default function Dropdown(props) {
               >
                 <span>{option.label}</span>
                 <Show when={value() === option.value}>
-                  <Icon name="check" />
+                  <Icon name={props.selectedIcon || 'check'} />
                 </Show>
               </div>
             )}

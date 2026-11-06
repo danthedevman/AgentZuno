@@ -56,11 +56,10 @@ export function defineWorkflow(input) {
   )
     throw new Error('Choose a valid department reference.');
   if (
-    !Array.isArray(input.trigger.phrases) ||
-    !input.trigger.phrases.length ||
-    input.trigger.phrases.length > 10
+    input.trigger.phrases !== undefined &&
+    (!Array.isArray(input.trigger.phrases) || input.trigger.phrases.length > 10)
   )
-    throw new Error('Choose 1–10 trigger phrases.');
+    throw new Error('Provide at most 10 legacy trigger phrases.');
   if (!Array.isArray(input.steps) || !input.steps.length || input.steps.length > 10)
     throw new Error('Choose 1–10 workflow steps.');
   const steps = input.steps.map((step) => {
@@ -231,8 +230,6 @@ export function defineWorkflow(input) {
     steps.filter((step) => ['route', 'handoff'].includes(step.action)).length !== 1
   )
     throw new Error('Conditional routing requires exactly one default route or handoff step.');
-  if (input.displayInCatalog !== undefined && typeof input.displayInCatalog !== 'boolean')
-    throw new Error('Display in Catalog must be a boolean.');
   let settings;
   if (input.settings !== undefined) {
     object(input.settings, [
@@ -271,9 +268,6 @@ export function defineWorkflow(input) {
     }
     for (const [key, max] of [
       ['description', 500],
-      ['category', 80],
-      ['catalogIcon', 40],
-      ['catalogImageId', 24],
       ['submissionMessage', 500],
     ]) {
       if (input.settings[key] !== undefined) {
@@ -299,13 +293,14 @@ export function defineWorkflow(input) {
   }
   return {
     ...(settings ? { settings } : {}),
-    ...(input.displayInCatalog === undefined ? {} : { displayInCatalog: input.displayInCatalog }),
     version: 1,
     name: text(input.name, 80),
     trigger: {
       department: input.trigger.department || 'general',
       ...(input.trigger.departmentId ? { departmentId: input.trigger.departmentId } : {}),
-      phrases: [...new Set(input.trigger.phrases.map((value) => text(value, 60).toLowerCase()))],
+      phrases: [
+        ...new Set((input.trigger.phrases || []).map((value) => text(value, 60).toLowerCase())),
+      ],
     },
     steps,
     ...(input.run ? { run: input.run } : {}),
@@ -471,14 +466,12 @@ export function validateFormAnswers(input, answers) {
 }
 export function matchesWorkflow(input, event) {
   const workflow = defineWorkflow(input);
-  return (
-    (workflow.trigger.departmentId
-      ? event.departmentId === workflow.trigger.departmentId
-      : workflow.trigger.department === 'general' ||
+  return workflow.trigger.departmentId
+    ? event.departmentId === workflow.trigger.departmentId
+    : !workflow.trigger.department ||
+        workflow.trigger.department === 'general' ||
         !event.department ||
-        event.department === workflow.trigger.department) &&
-    workflow.trigger.phrases.some((phrase) => String(event.text).toLowerCase().includes(phrase))
-  );
+        event.department === workflow.trigger.department;
 }
 export function toTypeScript(input) {
   const workflow = defineWorkflow(input);

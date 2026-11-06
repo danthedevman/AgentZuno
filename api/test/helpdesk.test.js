@@ -5,10 +5,7 @@ import { MongoClient, ObjectId } from 'mongodb';
 import { createIntegrationStore } from '../src/storage/integrationStore.js';
 import { createHelpdeskService } from '../src/requests/helpdesk.js';
 import { createApi } from '../src/app.js';
-import {
-  createHelpdeskWorkflows,
-  matchHelpdeskWorkflow,
-} from '../src/workflows/helpdeskWorkflows.js';
+import { createHelpdeskWorkflows } from '../src/workflows/helpdeskWorkflows.js';
 
 const uri = process.env.TEST_MONGODB_URI;
 test(
@@ -67,19 +64,13 @@ test(
         .collection('helpdeskQueues')
         .insertOne({ ownerId: user.id, workspaceId: user.workspaceId, name: 'Access team' });
       const workflow = await workflowService.save(user, null, workflowInput);
-      assert.equal(await matchHelpdeskWorkflow(store, user, 'it', 'Need access'), null);
+      assert.equal(workflow.enabled, false);
       await workflowService.save(user, workflow.id, {
         ...workflowInput,
         definition: workflow.definition,
         enabled: true,
         version: 1,
       });
-      assert.equal(
-        (await matchHelpdeskWorkflow(store, user, 'it', 'Need ACCESS')).status,
-        'escalated',
-      );
-      assert.equal(await matchHelpdeskWorkflow(store, other, 'it', 'Need access'), null);
-      assert.equal(await matchHelpdeskWorkflow(store, user, 'hr', 'Need access'), null);
       await assert.rejects(
         workflowService.save(other, workflow.id, {
           ...workflowInput,

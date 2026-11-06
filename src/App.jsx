@@ -1,3 +1,4 @@
+import ChatReportRecordPage from './pages/workspace/reports/ChatReportRecordPage.jsx';
 import AddUserPage from './pages/workspace/identity/AddUserPage.jsx';
 import SlackLinkPage from './pages/auth/SlackLinkPage.jsx';
 import InstallationPage from './pages/setup/InstallationPage.jsx';
@@ -27,7 +28,6 @@ import UsersPage from './pages/workspace/identity/UsersPage.jsx';
 import UserRecordPage from './pages/workspace/identity/UserRecordPage.jsx';
 import SlackUsersPage from './pages/workspace/connectors/SlackUsersPage.jsx';
 import ConnectorsPage from './pages/workspace/connectors/ConnectorsPage.jsx';
-import CatalogPage from './pages/workspace/requests/CatalogPage.jsx';
 import WorkflowsPage from './pages/workspace/workflows/WorkflowsPage.jsx';
 import EditConnectionPage from './pages/workspace/connectors/EditConnectionPage.jsx';
 import EditRecordPage from './pages/workspace/data/EditRecordPage.jsx';
@@ -96,7 +96,6 @@ export default function App() {
         <Route path="/connectors" component={ConnectorsPage} />
         <Route path="/connectors/slack/users" component={SlackUsersPage} />
         <Route path="/connectors/:provider" component={ConnectorsPage} />
-        <Route path="/catalog" component={CatalogPage} />
         <Route path="/workflows" component={WorkflowsPage} />
         <Route path="/workflows/new" component={WorkflowBuilderPage} />
         <Route path="/workflows/:id/edit" component={WorkflowBuilderPage} />
@@ -104,6 +103,7 @@ export default function App() {
         <Route path="/chat/:id" component={ChatPage} />
         <Route path="/approvals" component={ApprovalsPage} />
         <Route path="/reports" component={ReportsPage} />
+        <Route path="/reports/chats/:id" component={ChatReportRecordPage} />
         <Route path="/reports/audit/:id" component={AuditRecordPage} />
         <Route path="/knowledge" component={KnowledgePage} />
         <Route path="/knowledge/bases/:id" component={KnowledgeBasePage} />

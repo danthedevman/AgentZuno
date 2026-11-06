@@ -113,6 +113,12 @@ test('hero request submission slides a full-width record over the chat', async (
 }) => {
   await page.clock.install();
   await page.goto('/');
+  await page.clock.runFor(1000);
+  const heading = await page.locator('.landing-hero-copy').boundingBox();
+  const navigation = await page
+    .getByRole('navigation', { name: 'Public navigation' })
+    .boundingBox();
+  expect(heading.y - navigation.y - navigation.height).toBeLessThanOrEqual(isMobile ? 40 : 56);
   await page.locator('.hero-demo-stack').scrollIntoViewIfNeeded();
   if (!isMobile) {
     await page.clock.runFor(1000);

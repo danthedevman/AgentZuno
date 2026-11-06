@@ -295,7 +295,12 @@ export function createContentController(auth, store, designer = {}) {
           }
         : null);
     if (!record) return response.status(404).json({ error: 'Record not found in your workspace.' });
-    response.json(record);
+    response.json({
+      ...record,
+      ...(request.params.type === 'knowledge-base' && request.params.id === request.user.workspaceId
+        ? { isDefault: true }
+        : {}),
+    });
   };
   const patchArticlesIdStatus = async (request, response) => {
     const { status } = request.body || {};

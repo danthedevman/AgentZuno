@@ -233,7 +233,7 @@ function DataTablePage() {
                         class="workspace-button secondary small"
                         onClick={() => setQuery({ design: '1' })}
                       >
-                        Edit Fields
+                        Edit Table
                       </button>
                       <button
                         class="workspace-button small"

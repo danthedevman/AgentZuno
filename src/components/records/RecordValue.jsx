@@ -19,7 +19,9 @@ export default function RecordValue(props) {
   return (
     <dl class="record-value">
       <dt>
-        <Icon name={props.icon || fieldIcons[props.label] || 'file'} />
+        <Show when={props.showIcon !== false}>
+          <Icon name={props.icon || fieldIcons[props.label] || 'file'} />
+        </Show>
         <span>{props.label}</span>
       </dt>
       <dd>

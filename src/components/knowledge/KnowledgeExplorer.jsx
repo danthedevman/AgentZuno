@@ -71,7 +71,20 @@ function Directory(props) {
         when={!result.loading && !result.error && !nodes.length && (props.baseId || props.search)}
       >
         <li role="none" class="knowledge-tree-empty">
-          {props.search ? 'No matching folders or articles.' : 'Empty folder'}
+          <span>{props.search ? 'No matching folders or articles.' : 'Empty folder'}</span>
+          <Show when={props.canManage && !props.search}>
+            <A
+              class="workspace-button secondary small knowledge-empty-add"
+              href={props.articleLink({
+                type: props.topicId ? 'topic' : 'base',
+                id: props.topicId || props.baseId,
+                baseId: props.baseId,
+              })}
+            >
+              <Icon name="file-add" />
+              Add article
+            </A>
+          </Show>
         </li>
       </Show>
       <Show when={result()?.hasNext}>
@@ -218,6 +231,18 @@ function TreeNode(props) {
                 <Icon name="folder-add" />
               </button>
             </Show>
+          </div>
+        </Show>
+        <Show when={props.canManage && !folder()}>
+          <div class="knowledge-tree-actions knowledge-article-overlay">
+            <A
+              class="workspace-button secondary small icon-only"
+              href={`/workspace/articles/${props.node.id}/edit`}
+              aria-label={`Edit ${props.node.name}`}
+              data-tooltip="Edit Article"
+            >
+              <Icon name="edit" />
+            </A>
           </div>
         </Show>
       </div>

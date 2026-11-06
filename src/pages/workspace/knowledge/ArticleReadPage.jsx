@@ -25,14 +25,22 @@ export default function ArticleReadPage(props) {
         : article();
   return (
     <section class="reading-page knowledge-center">
-      <Show when={!props.embedded}>
+      <div class="knowledge-article-topbar">
         <Breadcrumbs
-          items={[
-            { label: 'Knowledge', href: '/workspace/knowledge' },
-            { label: content()?.title || 'Article' },
-          ]}
+          label={props.embedded ? 'Knowledge location' : 'Page location'}
+          items={
+            props.breadcrumbItems || [
+              { label: 'Knowledge', href: '/workspace/knowledge' },
+              { label: content()?.title || 'Article' },
+            ]
+          }
         />
-      </Show>
+        <Show when={access()?.role === 'admin' && content()?.body}>
+          <A class="workspace-button small" href={`/workspace/articles/${content().id}/edit`}>
+            Edit Article
+          </A>
+        </Show>
+      </div>
       <Show when={article.loading}>
         <Skeleton label="Loading article" lines={8} />
       </Show>
@@ -46,13 +54,7 @@ export default function ArticleReadPage(props) {
       <Show when={content()}>
         {(item) => (
           <article class="knowledge-center-article">
-            <RecordHeader title={item().title}>
-              <Show when={access()?.role === 'admin' && item().body}>
-                <A class="workspace-button small" href={`/workspace/articles/${item().id}/edit`}>
-                  Edit Article
-                </A>
-              </Show>
-            </RecordHeader>
+            <RecordHeader title={item().title} />
             <ArticleReader articleId={item().id} body={item().body} />
           </article>
         )}

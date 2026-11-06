@@ -73,7 +73,6 @@ const names = {
   service: 'Services',
   license: 'Software Licenses',
   'asset-model': 'Asset Models',
-  'catalog-category': 'Catalog Categories',
   user: 'Users',
   queue: 'Queues',
   group: 'Groups',
@@ -98,7 +97,6 @@ const serviceDeskTypes = [
   'service',
   'license',
   'asset-model',
-  'catalog-category',
   'user',
   'queue',
   'group',
@@ -125,7 +123,6 @@ const builtinFields = {
     optional('assignment-group', 'Assignment Group', 'reference', 'ref-group'),
   ],
   request: [optional('number', 'Number'), optional('status', 'Status')],
-  'catalog-category': [optional('code', 'Code')],
   user: [optional('email', 'Email', 'email'), optional('role', 'Role')],
   queue: [optional('routing-instructions', 'Routing Instructions')],
   group: [

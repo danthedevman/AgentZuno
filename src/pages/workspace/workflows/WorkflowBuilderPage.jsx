@@ -40,7 +40,6 @@ import { api } from '../../../services/api.js';
 import { useWorkspace } from '../../../context/WorkspaceContext.jsx';
 import Icon from '../../../components/Icon.jsx';
 import AgentProgress from '../../../components/chat/AgentProgress.jsx';
-const isExternalAction = (action) => action.includes('.') && action !== 'task.create';
 
 export default function WorkflowBuilderPage() {
   const { access } = useWorkspace();
@@ -150,7 +149,6 @@ export default function WorkflowBuilderPage() {
   const [lastAttempt, setLastAttempt] = createSignal('');
   const current = () => !saved.error && saved()?.find((item) => item.id === selected());
   const [manualPermissions, setManualPermissions] = createSignal(undefined);
-  const [catalogVisible, setCatalogVisible] = createSignal(undefined);
   const [manualName, setManualName] = createSignal(undefined);
   const [manualRouting, setManualRouting] = createSignal(undefined);
   const [manualForm, setManualForm] = createSignal(undefined);
@@ -177,7 +175,6 @@ export default function WorkflowBuilderPage() {
       setManualRouting(undefined);
       setManualName(undefined);
       setManualPermissions(undefined);
-      setCatalogVisible(undefined);
     });
   });
   let latestDefinition = '';
@@ -202,7 +199,6 @@ export default function WorkflowBuilderPage() {
     const { form, ...rest } = value;
     return {
       ...rest,
-      ...(catalogVisible() === undefined ? {} : { displayInCatalog: catalogVisible() }),
       ...(manualPermissions() === undefined ? {} : { permissions: manualPermissions() }),
       ...(manualName() === undefined ? {} : { name: manualName() }),
       ...((manualForm() === undefined ? form : manualForm())
@@ -309,7 +305,6 @@ export default function WorkflowBuilderPage() {
     }
   }
   function choose(id) {
-    setCatalogVisible(undefined);
     setHasEdits(false);
     setSourceEdited(false);
     setCodeDefinition(null);
@@ -327,7 +322,7 @@ export default function WorkflowBuilderPage() {
     );
     setBaseDefinition(
       item?.definition ||
-        (item
+        (item && !item.isAuthoringDraft
           ? {
               version: 1,
               name: item.name,
@@ -439,9 +434,18 @@ export default function WorkflowBuilderPage() {
     if (
       definition().steps.some(
         (step) =>
-          !['route', 'handoff', 'approval', 'slack.postMessage', 'task.create'].includes(
-            step.action,
-          ),
+          ![
+            'route',
+            'handoff',
+            'approval',
+            'slack.postMessage',
+            'task.create',
+            'task.wait',
+            'data.read',
+            'data.create',
+            'data.update',
+            'data.delete',
+          ].includes(step.action),
       )
     )
       return 'Choose a supported runtime action.';
@@ -768,7 +772,7 @@ export default function WorkflowBuilderPage() {
                           setBaseDefinition({
                             version: 1,
                             name: 'New Request',
-                            trigger: { phrases: ['request'] },
+                            trigger: { phrases: [] },
                             steps: [
                               {
                                 id: 'route-request',
@@ -833,7 +837,6 @@ export default function WorkflowBuilderPage() {
                     disabled={sending() || processing()}
                     onChange={(value) => {
                       setCodeDefinition(value);
-                      setCatalogVisible(undefined);
                       setSourceEdited(false);
                       setHasEdits(true);
                     }}
@@ -876,7 +879,7 @@ export default function WorkflowBuilderPage() {
                                 const value = {
                                   version: 1,
                                   name: 'New Workflow',
-                                  trigger: { phrases: ['new request'] },
+                                  trigger: { phrases: [] },
                                   steps: [
                                     {
                                       id: 'assign-support',

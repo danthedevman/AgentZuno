@@ -1,3 +1,4 @@
+import { selectedRequestWorkflow } from '../workflows/requestWorkflowSelection.js';
 import {
   requestFields as fields,
   requestText as text,
@@ -38,10 +39,6 @@ import {
 
 import { ObjectId } from 'mongodb';
 import { randomUUID } from 'node:crypto';
-import {
-  matchHelpdeskWorkflow,
-  matchSupportConversationWorkflow,
-} from '../workflows/helpdeskWorkflows.js';
 
 import {
   helpdeskScope,
@@ -239,14 +236,7 @@ export function createHelpdeskService(store, chats) {
       return safeRequest(await ensureOrigin(user, existing, context), user);
     }
     const config = await settings(user, true);
-    const workflow =
-      context.workflowRouting ||
-      (await matchHelpdeskWorkflow(
-        store,
-        user,
-        input.department ? department : null,
-        `${title}\n${body}`,
-      ));
+    const workflow = context.workflowRouting || null;
     const now = new Date();
     const counter = await store
       .collection('helpdeskCounters')
@@ -363,14 +353,10 @@ export function createHelpdeskService(store, chats) {
       updatedAt: chat.updatedAt,
     };
   }
-  async function availableWorkflows(user, catalogOnly) {
+  async function requestableWorkflows(user) {
     const records = await store
       .collection('helpdeskWorkflows')
       .find({ ...scope(user), enabled: true })
-      .toArray();
-    const categories = await store
-      .collection('workforceReferences')
-      .find({ ...scope(user), type: 'catalog-category' })
       .toArray();
     const eligible = [];
     for (const record of records)
@@ -381,20 +367,13 @@ export function createHelpdeskService(store, chats) {
     return eligible.flatMap((record) => {
       const published = record.publishedConfig || record;
       const definition = published.definition || {};
-      return (!catalogOnly || definition.displayInCatalog) &&
-        definition.form &&
-        canUseWorkflow(definition, user)
+      return definition.form && canUseWorkflow(definition, user)
         ? [
             {
               id: record._id.toHexString(),
               name: published.name,
               form: definition.form,
               description: definition.settings?.description || '',
-              categoryId: definition.settings?.category || '',
-              catalogIcon: definition.settings?.catalogIcon || 'catalog',
-              catalogImageId: definition.settings?.catalogImageId || '',
-              category:
-                categories.find((item) => item._id === definition.settings?.category)?.name || '',
               version: record.publishedRevision || record.version,
               updatedAt: record.updatedAt,
             },
@@ -402,8 +381,6 @@ export function createHelpdeskService(store, chats) {
         : [];
     });
   }
-  const catalog = (user) => availableWorkflows(user, true);
-  const requestableWorkflows = (user) => availableWorkflows(user, false);
   async function createSupport(user, input) {
     fields(input, ['requestId', 'text', 'attachmentIds', 'workflowId', 'relatedRequestId']);
     if (input.relatedRequestId) {
@@ -425,7 +402,7 @@ export function createHelpdeskService(store, chats) {
       const workflow = (await requestableWorkflows(user)).find(
         (item) => item.id === input.workflowId,
       );
-      if (!workflow) fail('Catalog item not found.', 404);
+      if (!workflow) fail('Request workflow not found.', 404);
       return chats.create(
         user,
         { requestId: input.requestId, text: workflow.name },
@@ -558,14 +535,28 @@ export function createHelpdeskService(store, chats) {
             }
           : null;
     } else {
-      const workflow = await matchSupportConversationWorkflow(store, user, chat);
-      chat.requestForm = workflow?.form
-        ? {
+      const offer =
+        chat.status === 'complete'
+          ? chat.messages.find((message) => message.id === chat.responseId)?.proposals?.requestForm
+          : null;
+      chat.requestForm = null;
+      if (offer) {
+        try {
+          const workflow = await selectedRequestWorkflow(
+            store,
+            user,
+            offer.workflowId,
+            offer.workflowVersion,
+          );
+          chat.requestForm = {
             workflowId: workflow.workflowId,
             workflowVersion: workflow.workflowVersion,
             ...workflow.form,
-          }
-        : null;
+          };
+        } catch (error) {
+          if (![400, 403, 404, 409].includes(error.status)) throw error;
+        }
+      }
     }
     if (chat.requestForm) chat.requestForm.offerId = chat.responseId;
     chat.requests = (
@@ -873,7 +864,7 @@ export function createHelpdeskService(store, chats) {
           workflowVersion: form.workflowVersion,
           department: (currentWorkflow.publishedConfig || currentWorkflow).department,
           queueName: routing.queueName,
-          status: routing.action === 'handoff' ? 'escalated' : 'open',
+          status: !published.source && routing.action === 'handoff' ? 'escalated' : 'open',
         },
       },
     );
@@ -945,7 +936,6 @@ export function createHelpdeskService(store, chats) {
     };
   }
   return {
-    catalog,
     requestableWorkflows,
     settings,
     saveSettings,

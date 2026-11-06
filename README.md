@@ -13,13 +13,13 @@ I wanted to see how quickly I could build an AI help desk using Codex and what I
 ## What it brings together
 
 - **Two agents:** An Admin agent for building workflows and proposing knowledge changes, and Zuno for employee support, with separate permissions.
-- **Conversational requests:** Guided forms, a browsable catalog, attachments, and request details alongside the conversation.
+- **Conversational requests:** Provider-selected guided forms, attachments, and request details alongside the conversation.
 - **Executable workflows:** TypeScript, conditional routing, user/group/manager approvals, visual previews, and published revisions.
 - **Support work:** My Work dashboards, assigned requests, group queues, request tasks, comments, work notes, and workload reports. Admins and authorized Agents can create and close tasks, including through confirmed Zuno actions.
 - **Shared knowledge:** A resizable knowledge explorer with bases, up to three topic levels, article readers, reviewed AI proposals, and inherited access controls.
 - **Organization data:** Workforce profiles, identity provisioning, reference records, and customizable Data Tables.
 - **Connections and governance:** Slack and email support, connector action controls, configurable AI providers, roles, searchable audit records, CSV/JSON exports, and version history.
-- **Demo data:** Load removable Tech, Media or Retail records into the current workspace from Settings. Published catalog workflows and knowledge work with your connected AI provider.
+- **Demo data:** Load removable Tech, Media or Retail records into the current workspace from Settings. Published request workflows and knowledge work with your connected AI provider.
 
 AgentZuno is self-hosted and uses MongoDB or PostgreSQL, plus Redis. AI providers, hosting, and third-party services may incur costs. Integration support varies; see [current capabilities and limits](docs/integrations.md).
 
@@ -32,6 +32,14 @@ Screenshots use fictional development records.
 Build and review a workflow alongside the Admin conversation.
 
 ![Workflow builder with its request form, approval, and routing steps](public/help/readme-workflow-builder-dark.png)
+
+Browse IT-team chat activity as cards, then open a single conversation record.
+
+![Chat Activity cards with fictional IT-team conversations](public/help/readme-chat-activity-dark.png)
+
+Inspect a populated workflow audit record with its request, tool call, versions, changed fields, and related activity. These are fictional development examples.
+
+![Workflow audit record with a completed data-record action and related events](public/help/readme-workflow-audit-dark.png)
 
 ## Get started
 
@@ -49,14 +57,16 @@ Deploy on Render with the included [`render.yaml`](render.yaml) Blueprint. See [
 
 - **Admin:** Configure the workspace, manage people and groups, build and publish workflows, and review Audit.
 - **Agent:** Work on accessible requests and tasks in assigned groups, with comments and internal work notes.
-- **User:** Ask for help, browse permitted knowledge and catalog items, and submit and follow requests.
+- **User:** Ask for help, browse permitted knowledge, and submit and follow requests.
 - **Read Only:** Inspect permitted records and reports without changing operational data or running AI conversations.
 
 Approval permission and an explicit assignment are required to decide approvals. Role access does not override private-file or knowledge permissions. See [roles and everyday features](docs/roles-and-features.md) and the [Knowledge guide](docs/knowledge.md) for step-by-step instructions.
 
-Admins add users from the dedicated Add User page. Creating an invitation shows its shareable link when email delivery is not configured. Groups and data-table records share consistent details/edit forms with named sections and controls based on field types.
+Admins add users from the dedicated Add User page. Creating an invitation shows its shareable link when email delivery is not configured. Data Table records open in a full-height workbench with the record form on the left and resizable Comments, Work Notes, and Related records tabs on the right. Fields follow their schema order in one continuous form; breadcrumbs and Save/Cancel share a fixed header while the form scrolls. On mobile, Form and Activity switch between panes. Groups use the shared details/edit controls.
 
 Record lists open as cards and offer a table toggle, with the preference remembered in the browser per user, workspace, and module. Workflow visuals let Admins select an existing assignment group for routing and task steps; saving and publication still use server validation.
+
+Deletion and removal prompts share one dialog layout. When a name is required, enter it exactly in the full-width confirmation field; Cancel and Escape leave the item unchanged.
 
 ## Learn more
 

@@ -7,6 +7,7 @@ import { helpdeskScope } from '../identity/helpdeskRoles.js';
 export const kinds = ['base', 'topic', 'article'];
 export async function knowledgeAllowed(store, user, kind, id) {
   if (user.role === 'admin') return true;
+  if (kind === 'base' && id === user.workspaceId) return true;
   const policy = await store
     .collection('knowledgePermissions')
     .findOne({ ...helpdeskScope(user), kind, resourceId: id });
