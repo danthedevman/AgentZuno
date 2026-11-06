@@ -2,9 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { MongoClient, ObjectId } from 'mongodb';
 import { randomUUID, randomBytes } from 'node:crypto';
-import { createIntegrationStore } from '../src/integrationStore.js';
-import { createIntegrationService } from '../src/integrations.js';
-import { encryptSecret } from '../src/secrets.js';
+import { createIntegrationStore } from '../src/storage/integrationStore.js';
+import { createIntegrationService } from '../src/integrations/integrations.js';
+import { encryptSecret } from '../src/shared/secrets.js';
 
 test(
   'semantic matches recheck ServiceNow access and never return denied content',

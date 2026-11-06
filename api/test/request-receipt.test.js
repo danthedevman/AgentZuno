@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { requestReceipt, insertRequestReceipt } from '../src/requestReceipt.js';
+import { requestReceipt, insertRequestReceipt } from '../src/requests/requestReceipt.js';
 test('submitted form receipts stay chronological, read-only and idempotent across follow-ups', () => {
   const ticket = {
     id: 'request',

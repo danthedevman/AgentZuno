@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { randomUUID, randomBytes } from 'node:crypto';
 import { MongoClient } from 'mongodb';
 import { createApi } from '../src/app.js';
-import { createIntegrationStore } from '../src/integrationStore.js';
-import { createChatService } from '../src/chat.js';
+import { createIntegrationStore } from '../src/storage/integrationStore.js';
+import { createChatService } from '../src/chat/chat.js';
 
 const uri = process.env.TEST_MONGODB_URI;
 test(

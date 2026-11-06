@@ -71,7 +71,7 @@ Authored articles, created knowledge bases, topics, file metadata/replacement up
 ## Local semantic smoke check
 
 ```sh
-docker compose exec -T worker node src/checkSemantic.js
+docker compose exec -T worker node src/knowledge/checkSemantic.js
 ```
 
 This check uses an isolated MongoDB database and synthetic text, verifies real local embeddings and Qdrant retrieval, and removes its own test records and vectors. It does not validate a real ServiceNow tenant.

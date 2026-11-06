@@ -42,17 +42,32 @@ Shared tables use server-side search, sorting, pagination, and saved page-size p
 
 ## Source layout
 
-| Path                 | Purpose                           |
-| -------------------- | --------------------------------- |
-| `src/pages/`         | Route-level Solid screens         |
-| `src/layouts/`       | Shared page shells                |
-| `src/components/`    | Reusable UI                       |
-| `src/context/`       | Shared reactive state             |
-| `src/services/`      | API clients and browser helpers   |
-| `api/src/`           | Express services and worker code  |
-| `api/sdk/workflows/` | Workflow SDK and TypeScript types |
-| `api/test/`          | API behavior and isolation tests  |
-| `api/mock-data/`     | Development fixtures              |
+| Path                   | Purpose                                                                                                                                           |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/pages/`           | Solid route screens, grouped into public, authentication, setup, and workspace features                                                           |
+| `src/layouts/`         | Application and workspace shells                                                                                                                  |
+| `src/components/`      | Shared controls plus feature folders for chat, workflows, knowledge, requests, records, identity, settings, connectors, data, and marketing       |
+| `src/context/`         | Shared reactive state                                                                                                                             |
+| `src/services/`        | API clients and browser helpers; chat, workflow, and public-site helpers have feature folders                                                     |
+| `src/styles/`          | Public-site and workspace styles                                                                                                                  |
+| `api/src/index.js`     | Installation initialization and process startup                                                                                                   |
+| `api/src/server.js`    | HTTP server creation and close lifecycle                                                                                                          |
+| `api/src/app.js`       | Express dependency composition and ordered middleware/route installation                                                                          |
+| `api/src/routes/`      | Endpoint registration, grouped by feature; preserves route paths and middleware order                                                             |
+| `api/src/controllers/` | HTTP handlers, grouped by feature; validates requests, calls services, and formats responses                                                      |
+| `api/src/middleware/`  | Browser-origin, identity, workspace, and request-body middleware                                                                                  |
+| `api/src/<feature>/`   | Business services for identity, chat, workflows, requests, knowledge, data, records, channels, integrations, audit, demo, and workspace reporting |
+| `api/src/shared/`      | Shared validation, secrets, binary, and query helpers                                                                                             |
+| `api/src/storage/`     | MongoDB/PostgreSQL adapters, installation configuration, and audited store access                                                                 |
+| `api/src/connectors/`  | Provider adapter implementations and registry                                                                                                     |
+| `api/src/worker.js`    | Separate background worker entry point                                                                                                            |
+| `api/sdk/workflows/`   | Workflow SDK and TypeScript types                                                                                                                 |
+| `api/test/`            | Behavior, database parity, and isolation tests                                                                                                    |
+| `api/mock-data/`       | Fictional development fixtures                                                                                                                    |
+
+Routes contain URL/method declarations and middleware wiring. Controller factories bind explicit service dependencies and return named handlers; feature services enforce the same authorization and validation for forms, AI tools, and background jobs. Moving an HTTP handler into a controller never makes its service checks optional. Raw-body Slack verification stays ahead of the normal JSON parser, installation setup remains available before database configuration, and audit/error middleware retains its original ordering.
+
+When adding a feature, use its existing service, route, controller, and frontend feature folders. Keep shared controls in one place, import modules directly, and avoid adding forwarding files at obsolete paths. The API and worker startup commands remain unchanged.
 
 ## Demo and request actions
 

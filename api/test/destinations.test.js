@@ -2,9 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { MongoClient, ObjectId } from 'mongodb';
-import { createIntegrationStore } from '../src/integrationStore.js';
-import { createIntegrationService } from '../src/integrations.js';
-import { createKnowledgeDestination } from '../src/knowledgeDestinations.js';
+import { createIntegrationStore } from '../src/storage/integrationStore.js';
+import { createIntegrationService } from '../src/integrations/integrations.js';
+import { createKnowledgeDestination } from '../src/integrations/knowledgeDestinations.js';
 
 const uri = process.env.TEST_MONGODB_URI;
 test(

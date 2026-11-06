@@ -1,11 +1,11 @@
-import { encryptSecret } from '../src/secrets.js';
+import { encryptSecret } from '../src/shared/secrets.js';
 import { randomBytes } from 'node:crypto';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import express from 'express';
 import { sourceClient } from '../src/connectors/index.js';
-import { installConnectionOAuthRoutes } from '../src/connectionOAuth.js';
+import { installConnectionOAuthRoutes } from '../src/routes/integrations/connectionOAuthRoutes.js';
 
 test('adapter credentials use provider-specific headers and fixed HTTPS hosts', async () => {
   const cases = [

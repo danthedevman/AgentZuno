@@ -2,10 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { MongoClient } from 'mongodb';
-import { createIntegrationStore } from '../src/integrationStore.js';
-import { createHelpdeskService } from '../src/helpdesk.js';
+import { createIntegrationStore } from '../src/storage/integrationStore.js';
+import { createHelpdeskService } from '../src/requests/helpdesk.js';
 import { createApi } from '../src/app.js';
-import { createHelpdeskWorkflows, matchHelpdeskWorkflow } from '../src/helpdeskWorkflows.js';
+import {
+  createHelpdeskWorkflows,
+  matchHelpdeskWorkflow,
+} from '../src/workflows/helpdeskWorkflows.js';
 
 const uri = process.env.TEST_MONGODB_URI;
 test(

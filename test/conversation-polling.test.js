@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { startConversationPolling } from '../src/services/conversationPolling.js';
+import { startConversationPolling } from '../src/services/chat/conversationPolling.js';
 
 test('conversation polling waits for an in-flight refresh and does not restart after cancellation', async () => {
   let calls = 0,

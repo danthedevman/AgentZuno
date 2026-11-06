@@ -1,8 +1,8 @@
 import { renderToStringAsync } from 'solid-js/web';
 import { StaticRouter, Route } from '@solidjs/router';
 import { PublicSessionProvider } from './context/SessionContext.jsx';
-import HomePage from './pages/HomePage.jsx';
-import DocsPage from './pages/DocsPage.jsx';
+import HomePage from './pages/public/HomePage.jsx';
+import DocsPage from './pages/public/DocsPage.jsx';
 
 export function renderPublicPage(url) {
   return renderToStringAsync(() => (

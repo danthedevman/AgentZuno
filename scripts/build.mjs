@@ -1,4 +1,4 @@
-import { publicPages as routes } from '../src/services/publicPages.js';
+import { publicPages as routes } from '../src/services/public/publicPages.js';
 import { build } from 'vite';
 import solid from 'vite-plugin-solid';
 import { JSDOM } from 'jsdom';

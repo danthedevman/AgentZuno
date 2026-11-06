@@ -7,11 +7,11 @@ import pg from 'pg';
 import { createMemoryDatabase } from '../src/storage/memory.js';
 import { createPostgresDatabase } from '../src/storage/postgres.js';
 import { postgresConnection } from '../src/storage/configuration.js';
-import { createIntegrationStore } from '../src/integrationStore.js';
-import { createChatService } from '../src/chat.js';
-import { createHelpdeskTeams, authorizeTeamsChat } from '../src/helpdeskTeams.js';
-import { saveChannelApplication } from '../src/channelApplications.js';
-import { saveConnectorActions } from '../src/connectorActions.js';
+import { createIntegrationStore } from '../src/storage/integrationStore.js';
+import { createChatService } from '../src/chat/chat.js';
+import { createHelpdeskTeams, authorizeTeamsChat } from '../src/channels/helpdeskTeams.js';
+import { saveChannelApplication } from '../src/channels/channelApplications.js';
+import { saveConnectorActions } from '../src/integrations/connectorActions.js';
 
 async function verify(database) {
   const oldKey = process.env.CREDENTIAL_ENCRYPTION_KEY;

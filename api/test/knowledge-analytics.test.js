@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { once } from 'node:events';
 import { MongoClient } from 'mongodb';
-import { createApiServer } from '../src/app.js';
+import { createApiServer } from '../src/server.js';
 
 const uri = process.env.TEST_MONGODB_URI;
 test(

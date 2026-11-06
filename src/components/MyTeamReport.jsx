@@ -1,6 +1,6 @@
 import { createResource, createSignal, For, Show } from 'solid-js';
 import { api } from '../services/api.js';
-import RecordTable from './RecordTable.jsx';
+import RecordTable from './records/RecordTable.jsx';
 import Skeleton from './Skeleton.jsx';
 import ToastMessage from './ToastMessage.jsx';
 import A from './WorkspaceLink.jsx';

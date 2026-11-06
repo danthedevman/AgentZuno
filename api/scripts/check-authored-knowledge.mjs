@@ -1,9 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { ObjectId, MongoClient } from 'mongodb';
-import { createIntegrationStore } from '../src/integrationStore.js';
-import { createContentStore } from '../src/contentStore.js';
-import { createAuthoredSemantic } from '../src/authoredSemantic.js';
-import { retrieveAssistantKnowledge } from '../src/assistantKnowledge.js';
+import { createIntegrationStore } from '../src/storage/integrationStore.js';
+import { createContentStore } from '../src/knowledge/contentStore.js';
+import { createAuthoredSemantic } from '../src/knowledge/authoredSemantic.js';
+import { retrieveAssistantKnowledge } from '../src/knowledge/assistantKnowledge.js';
 
 if (!process.env.MONGODB_URI || !process.env.OLLAMA_URL || !process.env.QDRANT_URL)
   throw new Error('Configure MongoDB, Ollama and Qdrant URLs before running this check.');

@@ -5,13 +5,13 @@ import pg from 'pg';
 import { createMemoryDatabase } from '../src/storage/memory.js';
 import { createPostgresDatabase } from '../src/storage/postgres.js';
 import { postgresConnection } from '../src/storage/configuration.js';
-import { createAdminData } from '../src/adminData.js';
-import { createDataRecordOperations } from '../src/dataRecordOperations.js';
-import { createHelpdeskWorkflows } from '../src/helpdeskWorkflows.js';
-import { createWorkflowExecution } from '../src/workflowExecution.js';
-import { createRequestTasks } from '../src/requestTasks.js';
-import { validateWorkflowAction } from '../src/workflowActionPolicy.js';
-import { canReadRequest, canWorkRequest } from '../src/requestPolicy.js';
+import { createAdminData } from '../src/data/adminData.js';
+import { createDataRecordOperations } from '../src/data/dataRecordOperations.js';
+import { createHelpdeskWorkflows } from '../src/workflows/helpdeskWorkflows.js';
+import { createWorkflowExecution } from '../src/workflows/workflowExecution.js';
+import { createRequestTasks } from '../src/requests/requestTasks.js';
+import { validateWorkflowAction } from '../src/workflows/workflowActionPolicy.js';
+import { canReadRequest, canWorkRequest } from '../src/requests/requestPolicy.js';
 
 async function verify(database) {
   const ownerId = String(new ObjectId()),
@@ -134,7 +134,7 @@ async function verify(database) {
       },
     ],
   };
-  const source = `import {defineWorkflow} from '@agentzuno/workflows'; export default defineWorkflow({...${JSON.stringify(definition)}, async run(ctx) { await ctx.route('route','Desktop'); const task = await ctx.tasks.create('deliver',{queueName:'Desktop',title:'Deliver laptop',description:'Hand over the hardware'}); await ctx.tasks.wait('wait-delivery',{taskId:task.id}); const asset = await ctx.data.read('read-asset',{tableId:'ref-asset',recordId:String(ctx.answers.asset)}); await ctx.data.update('assign-asset',{tableId:'ref-asset',recordId:asset.id,version:asset.version,values:{status:'In Use','assigned-to':ctx.requester.id}}); }});`;
+  const source = `import {defineWorkflow} from '@agentzuno/workflows'; export default defineWorkflow({...${JSON.stringify(definition)}, async run(ctx) { await ctx.route('route','Desktop'); const task = await ctx.tasks.create('deliver',{queueName:'Desktop',title:'Deliver laptop',description:'Hand over the hardware'}); await ctx.tasks.wait('wait-delivery',{taskId:task.id}); const asset = await ctx.data.read('read-asset',{tableId:'ref-asset',recordId:String(ctx.answers.asset)}); await ctx.data.update('assign-asset',{tableId:'ref-asset',recordId:asset.id,version:asset.version,values:{status:'In Use','assigned-to':String(ctx.requester.id)}}); }});`;
   const workflows = createHelpdeskWorkflows(store, {});
   const workflow = await workflows.save(actors.Admin, null, {
     source,

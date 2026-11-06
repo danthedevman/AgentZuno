@@ -2,10 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { MongoClient, ObjectId } from 'mongodb';
-import { createAuthoredSemantic } from '../src/authoredSemantic.js';
-import { createContentStore } from '../src/contentStore.js';
-import { retrieveAssistantKnowledge, verifyAssistantKnowledge } from '../src/assistantKnowledge.js';
-import { bulkDeleteRecords } from '../src/bulkDeletion.js';
+import { createAuthoredSemantic } from '../src/knowledge/authoredSemantic.js';
+import { createContentStore } from '../src/knowledge/contentStore.js';
+import {
+  retrieveAssistantKnowledge,
+  verifyAssistantKnowledge,
+} from '../src/knowledge/assistantKnowledge.js';
+import { bulkDeleteRecords } from '../src/records/bulkDeletion.js';
 
 test(
   'manually authored semantic knowledge backfills, reindexes, revokes, isolates and retires deleted articles',

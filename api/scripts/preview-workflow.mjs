@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import { inspectWorkflowSource, runSandbox } from '../src/workflowRuntime.js';
+import { inspectWorkflowSource, runSandbox } from '../src/workflows/workflowRuntime.js';
 import { validateFormAnswers } from '../sdk/workflows/index.js';
 const [, , filename, answersFile] = process.argv;
 if (!filename) throw new Error('Usage: npm run workflow:test -- workflow.ts [answers.json]');

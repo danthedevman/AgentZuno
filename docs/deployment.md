@@ -11,7 +11,7 @@ The bundled Compose configuration is a development starting point. Review it bef
 - Restrict access to the API and infrastructure. The sample API port binds publicly; MongoDB, Redis, Qdrant, and Ollama host ports bind to loopback. Use authentication and network isolation appropriate to your deployment, including on shared hosts and container networks.
 - Pin and update container versions, review dependencies, and set resource limits suitable for your traffic.
 - Persist and back up the selected MongoDB or PostgreSQL database, Redis, and any vector storage you use. Redis uses AOF and no eviction; the selected application database remains authoritative.
-- Configure SMTP in Settings for invitations. Configure connectors through their dedicated pages; do not add provider secrets to Git remotes, source files, or screenshots.
+- Configure SMTP in Settings for emailed invitations, or copy and share invitation links without SMTP. Configure connectors through their dedicated pages; do not add provider secrets to Git remotes, source files, or screenshots.
 
 Custom workspace domains require DNS verification and HTTPS provisioning at your edge. `CUSTOM_DOMAIN_TARGET` advertises the expected CNAME destination; the app does not provision certificates for you.
 
@@ -37,23 +37,27 @@ Workers recover scheduled work from durable records and use leases and retries. 
 
 Run dependency, code, container, and secret scans; review authorization and integration behavior; enable GitHub CodeQL, Dependabot, secret scanning, and push protection where available. A clean automated scan or passing tests does not establish production security. See [security and limits](security.md).
 
+## Choose a host
+
+AgentZuno needs an always-running API and worker, an application database, a persistent Redis-compatible queue, and its Qdrant/Ollama knowledge services. Keep the browser-facing web application and API on one public HTTPS origin. A static host alone cannot run the authenticated application.
+
+| Hosting option                                                                                                           | Deployment approach                                                                        | What you manage                                                                                       |
+| ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| [Render](https://render.com/docs/blueprint-spec)                                                                         | Included `render.yaml` creates the web, private API, worker, queue, and knowledge services | Atlas connection, plans, backups, domains, and operations; see [Deploy on Render](render.md)          |
+| [AWS EC2](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/concepts.html)                                             | Existing Docker Compose stack on a Linux VM                                                | Server, HTTPS, persistent storage, backups, and upgrades; see [Deploy on AWS](aws.md)                 |
+| [DigitalOcean Droplet](https://docs.digitalocean.com/products/droplets/getting-started/quickstart/) or another Linux VPS | Existing Docker Compose stack behind an HTTPS proxy                                        | VM/network maintenance and recovery; adapt the EC2 guide's Docker and HTTPS steps                     |
+| [Railway](https://railway.com/guides/docker-compose)                                                                     | Map each container to a service with private networking and persistent volumes             | Provider-specific variables, storage, and startup settings; no Railway template is included           |
+| [Fly.io](https://fly.io/docs/reference/configuration/)                                                                   | Configure separate application processes/services and durable volumes                      | Fly-specific networking, storage, database, and deployment configuration; no Fly template is included |
+
+A VM keeps the existing Compose topology together. A managed container platform can reduce host maintenance but requires per-service networking, secrets, storage, and cost planning. These are architectural options, not claims that each provider has been live-tested. Compare the complete deployment cost, including databases, disks, backups, traffic, and AI usage. Use [capacity testing](capacity.md) before sizing for a company.
+
 ## Deploy on Render
 
-The root `render.yaml` Blueprint deploys the existing containers as six paid Render services: an Nginx web service, private Express API, background worker, persistent Key Value queue, private Qdrant, and private Ollama. MongoDB is supplied separately through Atlas. Docker Compose remains available for local and self-hosted installations.
+Follow the dedicated [Render deployment guide](render.md) for the included Blueprint, Atlas setup, PostgreSQL alternatives, domains, connector callbacks, and troubleshooting.
 
-1. Create a MongoDB Atlas deployment in the closest available region to your Render services. Create a database user scoped to the `agentzuno` database. Allow only the API and worker's Render outbound IP ranges in Atlas Network Access; avoid allowing the entire internet. Use its TLS connection string with `/agentzuno` as the database name.
-2. Push this repository to your Git provider. In Render, select **New → Blueprint**, connect the repository, and select `render.yaml`. Review the paid resources and region before deploying. The default region is Oregon; change all service regions together before first deployment if needed.
-3. Enter `MONGODB_URI` when prompted for the API. The worker references that value automatically. Render generates a single credential encryption key on the API and shares it with the worker. Back up that key securely; never replace it casually or encrypted saved credentials will become unreadable.
-4. Wait for deployment and the Ollama logs to confirm `nomic-embed-text` was downloaded. Its persistent disk keeps the model across deploys. Knowledge indexing may retry while the model is first downloading.
-5. Open the web service's HTTPS URL, register, and complete or skip setup. Configure AI providers, SMTP, and connector credentials in the app. Ollama supplies embeddings, not chat responses.
+## Deploy on AWS
 
-The public web service proxies `/api/` to the private API, keeping browser requests and cookies on the same origin. API and worker obtain internal service addresses from Render references. Redis external access is blocked, eviction is disabled, and journal/snapshot persistence is enabled. Qdrant and Ollama have persistent disks and no public web endpoints. Atlas stores application records and uploaded binaries.
-
-If you add a custom domain, configure it on the Render web service and set the API's `APP_ORIGIN` to the exact HTTPS origin. The worker inherits it. Configure any additional workspace portal domains at the edge as described above. Do not assume the app's domain setting provisions Render domains automatically.
-
-The Blueprint uses paid Standard API, worker, vector and embedding services and a Starter web proxy. These are starting allocations, not a verified capacity guarantee for 500–1,000 employees. Load-test simultaneous chats, workflows and ingestion before rollout. Render bills services, persistent disks and applicable workspace/network usage separately; Atlas and AI usage add costs. Disk-backed services are single-instance and redeployments can interrupt them. Use Atlas backups, export/back up Qdrant as appropriate, and test recovery. This topology does not provide full high availability.
-
-Validate the Blueprint with Render's dashboard or `render blueprints validate render.yaml` before deployment. For troubleshooting, check the web `/health` endpoint, API logs, worker heartbeat with `node src/workerHealth.js` in the worker shell, queue depth and failed jobs. A successful web health check confirms the proxy is serving, not the health of every downstream service. Container image tags track upstream updates; review and pin tested digests for your production release.
+Follow [Deploy on AWS](aws.md) for the EC2/Compose path and the additional infrastructure needed for ECS/Fargate. The repository does not include an automated AWS template.
 
 ## Publish the website on GitHub Pages
 
@@ -72,7 +76,7 @@ The Pages build reads its base path from GitHub Pages configuration, so assets a
 
 ## Prerendered public pages and SEO
 
-`npm run build` renders the marketing homepage, `/docs`, and `/docs/workflows` to static HTML using Solid’s server renderer. Public content is available before JavaScript runs; the browser then replaces it with the interactive Solid app. Animations still start as sections enter view. Prerendering uses public copy and documentation only, with a guest session; it never requests account, workspace, or provider data.
+`npm run build` renders `/docs` and every registered public guide to static HTML. With `VITE_STATIC_SITE=true`, it also renders the marketing homepage using Solid’s server renderer. Public content is available before JavaScript runs; the browser then replaces it with the interactive Solid app. Animations still start as sections enter view. Prerendering uses public copy and documentation only, with a guest session; it never requests account, workspace, or provider data.
 
 Set `PUBLIC_SITE_URL` at build time to the public site’s canonical HTTPS URL, including a repository path if applicable. It defaults to `https://agentzuno.com/`. Compose passes `PUBLIC_SITE_URL` from `.env` as a web build argument; rebuild the web image after changing it. Set the matching Docker build argument on other hosts. The Pages workflow reads the URL and path from Pages configuration. Rebuild after changing the domain. The build generates page titles/descriptions, canonical links, social preview metadata, application structured data, `robots.txt`, and a sitemap containing only public routes. Authenticated routes use a separate noindex app shell; robots rules supplement authentication and do not protect private data. Nginx serves that shell for application routes.
 

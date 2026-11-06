@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { hasWorkflowChanges } from '../src/services/workflowPublication.js';
+import { hasWorkflowChanges } from '../src/services/workflows/workflowPublication.js';
 
 test('publication stays unchanged after saving, but metadata or executable edits enable publishing', () => {
   const definition = {

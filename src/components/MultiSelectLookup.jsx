@@ -1,3 +1,6 @@
+import { useWorkspace } from '../context/WorkspaceContext.jsx';
+import { useWorkspacePath } from '../services/workspaceRoutes.js';
+import { referenceCreationPath, referenceTypeFromOptions } from '../services/referenceCreation.js';
 import {
   For,
   Show,
@@ -11,6 +14,18 @@ import Icon from './Icon.jsx';
 import ReferenceArrow from './ReferenceArrow.jsx';
 
 export default function MultiSelectLookup(props) {
+  const workspaceContext = useWorkspace();
+  const path = useWorkspacePath();
+  const createHref = () => {
+    const role = workspaceContext?.access?.()?.role;
+    const target = props.referenceTable
+      ? referenceCreationPath(props.referenceTable, role)
+      : referenceCreationPath(props.name, role) ||
+        referenceCreationPath(referenceTypeFromOptions(props.options), role);
+    return target ? path(target) : '';
+  };
+  const [refreshing, setRefreshing] = createSignal(false);
+  let createLink;
   let container;
   let input;
   let list;
@@ -47,6 +62,13 @@ export default function MultiSelectLookup(props) {
   }
   function open() {
     if (!readOnly()) {
+      if (!isOpen()) {
+        const refresh = props.onOpen || workspaceContext?.refresh;
+        setRefreshing(true);
+        Promise.resolve(refresh?.())
+          .catch(() => {})
+          .finally(() => setRefreshing(false));
+      }
       setActiveIndex(0);
       setIsOpen(true);
     }
@@ -59,6 +81,11 @@ export default function MultiSelectLookup(props) {
   }
   function handleKeyDown(event) {
     if (readOnly()) return;
+    if (event.key === 'Tab' && !event.shiftKey && isOpen() && createHref()) {
+      event.preventDefault();
+      createLink?.focus();
+      return;
+    }
     if (event.key === 'Escape' || event.key === 'Tab') {
       setIsOpen(false);
       if (event.key === 'Escape') event.preventDefault();
@@ -196,38 +223,63 @@ export default function MultiSelectLookup(props) {
         {values().length} selected
       </span>
       <Show when={isOpen()}>
-        <div
-          class="category-options multi-select-options"
-          role="listbox"
-          aria-label={props.label}
-          aria-multiselectable={!props.single}
-          id={`${id}-list`}
-          ref={list}
-        >
-          <For each={results()}>
-            {(option, index) => (
-              <div
-                classList={{ 'category-option': true, 'is-active': activeIndex() === index() }}
-                role="option"
-                id={`${id}-${index()}`}
-                aria-selected={values().includes(option.value)}
-                onPointerMove={() => setActiveIndex(index())}
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  select(option.value);
-                }}
-              >
-                <span>{option.label}</span>
-                <Show when={values().includes(option.value)}>
-                  <Icon name="check" />
-                </Show>
-              </div>
-            )}
-          </For>
-          <Show when={!results().length}>
-            <p class="lookup-empty">No matches found.</p>
+        <div class="category-options multi-select-options">
+          <Show when={refreshing()}>
+            <p class="lookup-empty" role="status">
+              Refreshing options…
+            </p>
+          </Show>
+          <div
+            role="listbox"
+            aria-label={props.label}
+            aria-multiselectable={!props.single}
+            id={`${id}-list`}
+            ref={list}
+          >
+            <For each={results()}>
+              {(option, index) => (
+                <div
+                  classList={{ 'category-option': true, 'is-active': activeIndex() === index() }}
+                  role="option"
+                  id={`${id}-${index()}`}
+                  aria-selected={values().includes(option.value)}
+                  onPointerMove={() => setActiveIndex(index())}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    select(option.value);
+                  }}
+                >
+                  <span>{option.label}</span>
+                  <Show when={values().includes(option.value)}>
+                    <Icon name="check" />
+                  </Show>
+                </div>
+              )}
+            </For>
+            <Show when={!results().length}>
+              <p class="lookup-empty">No matches found.</p>
+            </Show>
+          </div>
+          <Show when={createHref() && !readOnly()}>
+            <a
+              ref={createLink}
+              class="reference-create-link"
+              href={createHref()}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(event) => {
+                event.stopPropagation();
+                setIsOpen(false);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape' || event.key === 'Tab') setIsOpen(false);
+              }}
+            >
+              <Icon name="plus" />
+              Create new…<span class="sr-only">{props.label}, opens in a new tab</span>
+            </a>
           </Show>
         </div>
       </Show>

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { listResponse, requestListColumns } from '../src/listQuery.js';
+import { listResponse, requestListColumns } from '../src/shared/listQuery.js';
 test('server list queries search and order the full result set before pagination', () => {
   const rows = Array.from({ length: 60 }, (_, index) => ({
     id: String(index),

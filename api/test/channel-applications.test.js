@@ -2,15 +2,15 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { ObjectId, MongoClient } from 'mongodb';
-import { createIntegrationStore } from '../src/integrationStore.js';
-import { createHelpdeskChannels } from '../src/helpdeskChannels.js';
+import { createIntegrationStore } from '../src/storage/integrationStore.js';
+import { createHelpdeskChannels } from '../src/channels/helpdeskChannels.js';
 import {
   channelApplication,
   saveChannelApplication,
   slackSigningSecret,
   requireCurrentChannelApplication,
-} from '../src/channelApplications.js';
-import { verifySlackSignature } from '../src/helpdeskSlack.js';
+} from '../src/channels/channelApplications.js';
+import { verifySlackSignature } from '../src/channels/helpdeskSlack.js';
 test(
   'connector application settings are scoped, versioned, encrypted and usable without server restarts',
   { skip: !process.env.TEST_MONGODB_URI },

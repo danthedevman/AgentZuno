@@ -47,6 +47,7 @@ export interface WorkflowDefinition {
     submissionMessage?: string;
     timeoutSeconds?: number;
     maxConcurrentRuns?: number;
+    accessTracking?: { applicationId: string; accessFieldId: string };
   };
   version: 1;
   name: string;

@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { workflowChatText } from '../src/services/workflowChatText.js';
+import { workflowChatText } from '../src/services/workflows/workflowChatText.js';
 import { highlightCode } from '../src/services/codeHighlight.js';
-import { chatActivity } from '../src/services/chatActivity.js';
+import { chatActivity } from '../src/services/chat/chatActivity.js';
 test('workflow definition stays hidden during partial and completed streaming', () => {
   assert.equal(workflowChatText('Updating.\n```json\n{"version":'), 'Updating.');
   assert.equal(workflowChatText('Updated.\n```json\n{"version":1}\n```'), 'Updated.');

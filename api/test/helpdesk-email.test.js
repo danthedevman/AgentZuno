@@ -2,16 +2,16 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID, randomBytes } from 'node:crypto';
 import { MongoClient } from 'mongodb';
-import { createIntegrationStore } from '../src/integrationStore.js';
-import { createChatService } from '../src/chat.js';
+import { createIntegrationStore } from '../src/storage/integrationStore.js';
+import { createChatService } from '../src/chat/chat.js';
 import {
   createHelpdeskEmail,
   normalizeGmail,
   normalizeOutlook,
   gmailReply,
-} from '../src/helpdeskEmail.js';
-import { encryptSecret } from '../src/secrets.js';
-import { readAIStream } from '../src/aiStream.js';
+} from '../src/channels/helpdeskEmail.js';
+import { encryptSecret } from '../src/shared/secrets.js';
+import { readAIStream } from '../src/chat/aiStream.js';
 
 const uri = process.env.TEST_MONGODB_URI;
 function gmail(id = 'm1', sender = 'employee@fixture.test') {
@@ -212,8 +212,8 @@ test(
   'Zuno support conversations route without employee department input and cannot assume the Admin agent capability',
   { skip: !uri },
   async () => {
-    const { createHelpdeskService } = await import('../src/helpdesk.js');
-    const { createHelpdeskWorkflows } = await import('../src/helpdeskWorkflows.js');
+    const { createHelpdeskService } = await import('../src/requests/helpdesk.js');
+    const { createHelpdeskWorkflows } = await import('../src/workflows/helpdeskWorkflows.js');
     process.env.MONGODB_URI = uri;
     const database = `agentzuno_support_${randomUUID().replaceAll('-', '')}`;
     process.env.MONGODB_DATABASE = database;

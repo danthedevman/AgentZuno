@@ -1,14 +1,17 @@
-import { searchWorkspace } from '../src/globalSearch.js';
+import { searchWorkspace } from '../src/workspace/globalSearch.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { MongoClient, ObjectId } from 'mongodb';
-import { createIntegrationStore } from '../src/integrationStore.js';
-import { createHelpdeskService } from '../src/helpdesk.js';
-import { createRequestTasks } from '../src/requestTasks.js';
-import { createAdminData } from '../src/adminData.js';
-import { allowedRequestActions, validateRequestAction } from '../src/requestChatActions.js';
-import { inspectWorkflowSource } from '../src/workflowRuntime.js';
+import { createIntegrationStore } from '../src/storage/integrationStore.js';
+import { createHelpdeskService } from '../src/requests/helpdesk.js';
+import { createRequestTasks } from '../src/requests/requestTasks.js';
+import { createAdminData } from '../src/data/adminData.js';
+import {
+  allowedRequestActions,
+  validateRequestAction,
+} from '../src/requests/requestChatActions.js';
+import { inspectWorkflowSource } from '../src/workflows/workflowRuntime.js';
 
 test('approval rejection flags normalize from parameters without weakening validation', async () => {
   const source = `import {defineWorkflow} from '@agentzuno/workflows';

@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { ObjectId } from 'mongodb';
 import { Worker, QueueEvents, Queue } from 'bullmq';
 import Redis from 'ioredis';
-import { createQueues, queueNames } from '../src/queues.js';
+import { createQueues, queueNames } from '../src/identity/queues.js';
 
 const redisUrl = process.env.TEST_REDIS_URL;
 test(

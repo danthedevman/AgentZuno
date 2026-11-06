@@ -6,8 +6,9 @@ import pg from 'pg';
 import { createMemoryDatabase } from '../src/storage/memory.js';
 import { createPostgresDatabase } from '../src/storage/postgres.js';
 import { postgresConnection } from '../src/storage/configuration.js';
-import { createHelpdeskService, installHelpdeskRoutes } from '../src/helpdesk.js';
-import { createMentionDelivery } from '../src/mentions.js';
+import { createHelpdeskService } from '../src/requests/helpdesk.js';
+import { installHelpdeskRoutes } from '../src/routes/requests/helpdeskRoutes.js';
+import { createMentionDelivery } from '../src/requests/mentions.js';
 
 async function verify(database) {
   const workspaceId = new ObjectId().toString();

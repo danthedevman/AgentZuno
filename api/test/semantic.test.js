@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ObjectId } from 'mongodb';
-import { createSemanticService, chunkText, pointId } from '../src/semantic.js';
+import { createSemanticService, chunkText, pointId } from '../src/knowledge/semantic.js';
 
 test('semantic chunks overlap and point IDs are stable across retries', () => {
   const chunks = chunkText('x'.repeat(4000));

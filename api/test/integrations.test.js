@@ -3,10 +3,10 @@ import assert from 'node:assert/strict';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { ObjectId, MongoClient } from 'mongodb';
 import { once } from 'node:events';
-import { createApiServer } from '../src/app.js';
-import { createIntegrationStore } from '../src/integrationStore.js';
-import { createIntegrationService } from '../src/integrations.js';
-import { canReadKnowledge } from '../src/permissions.js';
+import { createApiServer } from '../src/server.js';
+import { createIntegrationStore } from '../src/storage/integrationStore.js';
+import { createIntegrationService } from '../src/integrations/integrations.js';
+import { canReadKnowledge } from '../src/shared/permissions.js';
 
 const uri = process.env.TEST_MONGODB_URI;
 

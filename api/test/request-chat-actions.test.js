@@ -2,13 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { MongoClient, ObjectId } from 'mongodb';
-import { createIntegrationStore } from '../src/integrationStore.js';
-import { createHelpdeskService } from '../src/helpdesk.js';
+import { createIntegrationStore } from '../src/storage/integrationStore.js';
+import { createHelpdeskService } from '../src/requests/helpdesk.js';
 import {
   allowedRequestActions,
   validateRequestAction,
   stripRequestAction,
-} from '../src/requestChatActions.js';
+} from '../src/requests/requestChatActions.js';
 
 test('request action proposals are bounded by ownership and role and hidden during streaming', () => {
   const user = { id: 'employee', role: 'user' };

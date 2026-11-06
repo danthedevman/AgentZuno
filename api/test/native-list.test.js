@@ -4,7 +4,7 @@ import { ObjectId, MongoClient } from 'mongodb';
 import pg from 'pg';
 import { createPostgresDatabase } from '../src/storage/postgres.js';
 import { postgresConnection } from '../src/storage/configuration.js';
-import { databasePage } from '../src/databasePage.js';
+import { databasePage } from '../src/shared/databasePage.js';
 
 async function verify(database) {
   const store = { collection: (name) => database.collection(name) };

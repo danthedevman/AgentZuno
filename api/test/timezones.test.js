@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { isTimeZone } from '../src/timezones.js';
+import { isTimeZone } from '../src/shared/timezones.js';
 import { timeZoneOptions } from '../../src/services/timezones.js';
 
 test('timezones accept browser IANA identifiers and retain saved zones outside common choices', () => {

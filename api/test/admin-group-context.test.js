@@ -6,9 +6,9 @@ import pg from 'pg';
 import { createMemoryDatabase } from '../src/storage/memory.js';
 import { createPostgresDatabase } from '../src/storage/postgres.js';
 import { postgresConnection } from '../src/storage/configuration.js';
-import { createIntegrationStore } from '../src/integrationStore.js';
-import { createChatService } from '../src/chat.js';
-import { createAdminGroup } from '../src/adminGroupActions.js';
+import { createIntegrationStore } from '../src/storage/integrationStore.js';
+import { createChatService } from '../src/chat/chat.js';
+import { createAdminGroup } from '../src/identity/adminGroupActions.js';
 import { toTypeScript } from '../sdk/workflows/index.js';
 
 async function verify(database) {

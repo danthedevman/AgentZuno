@@ -2,13 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { MongoClient } from 'mongodb';
-import { createIntegrationStore } from '../src/integrationStore.js';
+import { createIntegrationStore } from '../src/storage/integrationStore.js';
 import {
   getConnectorActions,
   saveConnectorActions,
   requireConnectorAction,
-} from '../src/connectorActions.js';
-import { slackWorkflowDestination } from '../src/slackWorkflowDestination.js';
+} from '../src/integrations/connectorActions.js';
+import { slackWorkflowDestination } from '../src/workflows/slackWorkflowDestination.js';
 
 test(
   'connector controls default on, isolate workspaces, reject stale edits and deny disabled actions',

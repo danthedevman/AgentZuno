@@ -1,13 +1,16 @@
-import { encryptSecret } from '../src/secrets.js';
+import { encryptSecret } from '../src/shared/secrets.js';
 import { toTypeScript } from '../sdk/workflows/index.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ObjectId, MongoClient } from 'mongodb';
 import { randomBytes, randomUUID } from 'node:crypto';
-import { createIntegrationStore } from '../src/integrationStore.js';
-import { createHelpdeskChannels } from '../src/helpdeskChannels.js';
-import { createProvisioningService, provisionIdentityUser } from '../src/helpdeskProvisioning.js';
-import { createHelpdeskWorkflows } from '../src/helpdeskWorkflows.js';
+import { createIntegrationStore } from '../src/storage/integrationStore.js';
+import { createHelpdeskChannels } from '../src/channels/helpdeskChannels.js';
+import {
+  createProvisioningService,
+  provisionIdentityUser,
+} from '../src/identity/helpdeskProvisioning.js';
+import { createHelpdeskWorkflows } from '../src/workflows/helpdeskWorkflows.js';
 import { createApi } from '../src/app.js';
 const uri = process.env.TEST_MONGODB_URI;
 test(

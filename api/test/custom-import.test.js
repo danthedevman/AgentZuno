@@ -5,7 +5,7 @@ import {
   endpointHeaders,
   isPublicAddress,
   scanEndpoint,
-} from '../src/customImport.js';
+} from '../src/integrations/customImport.js';
 
 test('custom API endpoints reject unsafe URLs and private addresses', () => {
   for (const url of [

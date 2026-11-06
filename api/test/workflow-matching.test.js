@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { findWorkflowMatch } from '../src/workflowMatching.js';
+import { findWorkflowMatch } from '../src/workflows/workflowMatching.js';
 const laptop = {
   id: 'laptop',
   department: 'it',

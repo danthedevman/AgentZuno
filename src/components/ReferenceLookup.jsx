@@ -4,6 +4,8 @@ export default function ReferenceLookup(props) {
   return (
     <MultiSelectLookup
       single
+      referenceTable={props.referenceTable}
+      onOpen={props.onOpen}
       label={props.label}
       name={props.name}
       options={props.options}

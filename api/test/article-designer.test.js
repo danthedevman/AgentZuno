@@ -1,10 +1,13 @@
-import { retrieveAssistantKnowledge, verifyAssistantKnowledge } from '../src/assistantKnowledge.js';
+import {
+  retrieveAssistantKnowledge,
+  verifyAssistantKnowledge,
+} from '../src/knowledge/assistantKnowledge.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { MongoClient, ObjectId } from 'mongodb';
 import { createApi } from '../src/app.js';
-import { articleCandidate } from '../src/articleDesigner.js';
+import { articleCandidate } from '../src/knowledge/articleDesigner.js';
 
 test('article proposals parse bounded candidates and strip executable HTML', () => {
   const candidate = articleCandidate({

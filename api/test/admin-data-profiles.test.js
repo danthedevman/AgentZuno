@@ -3,13 +3,13 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { MongoClient, ObjectId } from 'mongodb';
 import { createApi } from '../src/app.js';
-import { defineDataTable, createAdminData } from '../src/adminData.js';
-import { createIntegrationStore } from '../src/integrationStore.js';
+import { defineDataTable, createAdminData } from '../src/data/adminData.js';
+import { createIntegrationStore } from '../src/storage/integrationStore.js';
 import {
   workforceFromScim,
   enterpriseUserSchema,
   importWorkforceProfile,
-} from '../src/workforceProfiles.js';
+} from '../src/identity/workforceProfiles.js';
 const definition = {
   name: 'Routing Map',
   description: 'Department routing',

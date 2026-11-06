@@ -3,8 +3,8 @@ import App from './App.jsx';
 import '@fontsource-variable/inter';
 import '@fontsource/shippori-mincho/latin-400.css';
 import '@fontsource/shippori-mincho/latin-500.css';
-import './styles.css';
-import './workspace.css';
+import './styles/public.css';
+import './styles/workspace.css';
 
 document.documentElement.classList.add('app-ready');
 const root = document.querySelector('#root');

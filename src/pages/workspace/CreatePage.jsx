@@ -1,13 +1,13 @@
 import ToastMessage from '../../components/ToastMessage.jsx';
 import Breadcrumbs from '../../components/Breadcrumbs.jsx';
-import KnowledgePermissions from '../../components/KnowledgePermissions.jsx';
+import KnowledgePermissions from '../../components/knowledge/KnowledgePermissions.jsx';
 import ValidatedForm from '../../components/ValidatedForm.jsx';
 import { useWorkspacePath } from '../../services/workspaceRoutes.js';
 import A from '../../components/WorkspaceLink.jsx';
 import { useParams, useNavigate, useSearchParams } from '@solidjs/router';
 import { Match, Switch, Show, createSignal } from 'solid-js';
-import ConnectionsPage from './ConnectionsPage.jsx';
-import CreateArticlePage from './CreateArticlePage.jsx';
+import ConnectionsPage from './connectors/ConnectionsPage.jsx';
+import CreateArticlePage from './knowledge/CreateArticlePage.jsx';
 import { useSession } from '../../context/SessionContext.jsx';
 import { useWorkspace } from '../../context/WorkspaceContext.jsx';
 import { api } from '../../services/api.js';

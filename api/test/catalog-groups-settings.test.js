@@ -4,10 +4,10 @@ import { randomUUID, randomBytes } from 'node:crypto';
 import { MongoClient, ObjectId } from 'mongodb';
 import sharp from 'sharp';
 import { createApi } from '../src/app.js';
-import { chatUserContext } from '../src/chatUserContext.js';
-import { workspaceGroups } from '../src/groups.js';
-import { requireExistingQueues } from '../src/helpdeskQueues.js';
-import { resolveWorkflowApprovers } from '../src/approvalTargets.js';
+import { chatUserContext } from '../src/chat/chatUserContext.js';
+import { workspaceGroups } from '../src/identity/groups.js';
+import { requireExistingQueues } from '../src/identity/helpdeskQueues.js';
+import { resolveWorkflowApprovers } from '../src/requests/approvalTargets.js';
 
 test(
   'catalog categories, group purposes, images, personal context and recent views enforce workspace access',

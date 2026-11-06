@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { randomUUID, randomBytes } from 'node:crypto';
 import { MongoClient } from 'mongodb';
 import { createApi } from '../src/app.js';
-import { createInvitationDelivery } from '../src/invitations.js';
-import { decryptSecret } from '../src/secrets.js';
+import { createInvitationDelivery } from '../src/identity/invitations.js';
+import { decryptSecret } from '../src/shared/secrets.js';
 test(
   'workspace invitations email a private single-use grant and require matching authenticated acceptance',
   { skip: !process.env.TEST_MONGODB_URI },

@@ -1,15 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { knowledgeActor } from '../src/knowledgeAccess.js';
+import { knowledgeActor } from '../src/knowledge/knowledgeAccess.js';
 import { ObjectId, MongoClient } from 'mongodb';
 import pg from 'pg';
 import { createPostgresDatabase } from '../src/storage/postgres.js';
 import { postgresConnection } from '../src/storage/configuration.js';
 import { createMemoryDatabase } from '../src/storage/memory.js';
-import { createIntegrationStore } from '../src/integrationStore.js';
-import { agentTools, executeAgentTool } from '../src/agentToolRegistry.js';
-import { readToolCalls, providerTools, toolTurns } from '../src/aiTools.js';
-import { articleCandidate } from '../src/articleDesigner.js';
+import { createIntegrationStore } from '../src/storage/integrationStore.js';
+import { agentTools, executeAgentTool } from '../src/chat/agentToolRegistry.js';
+import { readToolCalls, providerTools, toolTurns } from '../src/chat/aiTools.js';
+import { articleCandidate } from '../src/knowledge/articleDesigner.js';
 
 test('registry separates Admin editors, support actions and read-only roles; typed proposals do not execute writes', async () => {
   const db = createMemoryDatabase(),

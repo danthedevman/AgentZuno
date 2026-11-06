@@ -4,7 +4,7 @@ import { once } from 'node:events';
 import { randomUUID } from 'node:crypto';
 import { MongoClient } from 'mongodb';
 import sharp from 'sharp';
-import { createApiServer } from '../src/app.js';
+import { createApiServer } from '../src/server.js';
 
 const uri = process.env.TEST_MONGODB_URI;
 

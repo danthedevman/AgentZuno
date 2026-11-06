@@ -8,10 +8,10 @@ import {
   resolveWorkflowRouting,
   runWorkflow,
 } from '../sdk/workflows/index.js';
-import { createIntegrationStore } from '../src/integrationStore.js';
-import { createHelpdeskWorkflows } from '../src/helpdeskWorkflows.js';
-import { createHelpdeskService } from '../src/helpdesk.js';
-import { createChatService } from '../src/chat.js';
+import { createIntegrationStore } from '../src/storage/integrationStore.js';
+import { createHelpdeskWorkflows } from '../src/workflows/helpdeskWorkflows.js';
+import { createHelpdeskService } from '../src/requests/helpdesk.js';
+import { createChatService } from '../src/chat/chat.js';
 const definition = {
   version: 1,
   name: 'Laptop Order',

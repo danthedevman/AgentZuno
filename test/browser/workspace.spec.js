@@ -380,3 +380,241 @@ test('public docs have focused routes, mobile navigation, legacy links and predi
   await screenshot.scrollIntoViewIfNeeded();
   await expect.poll(() => screenshot.evaluate((image) => image.naturalWidth)).toBeGreaterThan(0);
 });
+
+test('Slack member suggestions support reviewed bulk selection across pages', async ({ page }) => {
+  await page
+    .context()
+    .addCookies([{ name: 'browser_test', value: '1', url: 'http://127.0.0.1:4180' }]);
+  const users = Array.from({ length: 25 }, (_, i) => ({
+    id: (i + 1).toString(16).padStart(24, '0'),
+    name: `Person ${i + 1}`,
+  }));
+  const rows = users.map((user, i) => ({
+    slackUserId: `U123MEMBER${i}`,
+    name: user.name,
+    email: `person${i}@fixture.test`,
+    userId: user.id,
+    status: 'Review email match',
+  }));
+  let applied = [];
+  let applicationVersion = 1;
+  const channel = () => ({
+    id: 'slack',
+    name: 'Slack',
+    deliveryStatus: 'Ready',
+    status: 'connected',
+    configured: true,
+    connected: true,
+    callbackUrl: 'https://fixture.test/api/helpdesk/channels/oauth/callback',
+    eventsUrl: 'https://fixture.test/api/helpdesk/channels/slack/events/222222222222222222222222',
+    application: {
+      clientId: 'fixture-client',
+      hasClientSecret: true,
+      hasSigningSecret: true,
+      version: applicationVersion,
+    },
+    actions: { version: 1, items: [] },
+    bot: {
+      enabled: true,
+      teamName: 'Fixture Team',
+      teamId: 'T123FIXTURE',
+      version: applied.length ? 2 : 1,
+      identityBindings: applied,
+    },
+  });
+  await page.route('**/api/helpdesk/channels', (route) => route.fulfill({ json: [channel()] }));
+  await page.route('**/api/helpdesk/reference-records', (route) =>
+    route.fulfill({ json: { users } }),
+  );
+  await page.route('**/api/helpdesk/channels/slack/users/discover', (route) =>
+    route.fulfill({ json: { id: 'a'.repeat(24), version: 1, rows: rows.slice(0, 20), total: 25 } }),
+  );
+  await page.route('**/api/helpdesk/channels/slack/users/reviews/**', (route) => {
+    const params = new URL(route.request().url()).searchParams;
+    return route.fulfill({
+      json:
+        params.get('selection') === 'suggested'
+          ? { bindings: rows.map(({ slackUserId, userId }) => ({ slackUserId, userId })) }
+          : {
+              id: 'a'.repeat(24),
+              version: 1,
+              rows: rows.slice(
+                (Number(params.get('page') || 1) - 1) * 20,
+                Number(params.get('page') || 1) * 20,
+              ),
+              total: 25,
+            },
+    });
+  });
+  await page.route('**/api/helpdesk/channels/slack/users/apply', (route) => {
+    const input = route.request().postDataJSON();
+    expect(input.confirmed).toBe(true);
+    applied = input.bindings;
+    return route.fulfill({ json: { linked: applied.length } });
+  });
+  await page.route('**/api/helpdesk/channels/slack/application', (route) => {
+    if (applicationVersion === 1) {
+      applicationVersion = 2;
+      return route.fulfill({ json: { saved: true } });
+    }
+    return route.fulfill({
+      status: 422,
+      json: { error: 'Connection details could not be saved.' },
+    });
+  });
+  await page.goto('/workspace/222222222222222222222222/connectors/slack');
+  await page.getByRole('button', { name: 'Save Connection Details', exact: true }).click();
+  await expect(
+    page.getByRole('status').filter({ hasText: 'Connection details saved.' }),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Save Connection Details', exact: true }).click();
+  await expect(
+    page.getByRole('alert').filter({ hasText: 'Connection details could not be saved.' }),
+  ).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Find Slack Users', exact: true })).toHaveCount(0);
+  await page.getByRole('link', { name: 'Manage Slack Users', exact: true }).click();
+  await expect(page).toHaveURL(/\/connectors\/slack\/users$/);
+  await expect(
+    page.getByRole('status').filter({ hasText: 'Connection details saved.' }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole('alert').filter({ hasText: 'Connection details could not be saved.' }),
+  ).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Slack Users', exact: true })).toBeVisible();
+  await expect(page.getByText('Fixture Team', { exact: true })).toBeVisible();
+  await expect(page.getByText('T123FIXTURE', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Find Slack Users', exact: true }).click();
+  await expect(page.getByText('Page 1 of 2 · 25 members')).toBeVisible();
+  const search = page.getByRole('searchbox', { name: 'Search Slack users' });
+  await expect(search).toBeVisible();
+  expect(await search.evaluate((input) => getComputedStyle(input).backgroundColor)).toBe(
+    await page.locator('.workspace-shell').evaluate((shell) => {
+      const probe = document.createElement('div');
+      probe.style.backgroundColor = 'var(--workspace-panel)';
+      shell.append(probe);
+      const color = getComputedStyle(probe).backgroundColor;
+      probe.remove();
+      return color;
+    }),
+  );
+  await page.getByRole('button', { name: 'Select All Suggested Matches' }).click();
+  await expect(page.getByText('25 selected across pages')).toBeVisible();
+  await page.getByRole('button', { name: 'Next', exact: true }).click();
+  await expect(page.getByText('Page 2 of 2 · 25 members')).toBeVisible();
+  await page.getByRole('button', { name: 'Link Selected Users', exact: true }).click();
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: 'Link Selected Users', exact: true })
+    .click();
+  await expect.poll(() => applied.length).toBe(25);
+});
+
+test('Slack self-service linking requires visible review and removes the fragment token', async ({
+  page,
+}) => {
+  await page
+    .context()
+    .addCookies([{ name: 'browser_test', value: '1', url: 'http://127.0.0.1:4180' }]);
+  await page.route('**/api/helpdesk/channels/slack/link/inspect', (route) =>
+    route.fulfill({
+      json: {
+        slackUserId: 'U123SELF',
+        teamName: 'Fixture Team',
+        workspaceId: '222222222222222222222222',
+      },
+    }),
+  );
+  let completed = false;
+  await page.route('**/api/helpdesk/channels/slack/link/complete', (route) => {
+    const input = route.request().postDataJSON();
+    expect(input.confirmed).toBe(true);
+    expect(input.token).toBe('b'.repeat(64));
+    completed = true;
+    return route.fulfill({ json: { linked: true, workspaceId: '222222222222222222222222' } });
+  });
+  await page.goto('/slack/link#' + 'b'.repeat(64));
+  await expect(page.getByText(/Link Slack member U123SELF/)).toBeVisible();
+  expect(new URL(page.url()).hash).toBe('');
+  expect(completed).toBe(false);
+  await page.getByRole('button', { name: 'Confirm Account Link' }).click();
+  await expect(page).toHaveURL(/\/workspace\/222222222222222222222222\/chat$/);
+  expect(completed).toBe(true);
+});
+
+test('article citations open a standalone read-only reader and legacy channel links open portal Chat', async ({
+  page,
+}) => {
+  await page
+    .context()
+    .addCookies([{ name: 'browser_test', value: '1', url: 'http://127.0.0.1:4180' }]);
+  const workspace = '222222222222222222222222';
+  const id = 'aaaaaaaaaaaaaaaaaaaaaaaa';
+  await page.route('**/api/helpdesk/knowledge-center?article=*', (route) =>
+    route.fulfill({
+      json: {
+        id,
+        title: 'Request application access',
+        body: '<p>Submit your access request through the portal.</p>',
+      },
+    }),
+  );
+  await page.goto(`/workspace/${workspace}/articles/${id}/read`);
+  await expect(
+    page.getByRole('heading', { name: 'Request application access', exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText('Submit your access request through the portal.', { exact: true }),
+  ).toBeVisible();
+  await expect(page.locator('[contenteditable="true"]')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Save|Publish|Edit Article/i })).toHaveCount(0);
+  await page.route(`**/api/helpdesk/support/conversations/${id}`, (route) =>
+    route.fulfill({ json: { redirectTo: `/workspace/${workspace}/chat` } }),
+  );
+  await page.goto(`/workspace/${workspace}/chat/${id}`);
+  await expect(page).toHaveURL(new RegExp(`/workspace/${workspace}/chat$`));
+  await expect(page.getByRole('heading', { name: 'How can I help you?' })).toBeVisible();
+});
+
+test('pending invitations offer confirmed replacement links and confirmed removal', async ({
+  page,
+  isMobile,
+}) => {
+  await page
+    .context()
+    .addCookies([{ name: 'browser_test', value: '1', url: 'http://127.0.0.1:4180' }]);
+  const workspace = '222222222222222222222222';
+  const invited = await page.request.post('/api/helpdesk/invitations', {
+    headers: { Origin: 'http://127.0.0.1:4180', 'X-Workspace-Id': workspace },
+    data: {
+      email: `invite-${isMobile ? 'mobile' : 'desktop'}@fixture.test`,
+      role: 'user',
+      queues: [],
+      canApprove: false,
+      active: true,
+    },
+  });
+  expect(invited.status()).toBe(202);
+  await page.goto(`/workspace/${workspace}/users?tab=invitations`);
+  await page.getByRole('button', { name: 'Generate New Link', exact: true }).click();
+  let dialog = page.getByRole('dialog', { name: 'Generate New Link', exact: true });
+  await expect(dialog).toContainText('The previous link will stop working.');
+  await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(page.getByLabel('Invitation Link', { exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Generate New Link', exact: true }).click();
+  dialog = page.getByRole('dialog', { name: 'Generate New Link', exact: true });
+  await dialog.getByRole('button', { name: 'Generate Link', exact: true }).click();
+  await expect(page.getByLabel('Invitation Link', { exact: true })).toHaveValue(
+    /\/invite#[a-f0-9]{64}$/,
+  );
+  await page.getByRole('button', { name: 'Remove Invitation', exact: true }).click();
+  dialog = page.getByRole('dialog', { name: 'Remove Invitation', exact: true });
+  await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Remove Invitation', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Remove Invitation', exact: true }).click();
+  await page
+    .getByRole('dialog', { name: 'Remove Invitation', exact: true })
+    .getByRole('button', { name: 'Remove Invitation', exact: true })
+    .click();
+  await expect(page.getByRole('button', { name: 'Generate New Link', exact: true })).toHaveCount(0);
+  await expect(page.getByText('Invitation removed.', { exact: true })).toBeVisible();
+});

@@ -7,8 +7,8 @@ import pg from 'pg';
 import { createPostgresDatabase } from '../src/storage/postgres.js';
 import { postgresConnection } from '../src/storage/configuration.js';
 import { createMemoryDatabase } from '../src/storage/memory.js';
-import { installProfilePictureRoutes } from '../src/profilePictures.js';
-import { storedBinaryBytes } from '../src/storedBinary.js';
+import { installProfilePictureRoutes } from '../src/routes/identity/profilePicturesRoutes.js';
+import { storedBinaryBytes } from '../src/shared/storedBinary.js';
 
 async function verifyPictures(database) {
   const user = { id: 'owner', workspaceId: 'workspace', role: 'user' };

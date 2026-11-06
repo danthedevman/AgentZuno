@@ -2,14 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID, randomBytes, createHmac } from 'node:crypto';
 import { MongoClient, ObjectId } from 'mongodb';
-import { createIntegrationStore } from '../src/integrationStore.js';
-import { createChatService } from '../src/chat.js';
+import { createIntegrationStore } from '../src/storage/integrationStore.js';
+import { createChatService } from '../src/chat/chat.js';
 import {
   createHelpdeskSlack,
   verifySlackSignature,
   authorizeSlackChat,
-} from '../src/helpdeskSlack.js';
-import { encryptSecret } from '../src/secrets.js';
+} from '../src/channels/helpdeskSlack.js';
+import { encryptSecret } from '../src/shared/secrets.js';
 test('Slack signatures reject tampering, stale requests and missing verification', () => {
   const now = Date.now();
   const timestamp = String(Math.floor(now / 1000));
@@ -63,9 +63,13 @@ test(
       async (url, options) => {
         assert.equal(options.redirect, 'error');
         assert.equal(options.headers.Authorization, 'Bearer fixture-bot-token');
+        if (new URL(url).pathname.endsWith('conversations.info')) {
+          assert.equal(options.method, 'GET');
+          assert.equal(options.body, undefined);
+          assert.ok(new URL(url).searchParams.get('channel'));
+          return Response.json({ ok: true, channel: { is_member: true, is_im: true } });
+        }
         const body = JSON.parse(options.body);
-        if (url.endsWith('conversations.info'))
-          return Response.json({ ok: true, channel: { is_member: true } });
         sent.push({ url, body });
         return Response.json({ ok: true, ts: '1780000000.000001' });
       },
@@ -144,8 +148,68 @@ test(
       assert.equal(sent.length, 1);
       assert.ok(sent[0].url.endsWith('chat.postEphemeral'));
       assert.equal(sent[0].body.user, 'U123USER');
-      assert.equal(sent[0].body.mrkdwn, false);
+      assert.equal(sent[0].body.mrkdwn, true);
+      const footer = sent[0].body.blocks.at(-1);
+      assert.equal(footer.type, 'context');
+      assert.ok(footer.elements[0].text.includes('Have an issue?'));
+      assert.ok(footer.elements[0].text.includes(`/workspace/${owner.workspaceId}/chat|`));
       assert.equal(await store.collection('helpdeskRequests').countDocuments({}), 0);
+      const initialUserMessages = (await chats.get(owner, String(chat._id))).messages.filter(
+        (message) => message.role === 'user',
+      ).length;
+      assert.ok(
+        sent[0].body.blocks.some((block) =>
+          block.elements?.some((element) => element.action_id === 'agentzuno_continue_dm'),
+        ),
+      );
+      await assert.rejects(
+        slack.interact(
+          {
+            type: 'block_actions',
+            team: { id: 'T123TEAM' },
+            user: { id: 'U123USER' },
+            actions: [{ action_id: 'agentzuno_continue_dm', value: String(new ObjectId()) }],
+          },
+          owner.workspaceId,
+        ),
+        { status: 404 },
+      );
+      await slack.interact(
+        {
+          type: 'block_actions',
+          team: { id: 'T123TEAM' },
+          user: { id: 'U123USER' },
+          actions: [{ action_id: 'agentzuno_continue_dm', value: String(chat._id) }],
+        },
+        owner.workspaceId,
+      );
+      await slack.receive({
+        ...event,
+        event_id: 'EvDirect',
+        event: {
+          ...event.event,
+          type: 'message',
+          channel: 'D123DIRECT',
+          channel_type: 'im',
+          ts: '1780000000.000003',
+          text: 'Continue my request privately',
+        },
+      });
+      await slack.process(source);
+      const direct = await store
+        .collection('helpdeskSlackMessages')
+        .findOne({ 'event.ts': '1780000000.000003' });
+      assert.equal(direct.chatId, String(chat._id));
+      assert.equal(
+        (await chats.get(owner, direct.chatId)).messages.filter(
+          (message) => message.role === 'user',
+        ).length,
+        initialUserMessages + 1,
+      );
+      await chats.process(jobs.shift());
+      await slack.process(source);
+      assert.ok(sent.at(-1).url.endsWith('chat.postMessage'));
+      const delivered = sent.length;
       await slack.receive({
         ...event,
         event_id: 'Ev124',
@@ -162,7 +226,7 @@ test(
       await assert.rejects(authorizeSlackChat(store, chat), { status: 403 });
       await slack.process(source);
       assert.equal(jobs.length, 0);
-      assert.equal(sent.length, 1);
+      assert.equal(sent.length, delivered);
       assert.equal(
         (
           await store
@@ -179,7 +243,7 @@ test(
         event_id: 'Ev125',
         event: { ...event.event, ts: '1780000000.000003' },
       });
-      assert.equal(await store.collection('helpdeskSlackMessages').countDocuments({}), 2);
+      assert.equal(await store.collection('helpdeskSlackMessages').countDocuments({}), 3);
     } finally {
       await store.close();
       await cleanup.db(database).dropDatabase();

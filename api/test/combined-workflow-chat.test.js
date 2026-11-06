@@ -3,10 +3,10 @@ import assert from 'node:assert/strict';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { ObjectId } from 'mongodb';
 import { createMemoryDatabase } from '../src/storage/memory.js';
-import { createIntegrationStore } from '../src/integrationStore.js';
-import { createChatService } from '../src/chat.js';
-import { createWorkflowExecution } from '../src/workflowExecution.js';
-import { inspectWorkflowSource } from '../src/workflowRuntime.js';
+import { createIntegrationStore } from '../src/storage/integrationStore.js';
+import { createChatService } from '../src/chat/chat.js';
+import { createWorkflowExecution } from '../src/workflows/workflowExecution.js';
+import { inspectWorkflowSource } from '../src/workflows/workflowRuntime.js';
 import { toTypeScript } from '../sdk/workflows/index.js';
 
 test('a combined Admin request saves its group, continues generation, and executes one scoped task after submission', async () => {

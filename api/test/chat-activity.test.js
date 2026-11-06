@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { chatActivity } from '../../src/services/chatActivity.js';
+import { chatActivity } from '../../src/services/chat/chatActivity.js';
 test('chat activity tracks actual processing, completion and failures without inventing steps', () => {
   assert.deepEqual(
     chatActivity([], 'queued').map((step) => step.state),

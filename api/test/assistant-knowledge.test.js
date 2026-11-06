@@ -2,7 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { MongoClient, ObjectId } from 'mongodb';
-import { retrieveAssistantKnowledge, verifyAssistantKnowledge } from '../src/assistantKnowledge.js';
+import {
+  retrieveAssistantKnowledge,
+  verifyAssistantKnowledge,
+} from '../src/knowledge/assistantKnowledge.js';
 
 test(
   'assistants retrieve published Slack guidance, isolate owners and reject changed or unpublished knowledge',

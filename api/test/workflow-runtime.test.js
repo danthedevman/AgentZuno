@@ -7,11 +7,11 @@ import {
   runSandbox,
   inspectWorkflowSource,
   updateWorkflowMetadata,
-} from '../src/workflowRuntime.js';
-import { createWorkflowExecution } from '../src/workflowExecution.js';
-import { createHelpdeskWorkflows } from '../src/helpdeskWorkflows.js';
-import { createIntegrationStore } from '../src/integrationStore.js';
-import { encryptSecret } from '../src/secrets.js';
+} from '../src/workflows/workflowRuntime.js';
+import { createWorkflowExecution } from '../src/workflows/workflowExecution.js';
+import { createHelpdeskWorkflows } from '../src/workflows/helpdeskWorkflows.js';
+import { createIntegrationStore } from '../src/storage/integrationStore.js';
+import { encryptSecret } from '../src/shared/secrets.js';
 const definition = {
   version: 1,
   name: 'Laptop Order',

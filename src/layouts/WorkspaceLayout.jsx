@@ -1,9 +1,9 @@
 import { Portal } from 'solid-js/web';
-import { publicAsset } from '../services/publicAsset.js';
+import { publicAsset } from '../services/public/publicAsset.js';
 import { confirmAction } from '../services/confirmations.js';
 import AIProviderBanner from '../components/AIProviderBanner.jsx';
-import ProfileAvatar from '../components/ProfileAvatar.jsx';
-import ChatPrompt from '../components/ChatPrompt.jsx';
+import ProfileAvatar from '../components/identity/ProfileAvatar.jsx';
+import ChatPrompt from '../components/chat/ChatPrompt.jsx';
 import Skeleton from '../components/Skeleton.jsx';
 import ToastMessage from '../components/ToastMessage.jsx';
 import { getRolePreview, setRolePreview } from '../services/rolePreview.js';

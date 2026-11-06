@@ -1,6 +1,6 @@
 import { useSearchParams } from '@solidjs/router';
 import PageHeading from '../../components/PageHeading.jsx';
-import RecordTable from '../../components/RecordTable.jsx';
+import RecordTable from '../../components/records/RecordTable.jsx';
 import A from '../../components/WorkspaceLink.jsx';
 export default function SearchPage() {
   const [params, setParams] = useSearchParams();

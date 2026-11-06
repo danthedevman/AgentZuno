@@ -1,13 +1,13 @@
-import { queryString, queryStrings, queryVersion } from '../src/queryValues.js';
-import { helpdeskScope, requestScope, resolveHelpdeskUser } from '../src/helpdeskRoles.js';
+import { queryString, queryStrings, queryVersion } from '../src/shared/queryValues.js';
+import { helpdeskScope, requestScope, resolveHelpdeskUser } from '../src/identity/helpdeskRoles.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import express from 'express';
-import { uploadBytes } from '../src/uploadBytes.js';
-import { isEmailAddress } from '../src/emailAddress.js';
-import { installSmtpRoutes } from '../src/smtpSettings.js';
-import { installChatAttachmentRoutes } from '../src/chatAttachments.js';
-import { listResponse } from '../src/listQuery.js';
+import { uploadBytes } from '../src/shared/uploadBytes.js';
+import { isEmailAddress } from '../src/shared/emailAddress.js';
+import { installSmtpRoutes } from '../src/routes/channels/smtpSettingsRoutes.js';
+import { installChatAttachmentRoutes } from '../src/routes/chat/chatAttachmentsRoutes.js';
+import { listResponse } from '../src/shared/listQuery.js';
 
 test('uploads reject parameter-tampering objects and arrays before inspecting their contents', () => {
   for (const body of [

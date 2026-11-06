@@ -1,7 +1,7 @@
 import ToastMessage from '../../components/ToastMessage.jsx';
 import { createResource, For, Show } from 'solid-js';
 import { api } from '../../services/api.js';
-import ArticleCard from '../../components/ArticleCard.jsx';
+import ArticleCard from '../../components/knowledge/ArticleCard.jsx';
 import PageHeading from '../../components/PageHeading.jsx';
 
 export default function HelpPage() {

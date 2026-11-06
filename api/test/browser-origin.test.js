@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { isAllowedBrowserOrigin } from '../src/browserOrigin.js';
+import { isAllowedBrowserOrigin } from '../src/shared/browserOrigin.js';
 test('browser writes accept equivalent loopback origins only on the configured protocol and port', () => {
   assert.equal(isAllowedBrowserOrigin('http://127.0.0.1:3000', 'http://localhost:3000'), true);
   assert.equal(isAllowedBrowserOrigin('http://localhost:3012', 'http://127.0.0.1:3012'), true);

@@ -1,6 +1,6 @@
 import { enableLocalInstallation } from './storage/configuration.js';
 enableLocalInstallation();
-import { createApiServer } from './app.js';
+import { createApiServer } from './server.js';
 
 const port = Number(process.env.PORT || 3001);
 const server = createApiServer();

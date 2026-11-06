@@ -15,11 +15,15 @@ The Slack handler uses HTTP Events API delivery, not Socket Mode. Local testing 
 
 Inbox processing does not grant the sender the workspace owner's permissions. Unmapped identities are restricted; identity-provider login and channel identity mapping remain separate from knowledge authorization. Verify provider scopes and the actual enabled behavior before production use.
 
+For Slack installation, reviewed bulk user matching, self-service linking, required scopes, and common errors, follow [Connect Slack](slack.md).
+
 ## Identity providers and invitations
 
 OIDC configuration belongs in workspace Settings. It uses validated identity binding and scoped membership; signing in does not automatically grant source knowledge access. Provisioning APIs and workforce attributes have separate validation and authorization.
 
-When an identity provider is enabled, manual Add User invitations are hidden and rejected. Otherwise, admins can invite employees through Users after configuring SMTP. Invitations are scoped, expiring, and recipient-bound; delivery requires a working saved SMTP configuration.
+When an identity provider is enabled, manual Add User invitations are hidden and rejected. Otherwise, admins can invite employees through Users. With SMTP configured, invitations are emailed; otherwise, the Admin receives a link to copy and share privately. Invitations are scoped, expiring, and recipient-bound.
+
+In **Users & Groups → Invitations**, pending invitations offer **Generate New Link**, **Resend Email** when SMTP is configured, and **Remove Invitation**. Each action requires confirmation. A replacement expires in seven days and invalidates the previous link; the new manual link appears above the list for copying. Removing an invitation revokes its link and removes it from the list while retaining its historical record. Actions are unavailable during email delivery and after acceptance. User removal requires confirmation, removes workspace membership, and preserves the account and audit history. You cannot remove yourself or the workspace owner; identity-provider-managed users must be managed in the identity provider.
 
 ## Historical knowledge imports
 
@@ -48,3 +52,9 @@ An Admin configures the bot in **Connectors → Microsoft Teams**. Agents and Us
 Every inbound activity needs a Microsoft-signed token with the expected issuer, application audience, lifetime, Teams channel endorsement, matching service URL and configured tenant. Private replies use the mapped person’s current workspace permissions. A channel mention receives an invitation to chat privately rather than a knowledge answer visible to the whole channel. The bot does not ingest channel history or grant access to private requests.
 
 Queued work stores source IDs and reloads current credentials, mappings and action policies. Changing bot settings invalidates queued work from the previous configuration. A send with an uncertain outcome is marked for review and is not automatically sent again. Review and reconcile the conversation in Teams before attempting manual recovery. Automated tests use signed fictional activities and mocked Microsoft endpoints; an actual tenant installation still needs live validation.
+
+## Native request forms in Slack and Teams
+
+Linked active users can complete published request workflows inside Slack modals or Teams Adaptive Cards. The assistants can collect answers in conversation and prefill a review; submission still requires the user's **Submit Request** action. Text, multiline text, choices, booleans, and bounded permitted record lookups use the same validation and workflow submission service as the app. Unsupported or large reference forms offer an app link instead of dropping fields. Teams cards that exceed the supported payload budget also use an app link.
+
+Slack requires its dedicated Interactivity URL in addition to Events and OAuth; see [Connect Slack](slack.md). Teams uses the existing authenticated personal bot activity endpoint and Adaptive Card submit messages; no new public unauthenticated endpoint is added. Forms expire after 30 minutes, recheck current permissions and publication versions, and deduplicate repeated submissions. Follow-up status questions can retrieve the user's own recent requests. Approval decisions still use the existing approval service and are not implied by a requester submitting a form.

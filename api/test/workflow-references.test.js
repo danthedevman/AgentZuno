@@ -2,14 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { MongoClient, ObjectId } from 'mongodb';
-import { createIntegrationStore } from '../src/integrationStore.js';
-import { createAdminData } from '../src/adminData.js';
+import { createIntegrationStore } from '../src/storage/integrationStore.js';
+import { createAdminData } from '../src/data/adminData.js';
 import { defineRequestForm, validateFormAnswers } from '../sdk/workflows/index.js';
 import {
   validateWorkflowReferences,
   workflowReferenceOptions,
   validateWorkflowReferenceAnswers,
-} from '../src/workflowReferences.js';
+} from '../src/workflows/workflowReferences.js';
 
 test(
   'workflow reference forms validate targets and expose only scoped lookup labels and accessible requests',

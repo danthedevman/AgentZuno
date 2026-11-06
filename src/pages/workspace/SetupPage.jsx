@@ -2,7 +2,7 @@ import { createSignal, For, Show } from 'solid-js';
 import { useNavigate, useParams } from '@solidjs/router';
 import { useWorkspace } from '../../context/WorkspaceContext.jsx';
 import { useWorkspacePath } from '../../services/workspaceRoutes.js';
-import AISettings from '../../components/AISettings.jsx';
+import AISettings from '../../components/settings/AISettings.jsx';
 import A from '../../components/WorkspaceLink.jsx';
 import PageHeading from '../../components/PageHeading.jsx';
 export default function SetupPage() {

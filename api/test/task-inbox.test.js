@@ -6,10 +6,11 @@ import pg from 'pg';
 import { createMemoryDatabase } from '../src/storage/memory.js';
 import { createPostgresDatabase } from '../src/storage/postgres.js';
 import { postgresConnection } from '../src/storage/configuration.js';
-import { createHelpdeskService, installHelpdeskRoutes } from '../src/helpdesk.js';
-import { createRequestTasks } from '../src/requestTasks.js';
-import { createRecordMentionDelivery } from '../src/recordMentions.js';
-import { installRecordActivityRoutes } from '../src/recordActivity.js';
+import { createHelpdeskService } from '../src/requests/helpdesk.js';
+import { installHelpdeskRoutes } from '../src/routes/requests/helpdeskRoutes.js';
+import { createRequestTasks } from '../src/requests/requestTasks.js';
+import { createRecordMentionDelivery } from '../src/records/recordMentions.js';
+import { installRecordActivityRoutes } from '../src/routes/records/recordActivityRoutes.js';
 
 async function verify(database) {
   const ownerId = new ObjectId().toString(),

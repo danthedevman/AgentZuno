@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ObjectId } from 'mongodb';
 import { createMemoryDatabase } from '../src/storage/memory.js';
-import { createIntegrationStore } from '../src/integrationStore.js';
-import { createAdminGroup } from '../src/adminGroupActions.js';
+import { createIntegrationStore } from '../src/storage/integrationStore.js';
+import { createAdminGroup } from '../src/identity/adminGroupActions.js';
 
 test('typed group actions reuse the form service, audit creation, deduplicate and reject malformed or unauthorized calls', async () => {
   const database = createMemoryDatabase(),

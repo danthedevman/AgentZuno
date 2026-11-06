@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { randomUUID } from 'node:crypto';
 import { MongoClient } from 'mongodb';
-import { createApiServer } from '../src/app.js';
+import { createApiServer } from '../src/server.js';
 
 async function withServer(run) {
   const server = createApiServer();

@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process';
 import { MongoClient, ObjectId, Binary } from '../api/node_modules/mongodb/lib/index.js';
 import pg from '../api/node_modules/pg/lib/index.js';
 import { createPostgresDatabase } from '../api/src/storage/postgres.js';
-import { createIntegrationStore } from '../api/src/integrationStore.js';
+import { createIntegrationStore } from '../api/src/storage/integrationStore.js';
 
 // Restore drills only touch random, disposable databases in the bundled Compose services.
 function compose(service, command, input) {

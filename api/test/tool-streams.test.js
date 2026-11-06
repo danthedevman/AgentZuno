@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readAIStream } from '../src/aiStream.js';
-import { toolTurns } from '../src/aiTools.js';
+import { readAIStream } from '../src/chat/aiStream.js';
+import { toolTurns } from '../src/chat/aiTools.js';
 function stream(items) {
   return new Response(items.map((item) => 'data: ' + JSON.stringify(item) + '\n\n').join(''), {
     headers: { 'Content-Type': 'text/event-stream' },

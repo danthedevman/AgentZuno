@@ -9,8 +9,8 @@
 ## Structure and code
 
 - Frontend: Solid.js, JavaScript/JSX, Vite. Use Solid reactive primitives; no React or replacement DOM framework.
-- Routes live in `src/pages/`, shells in `src/layouts/`, reusable controls in `src/components/`, state in `src/context/`, and API clients/helpers in `src/services/`.
-- Backend: independent Express project in `api/`. API, BullMQ worker, and web remain separate local processes and Docker services.
+- Routes live in `src/pages/`, shells in `src/layouts/`, reusable controls in `src/components/`, state in `src/context/`, and API clients/helpers in `src/services/`. Group feature-specific pages, components, and helpers in matching subfolders; keep genuinely shared controls at the shared level and styles in `src/styles/`. Use direct imports rather than compatibility wrappers or barrel files.
+- Backend: independent Express project in `api/`. Keep `app.js` for Express composition, `server.js` for HTTP server creation, and `index.js` for startup. Register endpoints in `api/src/routes/<feature>/`, handle HTTP requests/responses in `api/src/controllers/<feature>/`, and keep business rules in feature service folders. Shared middleware belongs in `middleware/`; storage adapters remain in `storage/`. API, BullMQ worker, and web remain separate local processes and Docker services.
 - Prefer small, readable feature services with straightforward control flow. Reuse the same services from forms, typed agent tools, and workers; avoid speculative abstractions and dependencies.
 - Components/files use PascalCase; routes end in `Page`, shells in `Layout`. Functions/variables use descriptive camelCase; CSS/routes use kebab-case. Use `is`/`has`/`can` for booleans where useful.
 - Honor EditorConfig and VS Code formatting: two spaces, LF, final newline, Prettier. Comment only non-obvious constraints.

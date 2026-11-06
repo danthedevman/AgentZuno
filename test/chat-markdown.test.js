@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { JSDOM } from 'jsdom';
 import createDOMPurify from 'dompurify';
-import { renderChatMarkdown, normalizeChatLinks } from '../src/services/chatMarkdown.js';
+import { renderChatMarkdown, normalizeChatLinks } from '../src/services/chat/chatMarkdown.js';
 
 function render(text) {
   const window = new JSDOM('').window;

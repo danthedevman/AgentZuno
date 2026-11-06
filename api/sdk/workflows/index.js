@@ -243,8 +243,32 @@ export function defineWorkflow(input) {
       'submissionMessage',
       'timeoutSeconds',
       'maxConcurrentRuns',
+      'accessTracking',
     ]);
     settings = {};
+    if (input.settings.accessTracking !== undefined) {
+      const tracking = input.settings.accessTracking;
+      object(tracking, ['applicationId', 'accessFieldId']);
+      if (
+        typeof tracking.applicationId !== 'string' ||
+        !tracking.applicationId ||
+        tracking.applicationId.length > 80 ||
+        typeof tracking.accessFieldId !== 'string' ||
+        !form?.fields.some(
+          (field) =>
+            field.id === tracking.accessFieldId &&
+            field.required &&
+            ['text', 'select'].includes(field.type),
+        )
+      )
+        throw new Error(
+          'Access tracking requires an application and a required text or choice access-level field.',
+        );
+      settings.accessTracking = {
+        applicationId: tracking.applicationId,
+        accessFieldId: tracking.accessFieldId,
+      };
+    }
     for (const [key, max] of [
       ['description', 500],
       ['category', 80],

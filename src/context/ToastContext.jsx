@@ -14,14 +14,24 @@ export function ToastProvider(props) {
   const [toasts, setToasts] = createSignal([]);
   const timers = new Map();
   const location = useLocation();
+  let routeVersion = 0;
   let previousRoute = `${location.pathname}${location.search}`;
   createEffect(() => {
     const route = `${location.pathname}${location.search}`;
     if (route === previousRoute) return;
     previousRoute = route;
-    for (const timer of timers.values()) clearTimeout(timer);
-    timers.clear();
-    setToasts([]);
+    routeVersion += 1;
+    setToasts((items) =>
+      items.filter((item) => {
+        if (item.destination === route) {
+          delete item.destination;
+          return true;
+        }
+        clearTimeout(timers.get(item.id));
+        timers.delete(item.id);
+        return false;
+      }),
+    );
   });
   function dismiss(id) {
     clearTimeout(timers.get(id));
@@ -42,7 +52,7 @@ export function ToastProvider(props) {
     for (const timer of timers.values()) clearTimeout(timer);
   });
   return (
-    <ToastContext.Provider value={{ notify, dismiss }}>
+    <ToastContext.Provider value={{ notify, dismiss, scope: () => routeVersion }}>
       {props.children}
       <div class="toast-region" aria-label="Notifications">
         <For each={toasts()}>
@@ -83,9 +93,9 @@ export function ToastProvider(props) {
 }
 export function useToasts() {
   const context = useContext(ToastContext);
-  let active = true;
-  onCleanup(() => {
-    active = false;
-  });
-  return { ...context, notify: (input) => (active ? context.notify(input) : undefined) };
+  const scope = context.scope();
+  return {
+    notify: (input) => (scope === context.scope() ? context.notify(input) : undefined),
+    dismiss: context.dismiss,
+  };
 }

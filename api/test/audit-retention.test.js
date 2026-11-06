@@ -5,10 +5,10 @@ import pg from 'pg';
 import { createMemoryDatabase } from '../src/storage/memory.js';
 import { createPostgresDatabase } from '../src/storage/postgres.js';
 import { postgresConnection } from '../src/storage/configuration.js';
-import { createIntegrationStore } from '../src/integrationStore.js';
-import { createAuditRetention } from '../src/auditRetention.js';
-import { auditOperation } from '../src/audit.js';
-import { executeAgentTool } from '../src/agentToolRegistry.js';
+import { createIntegrationStore } from '../src/storage/integrationStore.js';
+import { createAuditRetention } from '../src/audit/auditRetention.js';
+import { auditOperation } from '../src/audit/audit.js';
+import { executeAgentTool } from '../src/chat/agentToolRegistry.js';
 
 async function verify(db) {
   const store = createIntegrationStore(db);

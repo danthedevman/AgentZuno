@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { MongoClient } from 'mongodb';
 import { createApi } from '../src/app.js';
-import { portalHostname } from '../src/customDomains.js';
+import { portalHostname } from '../src/identity/customDomains.js';
 test('portal hostnames reject URLs, local names, IPs and invalid labels', () => {
   assert.equal(portalHostname('Help.Company.com'), 'help.company.com');
   for (const value of [

@@ -1,6 +1,6 @@
 import { createEffect } from 'solid-js';
 import { useLocation } from '@solidjs/router';
-import { publicPages } from '../services/publicPages.js';
+import { publicPages } from '../services/public/publicPages.js';
 export default function PageMetadata() {
   const location = useLocation();
   function meta(attribute, key, value) {
