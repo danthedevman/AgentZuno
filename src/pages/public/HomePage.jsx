@@ -168,7 +168,7 @@ export default function HomePage() {
         <HeroWorkflowBackground />
       </MarketingSection>
       <MarketingSection
-        class="marketing-section marketing-centered"
+        class="marketing-section marketing-centered marketing-everyday-requests"
         aria-labelledby="workflow-examples-title"
       >
         <div class="marketing-section-intro">
