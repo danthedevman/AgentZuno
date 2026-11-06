@@ -2,15 +2,15 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID, randomBytes } from 'node:crypto';
 import { MongoClient, ObjectId } from 'mongodb';
-import sharp from 'sharp';
 import { createApi } from '../src/app.js';
 import { chatUserContext } from '../src/chat/chatUserContext.js';
 import { workspaceGroups } from '../src/identity/groups.js';
 import { requireExistingQueues } from '../src/identity/helpdeskQueues.js';
+import { requestWorkflowChoices } from '../src/workflows/requestWorkflowSelection.js';
 import { resolveWorkflowApprovers } from '../src/requests/approvalTargets.js';
 
 test(
-  'catalog categories, group purposes, images, personal context and recent views enforce workspace access',
+  'retired catalog endpoints stay unavailable while groups, workflow audiences and recent views remain scoped',
   { skip: !process.env.TEST_MONGODB_URI },
   async () => {
     process.env.MONGODB_URI = process.env.TEST_MONGODB_URI;
@@ -89,40 +89,22 @@ test(
         ),
         /unavailable/,
       );
-      const category = await call(
-        admin.cookie,
-        '/helpdesk/data/tables/ref-catalog-category/records',
-        'POST',
-        { values: { name: 'Equipment', description: 'Device requests', code: 'EQUIP' } },
-        workspace,
-      );
-      assert.equal(category.status, 201, JSON.stringify(category.body));
-      const categoryId = category.body.id;
-      const image = await sharp({
-        create: { width: 8, height: 8, channels: 4, background: '#818CF8' },
-      })
-        .png()
-        .toBuffer();
-      const upload = await call(
-        admin.cookie,
+      for (const path of [
+        '/helpdesk/catalog',
         '/helpdesk/catalog-images',
-        'POST',
-        image,
-        workspace,
-        'image/png',
-      );
-      assert.equal(upload.status, 201, JSON.stringify(upload.body));
+        '/helpdesk/data/tables/ref-catalog-category',
+      ]) {
+        assert.equal((await call(admin.cookie, path, 'GET', undefined, workspace)).status, 404);
+      }
       const definition = {
         version: 1,
         name: 'MacBook Request',
         trigger: { department: 'it', phrases: ['macbook'] },
         steps: [{ id: 'route', action: 'route', params: { queueName: 'Desktop Support' } }],
-        displayInCatalog: true,
         form: {
           title: 'MacBook Request',
           fields: [{ id: 'reason', label: 'Reason', type: 'text', required: true }],
         },
-        settings: { category: categoryId, catalogIcon: 'laptop', catalogImageId: upload.body.id },
       };
       const input = {
         name: definition.name,
@@ -131,35 +113,11 @@ test(
         action: 'route',
         queueName: 'Desktop Support',
         enabled: true,
+        intent: 'publish',
         definition,
       };
       const workflow = await call(admin.cookie, '/helpdesk/workflows', 'POST', input, workspace);
       assert.equal(workflow.status, 201, JSON.stringify(workflow.body));
-      const catalog = await call(
-        admin.cookie,
-        '/helpdesk/catalog?list=1&sort=Workflow',
-        'GET',
-        undefined,
-        workspace,
-      );
-      assert.equal(catalog.body.rows[0].category, 'Equipment');
-      assert.equal(catalog.body.rows[0].catalogImageId, upload.body.id);
-      const related = await call(
-        admin.cookie,
-        `/helpdesk/data/tables/ref-catalog-category/records/${categoryId}/workflows?list=1&sort=Workflow`,
-        'GET',
-        undefined,
-        workspace,
-      );
-      assert.equal(related.body.rows[0].id, workflow.body.id);
-      const categoryOptions = await call(
-        admin.cookie,
-        '/helpdesk/data/tables/ref-catalog-category/options',
-        'GET',
-        undefined,
-        workspace,
-      );
-      assert.ok(categoryOptions.body[0].href.endsWith(categoryId));
       const departmentId = new ObjectId().toHexString();
       const foreignDepartmentId = new ObjectId().toHexString();
       await db.collection('workforceReferences').insertMany([
@@ -192,15 +150,10 @@ test(
       );
       assert.equal(scopedWorkflow.status, 201, JSON.stringify(scopedWorkflow.body));
       assert.equal(scopedWorkflow.body.definition.trigger.departmentId, departmentId);
-      let scopedCatalog = await call(
-        admin.cookie,
-        '/helpdesk/catalog?list=1&sort=Workflow',
-        'GET',
-        undefined,
-        workspace,
-      );
       assert.equal(
-        scopedCatalog.body.rows.some((item) => item.id === scopedWorkflow.body.id),
+        (await requestWorkflowChoices(store, actor)).some(
+          (item) => item.workflowId === scopedWorkflow.body.id,
+        ),
         false,
       );
       await db
@@ -210,15 +163,10 @@ test(
           { $set: { department: departmentId } },
           { upsert: true },
         );
-      scopedCatalog = await call(
-        admin.cookie,
-        '/helpdesk/catalog?list=1&sort=Workflow',
-        'GET',
-        undefined,
-        workspace,
-      );
       assert.equal(
-        scopedCatalog.body.rows.some((item) => item.id === scopedWorkflow.body.id),
+        (await requestWorkflowChoices(store, actor)).some(
+          (item) => item.workflowId === scopedWorkflow.body.id,
+        ),
         true,
       );
       const foreignDepartment = await call(
@@ -236,28 +184,11 @@ test(
       );
       assert.equal(foreignDepartment.status, 422);
       await db.collection('workforceReferences').deleteOne({ _id: departmentId });
-      scopedCatalog = await call(
-        admin.cookie,
-        '/helpdesk/catalog?list=1&sort=Workflow',
-        'GET',
-        undefined,
-        workspace,
-      );
       assert.equal(
-        scopedCatalog.body.rows.some((item) => item.id === scopedWorkflow.body.id),
+        (await requestWorkflowChoices(store, actor)).some(
+          (item) => item.workflowId === scopedWorkflow.body.id,
+        ),
         false,
-      );
-      const badCategory = await call(
-        admin.cookie,
-        '/helpdesk/workflows',
-        'POST',
-        { ...input, definition: { ...definition, settings: { category: 'missing-category' } } },
-        workspace,
-      );
-      assert.equal(badCategory.status, 422);
-      assert.equal(
-        (await call(other.cookie, `/helpdesk/catalog-images/${upload.body.id}`)).status,
-        404,
       );
       const schema = await call(
         admin.cookie,

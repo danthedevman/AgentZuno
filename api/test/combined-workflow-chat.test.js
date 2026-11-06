@@ -30,7 +30,6 @@ test('a combined Admin request saves its group, continues generation, and execut
     version: 1,
     name: 'Monday.com Request',
     trigger: { phrases: ['request monday.com'] },
-    displayInCatalog: true,
     form: {
       title: 'Monday.com Request',
       fields: [
@@ -59,8 +58,8 @@ test('a combined Admin request saves its group, continues generation, and execut
     async (job) => pending.push(job),
     async (url, options) => {
       const body = JSON.parse(options.body);
-      assert.match(body.instructions, /Never ask the administrator for trigger phrases/);
-      assert.match(body.instructions, /use the createGroup tool/);
+      assert.ok(body.tools.some((tool) => tool.name === 'createGroup'));
+      assert.ok(body.tools.some((tool) => tool.name === 'proposeWorkflow'));
       assert.doesNotMatch(body.instructions, /return a fenced group JSON block/);
       calls++;
       if (!body.input.some((item) => item.type === 'function_call_output'))

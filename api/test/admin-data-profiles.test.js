@@ -414,11 +414,25 @@ test(
         text: 'I need a laptop',
       });
       assert.equal(supportChat.status, 202);
-      // Complete the fixture queue state without calling a real model provider.
+      // Model selection is explicit; completing a chat alone must not infer a form.
       await cleanup
         .db(database)
         .collection('chats')
-        .updateOne({ _id: new ObjectId(supportChat.body.id) }, { $set: { status: 'complete' } });
+        .updateOne(
+          { _id: new ObjectId(supportChat.body.id) },
+          {
+            $set: {
+              status: 'complete',
+              'messages.$[reply].status': 'complete',
+              'messages.$[reply].proposals.requestForm': {
+                kind: 'requestForm',
+                workflowId: published.body.id,
+                workflowVersion: published.body.publishedRevision,
+              },
+            },
+          },
+          { arrayFilters: [{ 'reply.id': supportChat.body.messages.at(-1).id }] },
+        );
       const offered = (
         await call(employee, `/helpdesk/support/conversations/${supportChat.body.id}`)
       ).body.requestForm;
@@ -561,10 +575,10 @@ test(
     try {
       await store.ready();
       const defaults = await service.tables(admin);
-      assert.equal(defaults.length, 20);
+      assert.equal(defaults.length, 19);
       assert.ok(defaults.some((table) => table.id === 'ref-task'));
       assert.ok(defaults.some((table) => table.id === 'ref-request'));
-      assert.ok(defaults.some((table) => table.id === 'ref-catalog-category'));
+      assert.ok(!defaults.some((table) => table.id === 'ref-catalog-category'));
       assert.ok(defaults.some((table) => table.id === 'ref-user'));
       assert.ok(defaults.some((table) => table.id === 'ref-group'));
       for (const table of defaults) assert.ok(table.protectedFields.length >= 2);

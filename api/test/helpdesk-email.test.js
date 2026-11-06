@@ -222,12 +222,24 @@ test(
     const cleanup = new MongoClient(uri);
     const pending = [];
     let calls = 0;
+    let workflow;
     const chats = createChatService(
       store,
       async (job) => pending.push(job),
       async (url, options) => {
         calls++;
         assert.match(JSON.parse(options.body).instructions, /You are Zuno/);
+        if (calls === 1)
+          return Response.json({
+            output: [
+              {
+                type: 'function_call',
+                call_id: 'offer-phone-request',
+                name: 'offerRequestForm',
+                arguments: JSON.stringify({ workflowId: workflow.id }),
+              },
+            ],
+          });
         return Response.json({
           output: [
             { content: [{ type: 'output_text', text: 'Your request is with desktop support.' }] },
@@ -272,13 +284,24 @@ test(
       await store
         .collection('helpdeskQueues')
         .insertOne({ ownerId: owner.id, workspaceId: owner.workspaceId, name: 'desktop-support' });
-      await workflows.save(owner, null, {
+      workflow = await workflows.save(owner, null, {
         name: 'Phone routing',
         department: 'it',
         keywords: ['office phone'],
         action: 'route',
         queueName: 'desktop-support',
         enabled: true,
+        intent: 'publish',
+        definition: {
+          version: 1,
+          name: 'Phone routing',
+          trigger: { phrases: [] },
+          form: {
+            title: 'Phone support',
+            fields: [{ id: 'details', label: 'Details', type: 'textarea', required: true }],
+          },
+          steps: [{ id: 'route-phone', action: 'route', params: { queueName: 'desktop-support' } }],
+        },
       });
       const created = await helpdesk.createSupport(employee, {
         requestId: randomUUID(),
@@ -301,28 +324,25 @@ test(
         { status: 403 },
       );
       await chats.process(pending.shift());
-      assert.equal(calls, 1);
+      assert.equal(calls, 2);
       assert.equal((await helpdesk.getSupport(employee, created.id)).status, 'complete');
-      const ticket = await helpdesk.submitSupportTicket(employee, created.id, {
-        title: 'Office phone help',
-        text: 'Help with my office phone',
-      });
+      const form = (await helpdesk.getSupport(employee, created.id)).requestForm;
+      assert.equal(form.workflowId, workflow.id);
+      const submission = {
+        workflowId: form.workflowId,
+        workflowVersion: form.workflowVersion,
+        offerId: form.offerId,
+        answers: { details: 'Help with my office phone' },
+      };
+      const ticket = await helpdesk.submitForm(employee, created.id, submission);
       assert.equal(ticket.department, 'it');
       assert.equal(ticket.queueName, 'desktop-support');
       assert.equal(ticket.submittedVia, 'zuno');
       assert.equal(ticket.messages.length, 0);
-      assert.equal(
-        (
-          await helpdesk.submitSupportTicket(employee, created.id, {
-            title: 'Duplicate',
-            text: 'Do not duplicate',
-          })
-        ).id,
-        ticket.id,
-      );
+      assert.equal((await helpdesk.submitForm(employee, created.id, submission)).id, ticket.id);
       await helpdesk.sendSupport(employee, created.id, { text: 'Thanks, I need more help' });
       await chats.process(pending.shift());
-      assert.equal(calls, 2);
+      assert.equal(calls, 3);
       await assert.rejects(helpdesk.getSupport({ ...employee, id: 'other' }, created.id), {
         status: 404,
       });
@@ -331,7 +351,7 @@ test(
         .collection('helpdeskMembers')
         .updateOne({ workspaceId, userId: employee.id }, { $set: { active: false } });
       await chats.process(pending.shift());
-      assert.equal(calls, 2);
+      assert.equal(calls, 3);
       assert.equal((await chats.get(employee, created.id)).status, 'failed');
     } finally {
       await store.close();

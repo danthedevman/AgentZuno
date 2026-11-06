@@ -412,14 +412,6 @@ export function createChatService(store, enqueue, fetcher = fetch) {
       const changed = nextPhase !== phase;
       if (!changed && Date.now() - lastUpdate < 250) return;
       await authorizeHelpdeskChat(chat);
-      const selectedForm = result.proposals?.requestForm || result.proposals?.channelRequest;
-      if (selectedForm)
-        await selectedRequestWorkflow(
-          store,
-          await resolveChatActor(store, chat),
-          selectedForm.workflowId,
-          selectedForm.workflowVersion,
-        );
       await verifyAssistantKnowledge(store, chat, references);
       await attachmentContext(store, chat);
       const at = new Date();

@@ -76,7 +76,7 @@ Deletion and removal prompts share one dialog layout. When a name is required, e
 
 ## Learn more
 
-The running application includes public documentation at `/docs` and workflow SDK guidance at `/docs/workflows`.
+The running application includes task-focused guides at `/docs`, grouped into everyday use, administration, and developer/operations reference. Start with [Workflows](docs/workflows.md) for the in-app experience; the optional local SDK has its own reference at `/docs/workflow-sdk`.
 
 Technical documentation:
 

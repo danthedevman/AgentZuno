@@ -71,47 +71,47 @@ test(
         4,
       );
       assert.equal(await db.collection('helpdeskTasks').countDocuments({ ownerId: admin.id }), 4);
-      const catalog = await call(admin, '/helpdesk/catalog');
-      assert.equal(catalog.status, 200);
-      assert.equal(catalog.body.length, 4);
+      const workflows = await call(admin, '/helpdesk/workflows');
+      assert.equal(workflows.status, 200);
+      assert.equal(workflows.body.length, 4);
       const inbox = await call(admin, '/helpdesk/inbox');
       assert.equal(inbox.status, 200);
       assert.ok(inbox.body.some((item) => item.status === 'waiting-for-approval'));
       const history = await call(
         admin,
-        `/helpdesk/workflow-conversations?workflowId=${catalog.body[0].id}`,
+        `/helpdesk/workflow-conversations?workflowId=${workflows.body[0].id}`,
       );
       assert.equal(history.body.length, 1);
       assert.match(history.body[0].title, /Build/i);
       assert.equal(
-        (await call(admin, `/helpdesk/workflows/${catalog.body[0].id}/view`)).body.chatId,
+        (await call(admin, `/helpdesk/workflows/${workflows.body[0].id}/view`)).body.chatId,
         history.body[0].id,
       );
       assert.equal(
         (
-          await call(admin, `/helpdesk/workflows/${catalog.body[0].id}/view`, 'PUT', {
+          await call(admin, `/helpdesk/workflows/${workflows.body[0].id}/view`, 'PUT', {
             chatId: null,
           })
         ).status,
         200,
       );
       assert.equal(
-        (await call(admin, `/helpdesk/workflows/${catalog.body[0].id}/view`)).body.chatId,
+        (await call(admin, `/helpdesk/workflows/${workflows.body[0].id}/view`)).body.chatId,
         null,
       );
       assert.equal(
         (
-          await call(admin, `/helpdesk/workflows/${catalog.body[0].id}/view`, 'PUT', {
+          await call(admin, `/helpdesk/workflows/${workflows.body[0].id}/view`, 'PUT', {
             chatId: history.body[0].id,
           })
         ).status,
         200,
       );
       assert.equal(
-        (await call(other, `/helpdesk/workflows/${catalog.body[0].id}/view`)).status,
+        (await call(other, `/helpdesk/workflows/${workflows.body[0].id}/view`)).status,
         404,
       );
-      assert.ok(catalog.body.every((item) => item.name.startsWith('Demo:')));
+      assert.ok(workflows.body.every((item) => item.name.startsWith('Demo:')));
       assert.equal(
         await db.collection('articles').countDocuments({ ownerId: admin.id, status: 'Published' }),
         3,
@@ -137,7 +137,7 @@ test(
       );
       const conversation = await call(admin, '/helpdesk/support/conversations', 'POST', {
         requestId: randomUUID(),
-        workflowId: catalog.body[0].id,
+        workflowId: workflows.body[0].id,
       });
       assert.equal(conversation.status, 202);
       const opened = await call(admin, `/helpdesk/support/conversations/${conversation.body.id}`);
@@ -175,16 +175,21 @@ test(
       const demoWorkflow = await db
         .collection('helpdeskWorkflows')
         .findOne({ ownerId: admin.id, demoDatasetId: { $exists: true } });
-      const categoryId = demoWorkflow.definition.settings.category;
+      const demoAsset = await db.collection('workforceReferences').findOne({
+        ownerId: admin.id,
+        type: 'asset',
+        demoDatasetId: { $exists: true },
+      });
+      const assetId = String(demoAsset._id);
       assert.ok(
-        !(await call(admin, '/helpdesk/data/tables/ref-catalog-category/options')).body.some(
-          (item) => item.value === categoryId,
+        !(await call(admin, '/helpdesk/data/tables/ref-asset/options')).body.some(
+          (item) => item.value === assetId,
         ),
       );
       assert.ok(
-        (
-          await call(admin, '/helpdesk/data/tables/ref-catalog-category/options?includeDemo=1')
-        ).body.some((item) => item.value === categoryId),
+        (await call(admin, '/helpdesk/data/tables/ref-asset/options?includeDemo=1')).body.some(
+          (item) => item.value === assetId,
+        ),
       );
       const blocked = await call(admin, '/helpdesk/workflows', 'POST', {
         source: demoWorkflow.source,
@@ -198,6 +203,12 @@ test(
       delete legacy.demoDatasetId;
       delete legacy.demoIndustry;
       await db.collection('helpdeskWorkflows').insertOne(legacy);
+      await db.collection('adminDataRecords').insertOne({
+        ownerId: admin.id,
+        workspaceId: admin.workspaceId,
+        tableId: new ObjectId().toHexString(),
+        values: { asset: assetId },
+      });
       const preview = await call(admin, '/helpdesk/demo/removal-preview');
       assert.equal(preview.status, 200);
       assert.ok(preview.body.retained.some((item) => item.type === 'approvalGroups'));
@@ -247,11 +258,9 @@ test(
       const unchanged = await db.collection('helpdeskWorkflows').findOne({ _id: legacy._id });
       assert.equal(unchanged.source, legacy.source);
       assert.deepEqual(unchanged.publishedConfig, legacy.publishedConfig);
-      const retainedCategory = await db
-        .collection('workforceReferences')
-        .findOne({ _id: categoryId });
-      assert.ok(retainedCategory.retainedFromDemo);
-      assert.equal(retainedCategory.demoDatasetId, undefined);
+      const retainedAsset = await db.collection('workforceReferences').findOne({ _id: assetId });
+      assert.ok(retainedAsset.retainedFromDemo);
+      assert.equal(retainedAsset.demoDatasetId, undefined);
       assert.equal((await call(admin, '/helpdesk/demo/settings')).body.loaded, false);
       assert.equal(
         (
@@ -273,7 +282,7 @@ test(
         ).status,
         200,
       );
-      assert.ok(await db.collection('workforceReferences').findOne({ _id: categoryId }));
+      assert.ok(await db.collection('workforceReferences').findOne({ _id: assetId }));
       const actions = { receiveMessages: true, respondToUsers: true, workflowNotifications: false };
       assert.equal(
         (await call(admin, '/helpdesk/channels/slack/actions', 'PUT', { version: 0, actions }))

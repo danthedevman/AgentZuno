@@ -10,7 +10,7 @@ export const publicPages = [
     path: 'docs',
     title: 'Documentation | AgentZuno',
     description:
-      'Learn how to install AgentZuno, configure your AI provider, manage knowledge, and build conversational help desk workflows with the TypeScript SDK.',
+      'Find concise AgentZuno guides for employee requests, knowledge, workflows, and workspace setup, with separate developer and operations references.',
   },
   ...documentationPages.map((page) => ({
     path: documentationPath(page).slice(1),

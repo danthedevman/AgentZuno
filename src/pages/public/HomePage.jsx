@@ -210,7 +210,11 @@ export default function HomePage() {
         aria-labelledby="knowledge-feature-title"
       >
         <div class="marketing-copy">
-          <h2 id="knowledge-feature-title">Put answers within reach</h2>
+          <h2 id="knowledge-feature-title">
+            Get answers.
+            <br />
+            Keep work moving.
+          </h2>
           <p>
             Give employees trusted answers wherever they work. Bring your organization’s knowledge
             into one place, ready to explore or find through conversation.
@@ -346,7 +350,7 @@ export default function HomePage() {
       >
         <div class="marketing-copy ownership-graphic">
           <div class="ownership-alternative">
-            <h3>Considering your next help desk?</h3>
+            <h3>Considering your next AI-native help desk?</h3>
             <ul class="ownership-product-links" aria-label="Explore help desk platforms">
               <For each={helpDeskPlatforms}>
                 {(platform) => (

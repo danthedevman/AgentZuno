@@ -1,8 +1,18 @@
 # AgentZuno executable workflow SDK
 
-Admins author and publish workflows. Agents and Users can submit permitted published forms; they cannot change workflow code. Read Only users may inspect permitted configuration but cannot publish or execute it. Assigned approvers also need approval permission. See the [roles and features guide](../../../docs/roles-and-features.md).
+Developer reference for writing workflow TypeScript in a local editor or project. If you use AgentZuno’s Admin conversation or built-in Code tab, no separate SDK installation is needed. Start with the [workflow guide](../../../docs/workflows.md) for the in-app steps.
 
-Install with `npm install ./api/sdk/workflows`. The package includes JavaScript helpers and TypeScript declarations. The application executes the published TypeScript's `run(ctx)` function; the Code tab is editable source, not an export-only example.
+## Install for local authoring
+
+Clone or download the AgentZuno repository. From your separate local TypeScript project, install the SDK from its downloaded folder:
+
+```sh
+npm install /absolute/path/to/agentzuno/api/sdk/workflows
+```
+
+Replace the path with your checkout location. This installs the JavaScript helpers and TypeScript declarations for autocomplete and type checking. It does not install AgentZuno or grant access to a workspace. Review local changes in Git, then paste the source into AgentZuno’s Code tab to test and publish it under normal Admin permissions.
+
+## Example workflow
 
 ```typescript
 import { defineWorkflow } from '@agentzuno/workflows';
@@ -33,7 +43,7 @@ export default defineWorkflow({
 });
 ```
 
-Create Desktop Support in Users → Queues before saving this example. `steps` and optional `routing` declare the allowed action IDs and destinations; they do not execute the workflow. `run` controls execution and branches. The Visual tab presents declared actions; Test and Runs show the actual branch executed. Form, permissions and title edits update the source metadata while preserving `run`; changing visual routing explicitly regenerates its executable routing logic.
+Create Desktop Support in Users & Groups → Groups before saving this example. `steps` and optional `routing` declare the allowed action IDs and destinations; they do not execute the workflow. `run` controls execution and branches. The Visual tab presents declared actions; Test and Runs show the actual branch executed. Form, permissions and title edits update the source metadata while preserving `run`; changing visual routing explicitly regenerates its executable routing logic.
 
 Supported runtime functions:
 
@@ -58,7 +68,7 @@ The offline test has no live adapters. Server publication and execution addition
 
 The worker compiles and type-checks source using the bundled TypeScript compiler, then runs it in a fresh QuickJS WebAssembly runtime inside a dedicated worker thread. It does not use Node `eval` or `vm` to execute workflow code. The guest has no Node globals, filesystem, fetch, timers, arbitrary imports, credentials, clock or randomness. The only import is the SDK. CPU interrupts, a 32 MiB guest memory bound, worker heap limits, 40,000-character source limit, 50-action limit and wall deadline bound execution. This is a WebAssembly and worker-thread boundary, not a separate operating-system container or a security certification.
 
-MongoDB stores authoritative runs, frozen inputs, source hashes, revisions, leases and step receipts. BullMQ carries only scoped IDs. A scheduler recovers queued/expired work after outages (normally within 30 seconds). Replaying a run returns completed step results; it does not resend completed actions. Routes use an atomic event marker to avoid duplicate request history. Transient pre-send provider errors can retry up to five attempts. Slack delivery claimed before an uncertain failure becomes Delivery Unknown and requires investigation; it is never automatically resent. Exactly-once delivery across MongoDB and Slack is not promised.
+The selected MongoDB or PostgreSQL database stores authoritative runs, frozen inputs, source hashes, revisions, leases and step receipts. BullMQ carries only scoped IDs. A scheduler recovers queued/expired work after outages (normally within 30 seconds). Replaying a run returns completed step results; it does not resend completed actions. Routes use an atomic event marker to avoid duplicate request history. Transient pre-send provider errors can retry up to five attempts. Slack delivery claimed before an uncertain failure becomes Delivery Unknown and requires investigation; it is never automatically resent. Exactly-once delivery across MongoDB and Slack is not promised.
 
 Await each action sequentially and keep stable unique step IDs. Parallel effects, arbitrary npm dependencies, ServiceNow/Jira executors, arbitrary network access, schedules, custom approval expiry and general long-running timers are not implemented. A waiting approval releases compute; its decision requeues the immutable run. The original declarative `runWorkflow` helper remains available for integrations that supply their own host callbacks, but the app uses the TypeScript runtime described here.
 

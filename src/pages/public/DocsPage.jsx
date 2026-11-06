@@ -4,6 +4,8 @@ import { A, useLocation, useNavigate } from '@solidjs/router';
 import { For, Show, createEffect, createSignal, onMount, onCleanup } from 'solid-js';
 import {
   documentationPages,
+  documentationCategories,
+  documentationAnchorTarget,
   documentationPath,
   rewriteDocumentationLinks,
 } from '../../services/public/docsNavigation.js';
@@ -26,6 +28,8 @@ import renderGuide from '../../../docs/render.md?raw';
 import awsGuide from '../../../docs/aws.md?raw';
 import securityGuide from '../../../docs/security.md?raw';
 import slackGuide from '../../../docs/slack.md?raw';
+import workflowsGuide from '../../../docs/workflows.md?raw';
+import localDevelopmentGuide from '../../../docs/local-development.md?raw';
 import sdkGuide from '../../../api/sdk/workflows/README.md?raw';
 import sdkTypes from '../../../api/sdk/workflows/index.d.ts?raw';
 
@@ -45,7 +49,9 @@ const guides = {
   recovery: recoveryGuide,
   capacity: capacityGuide,
   'runtime-security': securityGuide,
-  'workflow-sdk': sdkGuide,
+  'workflow-sdk': workflowsGuide,
+  'workflow-development': sdkGuide,
+  'local-development': localDevelopmentGuide,
 };
 
 function DocsScreenshot(props) {
@@ -117,6 +123,11 @@ export default function DocsPage() {
       navigate(documentationPath(legacy) + (hash === '#' + legacy.id ? '' : hash), {
         replace: true,
       });
+      return;
+    }
+    const redirectedAnchor = documentationAnchorTarget(page(), hash);
+    if (redirectedAnchor && redirectedAnchor !== `${currentPath()}${hash}`) {
+      navigate(redirectedAnchor, { replace: true });
       return;
     }
     page();
@@ -251,14 +262,21 @@ export default function DocsPage() {
             <A href="/docs" aria-current={isOverview() ? 'page' : undefined}>
               Overview
             </A>
-            <For each={documentationPages}>
-              {(item) => (
-                <A
-                  href={documentationPath(item)}
-                  aria-current={page()?.id === item.id ? 'page' : undefined}
-                >
-                  {item.title}
-                </A>
+            <For each={documentationCategories}>
+              {(category) => (
+                <>
+                  <strong class="docs-category-label">{category}</strong>
+                  <For each={documentationPages.filter((item) => item.category === category)}>
+                    {(item) => (
+                      <A
+                        href={documentationPath(item)}
+                        aria-current={page()?.id === item.id ? 'page' : undefined}
+                      >
+                        {item.title}
+                      </A>
+                    )}
+                  </For>
+                </>
               )}
             </For>
           </nav>
@@ -297,20 +315,26 @@ export default function DocsPage() {
                   <strong>Read Only</strong> users review permitted records and reports without
                   changing them.
                 </p>
-                <h2>Find a guide</h2>
-                <div class="docs-guide-grid">
-                  <For each={documentationPages}>
-                    {(item) => (
-                      <A href={documentationPath(item)}>
-                        <strong>
-                          {item.title}
-                          <span aria-hidden="true">→</span>
-                        </strong>
-                        <p>{item.description}</p>
-                      </A>
-                    )}
-                  </For>
-                </div>
+                <For each={documentationCategories}>
+                  {(category) => (
+                    <>
+                      <h2>{category}</h2>
+                      <div class="docs-guide-grid">
+                        <For each={documentationPages.filter((item) => item.category === category)}>
+                          {(item) => (
+                            <A href={documentationPath(item)}>
+                              <strong>
+                                {item.title}
+                                <span aria-hidden="true">→</span>
+                              </strong>
+                              <p>{item.description}</p>
+                            </A>
+                          )}
+                        </For>
+                      </div>
+                    </>
+                  )}
+                </For>
                 <DocsScreenshot
                   src="/help/readme-my-work-dark.png"
                   caption="My Work brings assigned requests and personal workload together"
@@ -319,38 +343,6 @@ export default function DocsPage() {
             }
           >
             <p class="docs-guide-description">{page().description}</p>
-            <Show when={page().id === 'workflow-sdk'}>
-              <h2>Build a workflow through conversation</h2>
-              <ol>
-                <li>As an Admin, open Workflows and select New Workflow</li>
-                <li>
-                  Describe the request, form fields, assignment group, and any approvals. For
-                  example: “Create a laptop request with Mac or Windows choices, manager approval,
-                  and a task for Desktop Support”
-                </li>
-                <li>
-                  Review Visual, Form, Approvals, and Settings. Chat changes save to a draft; they
-                  do not publish it
-                </li>
-                <li>
-                  Choose whether it should appear in Catalog, check its permissions, and select
-                  Publish when ready
-                </li>
-                <li>
-                  Submit a permitted test request and inspect Runs before using it with your team
-                </li>
-              </ol>
-              <DocsScreenshot
-                src="/help/readme-workflow-builder-dark.png"
-                caption="The Admin conversation and workflow visual stay side by side"
-              />
-              <h2>Use workflow code</h2>
-              <p>
-                The Code tab contains the TypeScript that runs when the published workflow executes.
-                The reference below is for developers extending a workflow. Agents and employees use
-                the published request experience; they cannot change administrative code.
-              </p>
-            </Show>
             <Show
               when={page().id === 'type-reference'}
               fallback={<ChatMarkdown text={guide()} scrollTables externalLinksNewTab />}
@@ -358,10 +350,17 @@ export default function DocsPage() {
               <h2>Workflow types</h2>
               <p>
                 Use these declarations with the workflow SDK. Start with the{' '}
-                <A href="/docs/workflows">workflow guide</A> for a complete example and review the{' '}
+                <A href="/docs/workflows">workflow guide</A> for in-app steps, the{' '}
+                <A href="/docs/workflow-sdk">optional local SDK</A> for developer examples, and the{' '}
                 <A href="/docs/security">sandbox boundaries</A> before adding actions.
               </p>
               <CodeBlock language="typescript" code={sdkTypes} />
+            </Show>
+            <Show when={page().id === 'workflow-sdk'}>
+              <DocsScreenshot
+                src="/help/readme-workflow-builder-dark.png"
+                caption="Build and review a workflow alongside the Admin conversation"
+              />
             </Show>
             <Show when={page().id === 'requests-and-tasks'}>
               <DocsScreenshot

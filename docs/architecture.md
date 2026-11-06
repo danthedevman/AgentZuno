@@ -16,13 +16,13 @@ Providers must be configured before AI generation is available. Server-side auth
 1. An administrator creates or edits a workflow conversationally or manually.
 2. The workflow combines validated metadata, an optional form, routing, permissions, approvals, settings, and executable TypeScript.
 3. A draft autosaves only after an edit. Publish creates the active revision; Unpublish prevents new offers and execution authorization.
-4. An authorized employee discovers the form through chat or the Catalog. Catalog search runs server-side and loads additional items incrementally.
+4. An authorized employee describes a request in Chat. The support provider selects from permitted published workflows through typed tools; the employee reviews and submits the offered form.
 5. Explicit form submission validates the current published revision and answers, creates a request associated with its chat, and records a durable workflow run.
 6. A worker loads that revision and transpiles its TypeScript. QuickJS executes the resulting JavaScript in a worker thread, with memory, stack, time, and action-count limits.
 7. SDK calls cross an authorization gateway. Actions must match declared grants, destinations, current membership, and connector configuration. The sandbox has no direct filesystem, network, database, or credential access.
 8. Approvals pause execution and surface in the intended approvers' Inbox. On resumption, stored step results support replay and deduplication. External delivery is not guaranteed exactly once; uncertain delivery requires review.
 
-Implemented runtime actions cover routing, handoff, approvals, fulfillment task creation, and Slack messages. ServiceNow and Jira execution are not implemented. The public workflow SDK documentation is available at `/docs/workflows`, with package sources in [api/sdk/workflows](../api/sdk/workflows/README.md).
+Implemented runtime actions cover routing, handoff, approvals, fulfillment task creation, and Slack messages. ServiceNow and Jira execution are not implemented. The public workflow guide is available at `/docs/workflows`, and the local SDK reference at `/docs/workflow-sdk`, with package sources in [api/sdk/workflows](../api/sdk/workflows/README.md).
 
 ## Departments, groups, and data
 
@@ -71,7 +71,7 @@ When adding a feature, use its existing service, route, controller, and frontend
 
 ## Demo and request actions
 
-Admins load and remove demo data only from Settings, using an industry selector and explicit actions. Versioned JSON configuration creates tagged records in the current workspace: published catalog workflows with real executable TypeScript and request forms, published knowledge with a base and topic, assets, an assignment group, and submitted requests with originating chats. The records are fictional and use ordinary workspace permissions and reports. A connected AI provider can retrieve the demo knowledge and offer the workflows. Built-in demo actions route internally and do not send external notifications. Administrators can edit the seeded workflows like other workflows.
+Admins load and remove demo data only from Settings, using an industry selector and explicit actions. Versioned JSON configuration creates tagged records in the current workspace: published workflows with real executable TypeScript and request forms, published knowledge with a base and topic, assets, an assignment group, and submitted requests with originating chats. The records are fictional and use ordinary workspace permissions and reports. A connected AI provider can retrieve the demo knowledge and offer the workflows. Built-in demo actions route internally and do not send external notifications. Administrators can edit the seeded workflows like other workflows.
 
 Loading the same configuration again preserves existing tagged records. A scoped lease serializes load/removal; interrupted operations can be retried. Removal requires confirmation, blocks active or uncertain workflow delivery, retires article vectors through durable tombstones, and removes only tagged data. Requests submitted from demo workflows inherit the dataset tag and are included in removal. Shared conversations, real data, run history and governance logs are retained. Real workflows or articles referencing demo groups/categories/knowledge must be updated before removal. Demo records contribute to normal workspace reports until removed.
 

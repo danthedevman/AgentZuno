@@ -1,64 +1,46 @@
 # Knowledge
 
-Give employees a place to find answers and give both AI agents useful, permitted reference material. Knowledge is organized into bases, topics, and articles. A published article can appear in the Knowledge Center or be referenced in a conversation when the reader has access.
-
-## Who can do what
-
-- **Admins** organize bases and topics, create and edit articles, review AI proposals, publish content, and manage knowledge permissions.
-- **Agents** read permitted knowledge while supporting employees. Their role does not grant workspace administration or permission to change knowledge access.
-- **Users** browse the Knowledge Center and ask Zuno questions about published articles they can access.
-- **Read Only** users inspect permitted knowledge and configuration without editing or publishing it.
-
-See [Roles & Features](roles-and-features.md) for the broader role guide. Knowledge permissions and private attachment checks still apply to every role.
+Knowledge bases collect articles for your team. Topics and subtopics make them easier to browse. Employees and Zuno use published articles they are permitted to read.
 
 ## Organize bases and topics
 
-1. Open **Knowledge**. The left explorer contains knowledge bases, topic folders, and articles. Expand folders with their chevrons or the arrow keys.
-2. As an Admin, choose **Add Knowledge Base** beside the explorer search to create a base, such as IT Support.
-3. Hover or keyboard-focus a base folder and choose **Add Topic**. Use the same action on a topic to add subtopics, up to three topic levels. A new topic inherits its folder's base; parent placement is set when it is created.
-4. Select a folder to browse its contents. Select an article in the explorer to read it on the right, with attachments beside the content. **Add Article** opens the chat editor with the selected base/topic already filled in.
-5. Hover or keyboard-focus a base or topic folder and choose its edit pencil to change its name, description, or access. Quick-edit forms save their permissions with the record.
+1. Open **Knowledge**. Select a folder or article in the left explorer.
+2. As an Admin, select **Add Knowledge Base** beside the explorer search.
+3. Hover or keyboard-focus a folder to reveal **Add Topic**, **Add Article**, and its edit pencil. Actions stay visible on touch devices.
+4. Select the pencil to edit the base or topic in the right-side panel. Save changes when ready.
 
-Top-level topics appear as compact cards. Inside a topic, its subtopics appear as pills above the article list. Search the explorer to find permitted bases, topics, or articles. Admins can hover or keyboard-focus an article row to reveal its edit pencil; the reader also places **Edit Article** beside its breadcrumbs.
+Topics support up to three levels. Top-level topics appear as compact cards; subtopics appear as pills. Empty folders reveal an outlined **Add article** action on hover or focus.
 
-Drag the divider to resize the explorer between 220 and 420 pixels, while retaining space for the article. Keyboard users can focus the divider and use the arrow keys, Home, or End. On phones, use **Browse knowledge folders** to switch between the explorer and content.
-
-Base, ancestor-topic, topic, and article permissions apply together. Restricting a parent folder also restricts the articles beneath it. Topics organize content; they never grant broader access.
-
-Use separate bases when teams need different collections or access boundaries. Use topics to make a collection easier to browse.
+Search the explorer to find permitted folders and articles. Drag its divider to resize it, or focus the divider and use the arrow keys. On phones, use **Browse knowledge folders** to switch panes.
 
 ## Draft an article through conversation
 
-Open a new or existing article. The conversation is on the left; article content and settings are on the right.
+As an Admin, select **Add Article** in the intended folder. Its base and topic are filled in for you. Ask the Admin agent for a draft, for example:
 
-Describe what the article should explain. For example:
+> Write a guide for connecting to company Wi-Fi on Mac and Windows. Explain how to sign in and where to ask for help.
 
-> Write a guide for connecting to Company Wi-Fi on Mac and Windows. Explain how to sign in with a work account and where to ask for help.
-
-The Admin agent prepares a preview. Read it, ask for changes if needed, and approve the proposal before it is saved. Check organization-specific instructions, links, and security requirements before publishing. You can also edit the title and body manually.
-
-Historical authoring conversations are available in **History**. Add related files in **Attachments** using the upload button or drag and drop.
+Review the proposed preview, request changes if needed, and approve it before saving. You can also edit the title and body manually. Use History for past authoring conversations and Attachments for related files.
 
 ## Publish and maintain content
 
-Keep unfinished content in Draft. Publish the reviewed article when it is ready for readers. Drafting or saving an article does not make it available as published knowledge. Publishing a reviewed article is an explicit action; it does not require another conversational approval each time.
+Keep unfinished articles in **Draft**. Publish reviewed guidance when it is ready for readers. Saving a draft alone does not publish it.
 
-Update an article when a process changes. Approved AI proposals and saved edits follow the article's publication controls. Use the standalone preview to check what readers will see. When removing content or attachments, review the confirmation before proceeding.
+Select an article's hover pencil or **Edit Article** beside its breadcrumbs to update it. Check the reader preview and publication state after saving.
 
-Knowledge changes update the retrieval index through background processing. Retrieval checks current records and permissions; deleting or restricting content must prevent it from being returned even while index cleanup is pending.
+To remove a base or topic, open its edit panel and confirm deletion. Move its articles and subtopics and remove connected sources first. The default **General** base can be edited but cannot be deleted or restricted to selected members.
 
 ## Find answers in chat
 
-Employees can browse the Knowledge Center or ask a natural question, such as “How do I connect to office Wi-Fi?” Zuno can reference relevant permitted published articles and include links to open them alongside the conversation.
+Ask Zuno a question such as “How do I connect to company Wi-Fi?” It can reference permitted published articles and link to them. Live conversation requires an enabled AI provider in Settings.
 
-Configure an enabled AI provider in **Settings** for live conversations. Publish the article, use a specific title and useful instructions, and verify that the person asking has access. A similar title alone does not guarantee that every phrasing will return that article.
-
-The Admin agent can also reference permitted knowledge while preparing workflows and article proposals. Publishing knowledge does not authorize either agent to change a user's account or provision access in another application; that needs a separately implemented, configured action.
+Agents and employees can read permitted knowledge; Admins manage content. Read Only members can inspect permitted content without editing it.
 
 ## Control access
 
-Review permissions on the base, topic, and article. Select the intended people or groups, save the changes, and check with an appropriate user role. A published status makes content eligible for reading; it does not override access restrictions.
+Admins set access on bases, topics, and articles. Their restrictions apply together: publishing an article does not override them. General is available to all workspace members, while its articles and topics can still have restrictions.
 
-Private files uploaded into a support conversation remain scoped to that conversation. They are not automatically shared knowledge. Attachments on an article follow the article's authorized access checks.
+Article attachments follow the article's access rules. Files uploaded privately in a support chat do not become shared knowledge.
 
-The default General base is available to all workspace members and can be renamed or edited by the owning administrator, but cannot be deleted or restricted. Topic and article restrictions still apply, and external agents still need explicit base grants. Edit a base or topic in the right-side panel. Other folders offer confirmed deletion when empty; first move any articles/subtopics and remove source connections. Empty explorer folders reveal Add article on hover or keyboard focus, with the action always visible on touch devices.
+## If an article is missing
+
+Check that it is published, belongs to the intended base and topic, and is available to the person asking. Use a specific title and clear instructions. For technical retrieval and permission details, see [Security & Sandbox](security.md).

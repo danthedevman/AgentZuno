@@ -105,7 +105,9 @@ test('profile avatar stays above the cover and navigation controls retain their 
     expect(Math.abs(box.width - box.height)).toBeLessThanOrEqual(1);
     expect(box.width).toBeLessThanOrEqual(40);
   }
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
+    .toBe(true);
 });
 
 test('request conversations and workflow visuals render current app records', async ({
@@ -195,7 +197,7 @@ test('workflow publication, approval rejection and task completion persist throu
   await page
     .getByRole('textbox', { name: 'Title', exact: true })
     .fill('Prepare and verify the laptop');
-  await page.getByLabel('Due Date', { exact: true }).fill('2027-03-12');
+  await page.getByLabel(/^Due Date\b/).fill('2027-03-12');
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.getByRole('textbox', { name: 'Title', exact: true })).toHaveCount(0);
   expect((await (await page.request.get(`/api/helpdesk/tasks/${task.id}`)).json()).title).toBe(
@@ -283,8 +285,8 @@ test('task property rows, due dates and activity fit both desktop and mobile', a
     true,
   );
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
-  await expect(page.getByLabel('Due Date', { exact: true })).toHaveValue('2027-03-12');
-  await page.getByLabel('Due Date', { exact: true }).fill('2027-03-15');
+  await expect(page.getByLabel(/^Due Date\b/)).toHaveValue('2027-03-12');
+  await page.getByLabel(/^Due Date\b/).fill('2027-03-15');
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.getByRole('textbox', { name: 'Title', exact: true })).toHaveCount(0);
   expect((await (await page.request.get(`/api/helpdesk/tasks/${task.id}`)).json()).dueDate).toBe(
@@ -451,6 +453,36 @@ test('public docs have focused routes, mobile navigation, legacy links and predi
   await expect(page).toHaveURL(/\/docs\/knowledge$/);
   await expect(page.getByRole('heading', { name: 'Knowledge', exact: true })).toBeVisible();
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+  await page.goto('/docs/workflows');
+  await expect(page.getByRole('heading', { name: 'Workflows', exact: true })).toBeVisible();
+  await expect(page.locator('.docs-content')).toContainText('no SDK installation is needed');
+  await expect(page.locator('.docs-content')).not.toContainText('npm install');
+  await page
+    .locator('.docs-content')
+    .getByRole('link', { name: 'Workflow SDK', exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/docs\/workflow-sdk$/);
+  await expect(page.locator('.docs-content')).toContainText(
+    'npm install /absolute/path/to/agentzuno/api/sdk/workflows',
+  );
+  await page.goto('/docs/workflows#runtime-and-operational-limits');
+  await expect(page).toHaveURL(/\/docs\/workflow-sdk#runtime-and-operational-limits$/);
+  await expect
+    .poll(() =>
+      page
+        .locator('#runtime-and-operational-limits')
+        .evaluate((element) => element.getBoundingClientRect().top),
+    )
+    .toBeLessThan(200);
+  await page.goto('/docs#roles-and-features-6');
+  await expect(page).toHaveURL(/\/docs\/roles#approval-permission$/);
+  await expect
+    .poll(() =>
+      page
+        .locator('#approval-permission')
+        .evaluate((element) => element.getBoundingClientRect().top),
+    )
+    .toBeLessThan(200);
   await page.goto('/docs/requests-and-tasks');
   const screenshot = page.locator('.docs-screenshot img').first();
   await screenshot.scrollIntoViewIfNeeded();
@@ -976,9 +1008,16 @@ test('workflow and My Requests tables consolidate details into two columns', asy
   const sortControl = page.getByRole('combobox', { name: 'Sort records by', exact: true });
   await expect(sortControl).toHaveAttribute('title', /Updated/);
   await sortControl.click();
-  await page.getByRole('option', { name: 'Request · Ascending', exact: true }).click();
-  await expect(sortControl).toHaveAttribute('aria-description', 'Request · Ascending');
+  await page.getByRole('option', { name: 'Request', exact: true }).click();
+  await expect(sortControl).toHaveAttribute('aria-description', 'Request');
   await expect(sortControl).toHaveAttribute('aria-expanded', 'false');
+  await sortControl.click();
+  await page.getByRole('option', { name: 'Request, ascending', exact: true }).click();
+  await sortControl.click();
+  await expect(
+    page.getByRole('option', { name: 'Request, descending', exact: true }),
+  ).toBeVisible();
+  await page.keyboard.press('Escape');
   const filter = page.getByRole('combobox', { name: 'Request status filter', exact: true });
   await expect(filter).toHaveAttribute('title', /All Statuses/);
   expect((await filter.boundingBox()).width).toBeLessThanOrEqual(40);
@@ -986,6 +1025,7 @@ test('workflow and My Requests tables consolidate details into two columns', asy
     .getByRole('group', { name: 'My Requests view', exact: true })
     .getByRole('button', { name: 'Table', exact: true })
     .click();
+  await expect(sortControl).toBeHidden();
   const views = page.getByRole('group', { name: 'My Requests view', exact: true });
   await expect(views).not.toContainText('Cards');
   await expect(views).not.toContainText('Table');
