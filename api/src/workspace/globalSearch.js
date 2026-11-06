@@ -1,6 +1,10 @@
 import { createRequestTasks } from '../requests/requestTasks.js';
 import { helpdeskScope, requestScope, deny } from '../identity/helpdeskRoles.js';
-import { canReadAuthoredArticle, knowledgeAllowed } from '../knowledge/knowledgeAccess.js';
+import {
+  canReadAuthoredArticle,
+  knowledgeAllowed,
+  canReadKnowledgeTopic,
+} from '../knowledge/knowledgeAccess.js';
 import { canUseWorkflow } from '../../sdk/workflows/index.js';
 import { matchesWorkflowDepartment } from '../workflows/workflowDepartments.js';
 import { createAdminData } from '../data/adminData.js';
@@ -94,7 +98,7 @@ export async function searchWorkspace(store, user, term, helpdesk) {
     if (!baseId || !(await knowledgeAllowed(store, user, 'base', baseId))) continue;
     if (
       record.type === 'topic' &&
-      !(await knowledgeAllowed(store, user, 'topic', String(record._id)))
+      !(await canReadKnowledgeTopic(store, user, String(record._id), baseId))
     )
       continue;
     push(

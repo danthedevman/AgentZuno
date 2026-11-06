@@ -50,14 +50,10 @@ export default function CreateTopicPage(props) {
       }
       await refresh();
       const destination = path(
-        baseId() ? `/workspace/knowledge/bases/${baseId()}` : '/workspace/knowledge?tab=topics',
+        baseId() ? `/workspace/knowledge/bases/${baseId()}` : '/workspace/knowledge',
       );
       notify({ tone: 'success', message: 'Topic saved.', destination });
-      navigate(
-        path(
-          baseId() ? `/workspace/knowledge/bases/${baseId()}` : '/workspace/knowledge?tab=topics',
-        ),
-      );
+      navigate(path(baseId() ? `/workspace/knowledge/bases/${baseId()}` : '/workspace/knowledge'));
     } catch (error) {
       setError(error.message);
     } finally {
@@ -69,7 +65,7 @@ export default function CreateTopicPage(props) {
       <Breadcrumbs
         label="Topic location"
         items={[
-          { label: 'Knowledge', href: '/workspace/knowledge?tab=topics' },
+          { label: 'Knowledge', href: '/workspace/knowledge' },
           baseId() && {
             label:
               workspace()?.knowledgeBases?.find((item) => item.id === baseId())?.name ||
@@ -90,11 +86,7 @@ export default function CreateTopicPage(props) {
         >
           <A
             class="workspace-button secondary small"
-            href={
-              baseId()
-                ? `/workspace/knowledge/bases/${baseId()}`
-                : '/workspace/knowledge?tab=topics'
-            }
+            href={baseId() ? `/workspace/knowledge/bases/${baseId()}` : '/workspace/knowledge'}
           >
             Cancel
           </A>
@@ -122,7 +114,6 @@ export default function CreateTopicPage(props) {
           onSubmit={save}
         >
           <section class="record-section">
-            <h2>Topic Details</h2>
             <div class="record-property-list">
               <Show
                 when={editing()}

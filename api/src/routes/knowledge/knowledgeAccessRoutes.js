@@ -4,7 +4,7 @@ import { createKnowledgeAccessController } from '../../controllers/knowledge/kno
 export function installKnowledgeAccessRoutes(app, store) {
   const controller = createKnowledgeAccessController(store);
   app.use(
-    '/api/helpdesk/knowledge-center',
+    ['/api/helpdesk/knowledge-center', '/api/helpdesk/knowledge-directory'],
     rateLimit({
       windowMs: 60000,
       limit: 120,
@@ -22,4 +22,5 @@ export function installKnowledgeAccessRoutes(app, store) {
     controller.putKnowledgePermissionsKindId,
   );
   app.get('/api/helpdesk/knowledge-center', controller.getKnowledgeCenter);
+  app.get('/api/helpdesk/knowledge-directory', controller.getKnowledgeDirectory);
 }

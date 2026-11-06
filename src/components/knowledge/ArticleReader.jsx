@@ -1,28 +1,18 @@
-import { Show, createSignal } from 'solid-js';
+import { createUniqueId } from 'solid-js';
 import ArticleEditor from './ArticleEditor.jsx';
 import ArticleAttachments from './ArticleAttachments.jsx';
+
 export default function ArticleReader(props) {
-  const [tab, setTab] = createSignal('article');
+  const attachmentsHeading = createUniqueId();
   return (
-    <>
-      <div class="record-detail-tabs" role="tablist" aria-label="Article sections">
-        <button role="tab" aria-selected={tab() === 'article'} onClick={() => setTab('article')}>
-          Article
-        </button>
-        <button
-          role="tab"
-          aria-selected={tab() === 'attachments'}
-          onClick={() => setTab('attachments')}
-        >
-          Attachments
-        </button>
-      </div>
-      <Show when={tab() === 'article'}>
+    <div class="article-reader-layout">
+      <div class="article-reader-content">
         <ArticleEditor readOnly content={props.body || ''} />
-      </Show>
-      <Show when={tab() === 'attachments'}>
+      </div>
+      <aside class="article-reader-attachments" aria-labelledby={attachmentsHeading}>
+        <h2 id={attachmentsHeading}>Attachments</h2>
         <ArticleAttachments articleId={props.articleId} />
-      </Show>
-    </>
+      </aside>
+    </div>
   );
 }

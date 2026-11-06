@@ -132,7 +132,7 @@ export default function ArticleLayout(props) {
                 href={
                   article().id
                     ? `/workspace/articles/${article().id}`
-                    : '/workspace/knowledge?tab=articles'
+                    : '/workspace/knowledge?view=articles'
                 }
               >
                 Cancel
@@ -155,7 +155,7 @@ export default function ArticleLayout(props) {
                 Open source
               </a>
             </Show>
-            <A class="workspace-button secondary" href="/workspace/knowledge?tab=articles">
+            <A class="workspace-button secondary" href="/workspace/knowledge?view=articles">
               <Icon name="book-pen" />
               Browse articles
             </A>
@@ -192,7 +192,7 @@ export default function ArticleLayout(props) {
                 <Show when={base()} fallback="Not recorded">
                   {(item) => (
                     <A
-                      href={`/workspace/knowledge?tab=articles&base=${encodeURIComponent(item().id)}`}
+                      href={`/workspace/knowledge?view=articles&base=${encodeURIComponent(item().id)}`}
                     >
                       {item().name}
                     </A>
@@ -206,7 +206,7 @@ export default function ArticleLayout(props) {
                     <For each={topics()}>
                       {(topic) => (
                         <A
-                          href={`/workspace/knowledge?tab=articles&topic=${encodeURIComponent(topic.id)}`}
+                          href={`/workspace/knowledge?view=articles&topic=${encodeURIComponent(topic.id)}`}
                         >
                           {topic.name}
                         </A>

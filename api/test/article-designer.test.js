@@ -99,9 +99,12 @@ test(
       const preview = await call(admin, '/helpdesk/article-proposals', 'POST', {
         draft,
         chatId: draftChat.body.id,
+        articleId: draftChat.body.articleId,
+        expectedUpdatedAt: draftChat.body.articleUpdatedAt,
       });
       assert.equal(preview.status, 201);
-      assert.equal(await db.collection('articles').countDocuments({}), 0);
+      assert.equal(await db.collection('articles').countDocuments({}), 1);
+      assert.equal((await db.collection('articles').findOne({ _id: new ObjectId(draftChat.body.articleId) })).status, 'Draft');
       assert.equal(preview.body.draft.body, '<h2>Start</h2><p>Contact support.</p>');
       assert.equal(
         (await call(other, `/helpdesk/article-proposals/${preview.body.id}`)).status,
@@ -123,7 +126,8 @@ test(
         ).status,
         400,
       );
-      assert.equal(await db.collection('articles').countDocuments({}), 0);
+      assert.equal(await db.collection('articles').countDocuments({}), 1);
+      assert.equal((await db.collection('articles').findOne({ _id: new ObjectId(draftChat.body.articleId) })).status, 'Draft');
       const saved = await call(
         admin,
         `/helpdesk/article-proposals/${preview.body.id}/approve`,
@@ -231,6 +235,10 @@ test(
       });
       const member = { ...employee, workspaceId: admin.workspaceId };
       assert.equal((await call(member, '/helpdesk/knowledge-center')).body.bases.length, 0);
+      assert.equal(
+        (await call(member, '/helpdesk/knowledge-center?q=Newer')).body.articles.total,
+        0,
+      );
       const basePolicy = await call(
         admin,
         `/helpdesk/knowledge-permissions/base/${admin.workspaceId}`,
@@ -241,6 +249,9 @@ test(
       const center = await call(member, `/helpdesk/knowledge-center?base=${admin.workspaceId}`);
       assert.equal(center.status, 200);
       assert.equal(center.body.articles.rows[0].id, saved.body.id);
+      const globalSearch = await call(member, '/helpdesk/knowledge-center?q=Newer');
+      assert.equal(globalSearch.body.articles.rows[0].id, saved.body.id);
+      assert.equal(center.body.bases[0].articles[0].id, saved.body.id);
       const reader = await call(member, `/helpdesk/knowledge-center?article=${saved.body.id}`);
       assert.equal(reader.status, 200);
       assert.equal(reader.body.title, 'Newer edit');

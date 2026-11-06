@@ -1,3 +1,5 @@
+import ChangeReview from '../../../components/records/ChangeReview.jsx';
+import { changedSections } from '../../../utils/textDiff.js';
 import { pollConversation } from '../../../services/chat/conversationPolling.js';
 import ChatPanelToolbar from '../../../components/chat/ChatPanelToolbar.jsx';
 import { followChatProgress } from '../../../services/chat/chatFollow.js';
@@ -49,6 +51,9 @@ export default function CreateArticlePage(props) {
   const [prompt, setPrompt] = createSignal('');
   const [chatId, setChatId] = createSignal(query.chat || props.article?.authoringChatId || '');
   const [proposal, setProposal] = createSignal(null);
+  const [chatBaseline, setChatBaseline] = createSignal(null);
+  const [reviewSections, setReviewSections] = createSignal([]);
+  const [reviewedResponse, setReviewedResponse] = createSignal('');
   const [busy, setBusy] = createSignal(false);
   const [uploading, setUploading] = createSignal(false);
   const [chatStarting, setChatStarting] = createSignal(false);
@@ -136,9 +141,59 @@ export default function CreateArticlePage(props) {
   function changed() {
     setProposal(null);
   }
+  const articleSections = (before, after) => [
+    { label: 'Title', before: before.title || '', after: after.title || '' },
+    {
+      label: 'Body',
+      before: (before.body || '').replace(/></g, '>\n<'),
+      after: (after.body || '').replace(/></g, '>\n<'),
+    },
+    {
+      label: 'Knowledge Base',
+      before:
+        workspace()?.knowledgeBases?.find((item) => item.id === before.knowledgeBaseId)?.name || '',
+      after:
+        workspace()?.knowledgeBases?.find((item) => item.id === after.knowledgeBaseId)?.name || '',
+    },
+    {
+      label: 'Topics',
+      before: (before.topicIds || [])
+        .map(
+          (id) => workspace()?.topics?.find((item) => item.id === id)?.name || 'Unavailable topic',
+        )
+        .sort()
+        .join('\n'),
+      after: (after.topicIds || [])
+        .map(
+          (id) => workspace()?.topics?.find((item) => item.id === id)?.name || 'Unavailable topic',
+        )
+        .sort()
+        .join('\n'),
+    },
+  ];
+  const savedDraft = () => ({
+    title: props.article?.title || '',
+    body: props.article?.body || '',
+    knowledgeBaseId: props.article?.base || base(),
+    topicIds: props.article?.topicIds || topics(),
+  });
+  const hasChatChanges = () => {
+    const current = currentConversation();
+    const response = current?.messages?.filter((message) => message.role === 'assistant').at(-1);
+    return (
+      current?.status === 'complete' &&
+      response?.id !== reviewedResponse() &&
+      !!(current.candidate || response?.proposals?.articleMetadata) &&
+      changedSections(
+        articleSections(chatBaseline() || savedDraft(), draft(status(), current.candidate)),
+      ).length > 0
+    );
+  };
+
   async function chat(event) {
     event.preventDefault();
     if (busy() || !prompt().trim()) return;
+    setChatBaseline(draft());
     setBusy(true);
     setChatStarting(true);
     setTab('preview');
@@ -201,6 +256,9 @@ export default function CreateArticlePage(props) {
         await approve(result);
         return;
       }
+      setReviewSections(
+        articleSections(candidate ? chatBaseline() || savedDraft() : savedDraft(), result.draft),
+      );
       setProposal(result);
       setTab('preview');
       if (standalone)
@@ -236,7 +294,7 @@ export default function CreateArticlePage(props) {
     const response = current?.messages?.filter((message) => message.role === 'assistant').at(-1);
     const key =
       candidate && current.status === 'complete' && response ? `${chatId()}:${response.id}` : '';
-    if (!key || key === previewedResponse || busy() || !base()) return;
+    if (!key || key === previewedResponse || busy() || !base() || !hasChatChanges()) return;
     previewedResponse = key;
     review(status(), candidate);
   });
@@ -284,6 +342,11 @@ export default function CreateArticlePage(props) {
       setTopics(saved.topicIds);
       setStatus(saved.status);
       setAttachmentIds(saved.attachmentIds || []);
+      setReviewedResponse(
+        currentConversation()
+          ?.messages?.filter((message) => message.role === 'assistant')
+          .at(-1)?.id || '',
+      );
       setProposal(null);
       setTab('editor');
       await refresh();
@@ -310,7 +373,7 @@ export default function CreateArticlePage(props) {
         <Breadcrumbs
           label="Article location"
           items={[
-            { label: 'Knowledge', href: '/workspace/knowledge?tab=articles' },
+            { label: 'Knowledge', href: '/workspace/knowledge?view=articles' },
             base() && {
               label:
                 workspace()?.knowledgeBases?.find((item) => item.id === base())?.name ||
@@ -319,7 +382,7 @@ export default function CreateArticlePage(props) {
             },
             topics().length === 1 && {
               label: workspace()?.topics?.find((item) => item.id === topics()[0])?.name || 'Topic',
-              href: `/workspace/knowledge?tab=articles&base=${encodeURIComponent(base())}&topic=${encodeURIComponent(topics()[0])}`,
+              href: `/workspace/knowledge?view=articles&base=${encodeURIComponent(base())}&topic=${encodeURIComponent(topics()[0])}`,
             },
             { label: title() || 'New Article' },
           ]}
@@ -333,14 +396,16 @@ export default function CreateArticlePage(props) {
           >
             Preview
           </button>
-          <button
-            type="button"
-            class="workspace-button secondary small"
-            disabled={!canEdit() || busy() || uploading() || isGeneratingArticle()}
-            onClick={() => review()}
-          >
-            Review Changes
-          </button>
+          <Show when={hasChatChanges()}>
+            <button
+              type="button"
+              class="workspace-button secondary small"
+              disabled={!canEdit() || busy() || uploading() || isGeneratingArticle()}
+              onClick={() => review(status(), currentConversation().candidate || draft())}
+            >
+              Review Changes
+            </button>
+          </Show>
           <Show when={articleId() && status() === 'Published'}>
             <button
               type="button"
@@ -404,16 +469,6 @@ export default function CreateArticlePage(props) {
                 </article>
               )}
             </For>
-            <Show when={currentConversation()?.candidate}>
-              <button
-                type="button"
-                class="workspace-button secondary"
-                disabled={busy()}
-                onClick={() => review(status(), currentConversation().candidate)}
-              >
-                Review Proposed Article
-              </button>
-            </Show>
           </div>
           <div class="article-chat-composer">
             <ChatPrompt
@@ -594,7 +649,12 @@ export default function CreateArticlePage(props) {
               <Show when={!isGeneratingArticle() && !(busy() && !proposal())}>
                 <Show
                   when={proposal()}
-                  fallback={<p>Review your changes to prepare an article preview.</p>}
+                  fallback={
+                    <p>
+                      No proposed changes to review. Continue editing or ask the Admin agent for a
+                      change.
+                    </p>
+                  }
                 >
                   {(item) => (
                     <>
@@ -602,6 +662,7 @@ export default function CreateArticlePage(props) {
                         Review this {item().draft.status.toLowerCase()} article before approving.
                         Your saved article has not changed.
                       </p>
+                      <ChangeReview sections={reviewSections()} />
                       <h1>{item().draft.title}</h1>
                       <ArticleEditor readOnly content={item().draft.body} />
                       <Show when={item().draft.attachmentIds?.length}>

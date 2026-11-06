@@ -126,7 +126,6 @@ export default function QueuePage(props) {
           id="queue-form"
           sections={[
             {
-              title: 'Group Details',
               fields: [
                 {
                   id: 'name',

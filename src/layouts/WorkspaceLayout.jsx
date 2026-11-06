@@ -29,10 +29,9 @@ import SearchOverlay from '../components/SearchOverlay.jsx';
 import { openDialog } from '../services/dialogs.js';
 
 const navigation = [
-  ['/workspace/my-work', 'work', 'My Work'],
+  ['/workspace/dashboard', 'home', 'Dashboard'],
   ['/workspace/chat', 'chat', 'Chat'],
   ['/workspace/inbox', 'inbox', 'Inbox'],
-  ['/workspace/requests', 'request', 'My Requests'],
   ['/workspace/catalog', 'catalog', 'Catalog'],
   ['/workspace/knowledge', 'book-pen', 'Knowledge'],
   ['/workspace/workflows', 'workflow', 'Workflows'],
@@ -174,6 +173,7 @@ function WorkspaceShell(props) {
       if (path.endsWith('/my-work'))
         return !access.error && ['admin', 'agent'].includes(access()?.role);
       if (
+        path.endsWith('/dashboard') ||
         path.endsWith('/catalog') ||
         path.endsWith('/requests') ||
         path.endsWith('/chat') ||
@@ -533,7 +533,7 @@ function WorkspaceShell(props) {
               }))}
               onChange={(id) => {
                 document.getElementById('profile-popover').hidePopover();
-                navigate(`/workspace/${id}/requests`);
+                navigate(`/workspace/${id}/dashboard`);
               }}
             />
           </label>
@@ -696,10 +696,7 @@ export default function WorkspaceLayout(props) {
       !access.error &&
       location.pathname.replace(/\/$/, '') === `/workspace/${params.workspaceId}`
     )
-      navigate(
-        `/workspace/${params.workspaceId}/${['admin', 'agent'].includes(access()?.role) ? 'my-work' : 'chat'}${location.search}`,
-        { replace: true },
-      );
+      navigate(`/workspace/${params.workspaceId}/dashboard${location.search}`, { replace: true });
     else if (session()?.user && !params.workspaceId)
       navigate(
         location.pathname.replace('/workspace', `/workspace/${session().user.workspaceId}`) +

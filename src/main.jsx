@@ -1,13 +1,23 @@
-import { render } from 'solid-js/web';
+import { render, hydrate } from 'solid-js/web';
+import PublicApp from './PublicApp.jsx';
 import App from './App.jsx';
-import '@fontsource-variable/inter';
-import '@fontsource/shippori-mincho/latin-400.css';
-import '@fontsource/shippori-mincho/latin-500.css';
+import './styles/fonts.css';
 import './styles/public.css';
 import './styles/workspace.css';
 
-document.documentElement.classList.add('app-ready');
 const root = document.querySelector('#root');
-// Public pages include build-time HTML; replace it with the interactive Solid app.
-root.replaceChildren();
-render(() => <App />, root);
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const path = window.location.pathname.slice(base.length).replace(/\/$/, '') || '/';
+const isPublic =
+  path === '/docs' ||
+  path.startsWith('/docs/') ||
+  (path === '/' && import.meta.env.VITE_STATIC_SITE === 'true');
+if (isPublic && root.querySelector('[data-hk]')) {
+  // Public pages retain their server-rendered nodes and layout during startup.
+  globalThis._$HY ||= { events: [], completed: new WeakSet(), r: {}, fe() {} };
+  hydrate(() => <PublicApp />, root);
+} else {
+  root.replaceChildren();
+  render(() => <App />, root);
+}
+document.documentElement.classList.add('app-ready');

@@ -27,7 +27,7 @@ Your selected database persists accounts and workspace records. Redis coordinate
 
 Configure an AI provider in workspace Settings before using AI chat. Connector application credentials are entered through Connectors; SMTP and identity-provider configuration belong in Settings. Credentials are encrypted in the selected database rather than stored as connector-specific environment variables.
 
-Admins and Agents land on My Work. Other roles land on Chat. New workspaces start without other users' records; demo login is disabled.
+All roles land on Dashboard. Everyone can follow My Requests there; Admins and Agents can switch to My Work for assignments and workload reports. Chat remains a dedicated page. New workspaces start without other users' records; demo login is disabled.
 
 ## Local Node development
 

@@ -29,29 +29,33 @@ export default function InboxList(props) {
       role="tabpanel"
       aria-labelledby={`inbox-tab-${props.archived ? 'archive' : 'primary'}`}
     >
-      <Show when={props.selectedIds?.length || props.busyIds?.length}>
-        <div class="inbox-selection-actions" role="group" aria-label="Selected inbox items">
-          <span role="status">
-            {props.busyIds?.length
-              ? `${props.archived ? 'Restoring' : 'Archiving'} ${props.processedCount} of ${props.busyIds.length}…`
-              : `${props.selectedIds.length} selected`}
-          </span>
-          <button
-            class="inbox-bulk-action"
-            type="button"
-            disabled={!!props.busyIds?.length || props.loading}
-            onClick={props.onBulkArchive}
-          >
-            <Icon name={props.archived ? 'restore' : 'archive'} />
-            {props.archived ? 'Restore' : 'Archive'}
-          </button>
-        </div>
-      </Show>
       <RecordTable
         onEmptyChange={props.onEmptyChange}
         label="Inbox"
         emptyAction={{ label: 'Start Chat', href: '/workspace/chat' }}
         query={props.query}
+        onQueryChange={props.onQueryChange}
+        toolbarActions={
+          <Show when={props.selectedIds?.length || props.busyIds?.length}>
+            <div class="inbox-selection-actions" role="group" aria-label="Selected inbox items">
+              <span role="status">
+                {props.busyIds?.length
+                  ? `${props.archived ? 'Restoring' : 'Archiving'} ${props.processedCount} of ${props.busyIds.length}…`
+                  : `${props.selectedIds.length} selected`}
+              </span>
+              <button
+                class="inbox-bulk-action icon-only"
+                aria-label={props.archived ? 'Restore' : 'Archive'}
+                title={props.archived ? 'Restore selected items' : 'Archive selected items'}
+                type="button"
+                disabled={!!props.busyIds?.length || props.loading}
+                onClick={props.onBulkArchive}
+              >
+                <Icon name={props.archived ? 'restore' : 'archive'} />
+              </button>
+            </div>
+          </Show>
+        }
         source="/api/helpdesk/inbox"
         sourceParams={{ tab: props.archived ? 'archive' : 'primary' }}
         refreshKey={props.refreshKey}

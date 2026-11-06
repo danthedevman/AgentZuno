@@ -44,6 +44,7 @@ export default function KnowledgeOverviewPage(props) {
   return (
     <section class="knowledge-overview" aria-label="Knowledge overview">
       <DashboardToolbar
+        title={props.title}
         refreshLabel="Refresh knowledge statistics"
         loading={report.loading}
         actions={props.actions}

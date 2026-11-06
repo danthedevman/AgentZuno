@@ -1,5 +1,5 @@
 import Skeleton from '../../../components/Skeleton.jsx';
-import { displayLabel, statusLabel } from '../../../utils/displayLabels.js';
+import { displayLabel } from '../../../utils/displayLabels.js';
 import { Show, createEffect, createResource } from 'solid-js';
 import { useNavigate, useSearchParams } from '@solidjs/router';
 import { useWorkspace } from '../../../context/WorkspaceContext.jsx';
@@ -9,7 +9,6 @@ import A from '../../../components/WorkspaceLink.jsx';
 import PageHeading from '../../../components/PageHeading.jsx';
 import RecordTable from '../../../components/records/RecordTable.jsx';
 import ToastMessage from '../../../components/ToastMessage.jsx';
-import Icon from '../../../components/Icon.jsx';
 
 export default function WorkflowsPage() {
   const { access } = useWorkspace();
@@ -60,22 +59,18 @@ export default function WorkflowsPage() {
                 <A class="article-table-title" href={`/workspace/workflows/${item.id}/edit`}>
                   <span>
                     <strong>{item.name}</strong>
-                    <small>{displayLabel(item.queueName) || 'No Queue'}</small>
+                    <small class="record-row-details">
+                      <span>{displayLabel(item.queueName) || 'No Assignment Group'}</span>
+                      <span
+                        class="activity-status"
+                        data-tone={item.enabled ? 'positive' : 'informational'}
+                      >
+                        <span class="activity-status-dot" />
+                        {item.enabled ? 'Published' : 'Draft'}
+                      </span>
+                    </small>
                   </span>
                 </A>
-              ),
-            },
-            {
-              label: 'Status',
-              sortValue: (item) => (item.enabled ? 'Published' : 'Draft'),
-              render: (item) => (
-                <span
-                  class="activity-status"
-                  data-tone={item.enabled ? 'positive' : 'informational'}
-                >
-                  <span class="activity-status-dot" />
-                  {item.enabled ? 'Published' : 'Draft'}
-                </span>
               ),
             },
             {

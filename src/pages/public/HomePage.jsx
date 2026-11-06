@@ -1,12 +1,13 @@
 import ReleaseBanner from '../../components/marketing/ReleaseBanner.jsx';
+import { useScrollHeader } from '../../services/public/scrollHeader.js';
 import { publicAsset } from '../../services/public/publicAsset.js';
 import ProfileAvatar from '../../components/identity/ProfileAvatar.jsx';
 import Icon from '../../components/Icon.jsx';
 import { useSession } from '../../context/SessionContext.jsx';
 import MarketingSection from '../../components/marketing/MarketingSection.jsx';
-import AnimatedRequestChat from '../../components/marketing/AnimatedRequestChat.jsx';
+import RequestLifecycle from '../../components/marketing/RequestLifecycle.jsx';
 import AnimatedKnowledgeChat from '../../components/marketing/AnimatedKnowledgeChat.jsx';
-import AnimatedWorkflowBuilder from '../../components/marketing/AnimatedWorkflowBuilder.jsx';
+import WorkflowDiagram from '../../components/marketing/WorkflowDiagram.jsx';
 import { For, Show, createSignal, onMount } from 'solid-js';
 import HeroWorkflowBackground from '../../components/marketing/HeroWorkflowBackground.jsx';
 import { A, useNavigate } from '@solidjs/router';
@@ -28,6 +29,8 @@ const helpDeskPlatforms = [
 ];
 
 export default function HomePage() {
+  let publicHeader;
+  useScrollHeader(() => publicHeader);
   const { session } = useSession();
   const user = () => (session.error ? null : session()?.user);
   const workspaceUrl = () =>
@@ -88,7 +91,11 @@ export default function HomePage() {
   return (
     <main class="landing-main">
       <ReleaseBanner />
-      <nav class="landing-top-navigation" aria-label="Public navigation">
+      <nav
+        ref={publicHeader}
+        class="landing-top-navigation scroll-public-header"
+        aria-label="Public navigation"
+      >
         <A class="marketing-brand-mark" href="/" aria-label="AgentZuno home">
           <img
             src={publicAsset('/agentzuno-wordmark.svg')}
@@ -175,7 +182,7 @@ export default function HomePage() {
             organization.
           </p>
         </div>
-        <AnimatedRequestChat />
+        <RequestLifecycle />
       </MarketingSection>
       <MarketingSection
         class="marketing-section marketing-split"
@@ -196,7 +203,7 @@ export default function HomePage() {
             Explore the workflow SDK <span aria-hidden="true">→</span>
           </A>
         </div>
-        <AnimatedWorkflowBuilder />
+        <WorkflowDiagram />
       </MarketingSection>
       <MarketingSection
         class="marketing-section marketing-split is-reversed"
@@ -377,14 +384,11 @@ export default function HomePage() {
       >
         <div class="marketing-section-intro">
           <h2 id="make-it-yours-title">Make it your own</h2>
-          <p>
-            Download the code, run it in your environment, and test it with your team. Change the
-            experience, extend a workflow, or build something entirely your own.
-          </p>
           <h3 class="marketing-ai-subtitle">No million-dollar dev team required</h3>
           <p>
-            Use your favorite AI tools to understand the code, explore ideas, and build the changes
-            your team needs. You have the source, and you decide where it goes next.
+            Download the code, run it in your environment, and use your favorite AI tools to explore
+            ideas and build the changes your team needs. You have the source, and you decide what
+            comes next.
           </p>
           <div class="marketing-provider-links">
             <a

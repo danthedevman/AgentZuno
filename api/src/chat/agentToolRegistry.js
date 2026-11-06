@@ -87,18 +87,27 @@ const tools = [
       const current = await knowledgeStructure(store, actor);
       return {
         bases: current.knowledgeBases.map(({ id, name }) => ({ id, name })),
-        topics: current.topics.map(({ id, name, knowledgeBaseId }) => ({
+        topics: current.topics.map(({ id, name, knowledgeBaseId, parentTopicId }) => ({
           id,
           name,
           knowledgeBaseId: knowledgeBaseId || null,
+          parentTopicId: parentTopicId || null,
         })),
       };
     },
   ),
   definition(
     'createKnowledgeTopic',
-    'Create an explicitly requested knowledge topic using the same service as Knowledge Topics. Use an existing base ID or null for a general topic. Return its saved link; never create a catalog category instead.',
-    object({ name: text(100), description: text(1000), knowledgeBaseId: nullable(text(80)) }),
+    'Create an explicitly requested knowledge topic, optionally nested under parentTopicId (maximum three topic levels), using the same service as Knowledge Topics. Use an existing base ID or null for a general topic. Return its saved link; never create a catalog category instead.',
+    object(
+      {
+        name: text(100),
+        description: text(1000),
+        knowledgeBaseId: nullable(text(80)),
+        parentTopicId: nullable(text(80)),
+      },
+      ['name', 'description', 'knowledgeBaseId'],
+    ),
     'knowledge',
     async ({ store, actor, chat }, input) => {
       const current = await knowledgeStructure(store, actor);
@@ -110,7 +119,8 @@ const tools = [
       const existing = current.topics.find(
         (topic) =>
           topic.name.toLowerCase() === String(input.name).toLowerCase() &&
-          (topic.knowledgeBaseId || null) === input.knowledgeBaseId,
+          (topic.knowledgeBaseId || null) === input.knowledgeBaseId &&
+          (topic.parentTopicId || null) === (input.parentTopicId || null),
       );
       const topic =
         existing ||
@@ -118,6 +128,7 @@ const tools = [
           name: input.name,
           description: input.description,
           articleIds: [],
+          parentTopicId: input.parentTopicId || '',
           ...(input.knowledgeBaseId ? { knowledgeBaseId: input.knowledgeBaseId } : {}),
         }));
       return {

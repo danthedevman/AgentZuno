@@ -1,4 +1,5 @@
-import { Portal, Dynamic } from 'solid-js/web';
+import { useDashboardActions } from '../../context/DashboardActionsContext.jsx';
+import { Dynamic } from 'solid-js/web';
 import Dropdown from '../Dropdown.jsx';
 import ActionMenu from '../ActionMenu.jsx';
 import { loadExportRows, downloadRecords } from '../../services/tableExport.js';
@@ -12,6 +13,8 @@ import A from '../WorkspaceLink.jsx';
 import Skeleton from '../Skeleton.jsx';
 import Icon from '../Icon.jsx';
 import { api } from '../../services/api.js';
+import { useParams } from '@solidjs/router';
+import { recordViewKey, recordCardVariant } from '../../utils/recordViews.js';
 import ToastMessage from '../ToastMessage.jsx';
 import {
   For,
@@ -19,6 +22,7 @@ import {
   createEffect,
   createResource,
   createSignal,
+  createUniqueId,
   onMount,
   onCleanup,
 } from 'solid-js';
@@ -36,7 +40,7 @@ function RecordRow(props) {
     <Dynamic
       component={props.card ? 'article' : 'tr'}
       ref={row}
-      class={props.card ? 'record-mobile-card' : undefined}
+      class={props.card ? 'record-mobile-card record-card' : undefined}
       classList={{ 'record-row-actionable': actionable() }}
       tabindex={actionable() ? 0 : undefined}
       onClick={(event) => {
@@ -54,6 +58,11 @@ function RecordRow(props) {
           <Dynamic
             component={props.card ? 'div' : 'td'}
             class={`${props.card ? 'record-mobile-field' : ''} ${column.className || ''}`}
+            classList={{
+              'record-primary-field':
+                props.card && column === props.columns.find((item) => item.label),
+              'record-status-field': props.card && column.label === 'Status',
+            }}
           >
             <Show
               when={
@@ -70,28 +79,32 @@ function RecordRow(props) {
   );
 }
 export default function RecordTable(props) {
-  const [isMobile, setIsMobile] = createSignal(window.matchMedia('(max-width: 700px)').matches);
-  onMount(() => {
-    const query = window.matchMedia('(max-width: 700px)');
-    const update = () => setIsMobile(query.matches);
-    query.addEventListener('change', update);
-    onCleanup(() => query.removeEventListener('change', update));
-  });
-  let root;
-  const [menuTarget, setMenuTarget] = createSignal(null);
-  onMount(() => {
-    let region = root?.parentElement;
-    while (region && !region.classList.contains('workspace-main')) {
-      const target = region.querySelector(
-        ':scope > [data-list-actions], :scope > .connections-heading [data-list-actions]',
-      );
-      if (target) {
-        setMenuTarget(target);
-        break;
-      }
-      region = region.parentElement;
+  const params = useParams();
+  const { session } = useSession();
+  const [view, setView] = createSignal('cards');
+  const preferenceKey = () =>
+    recordViewKey(session()?.user?.id, params.workspaceId, props.source, props.label);
+  createEffect(() => {
+    const key = preferenceKey();
+    try {
+      setView(localStorage.getItem(key) === 'table' ? 'table' : 'cards');
+    } catch {
+      setView('cards');
     }
   });
+  const cardView = () => view() === 'cards';
+  function changeView(value) {
+    setView(value);
+    try {
+      localStorage.setItem(preferenceKey(), value);
+    } catch {
+      /* Preferences remain usable without browser storage. */
+    }
+  }
+  let root;
+  const dashboardActions = useDashboardActions();
+  const actionId = createUniqueId();
+  onCleanup(() => dashboardActions?.remove(actionId));
   const { access } = useWorkspace();
   const { notify } = useToasts();
   const canDelete = () => !!props.bulkDelete && access()?.role === 'admin';
@@ -319,6 +332,16 @@ export default function RecordTable(props) {
     !rows().length;
   const unfilteredEmpty = () => isEmpty() && !appliedSearch() && !(props.query || search());
   createEffect(() => props.onEmptyChange?.(unfilteredEmpty()));
+  const sortOptions = () =>
+    columns()
+      .filter((column) => column.sortable !== false)
+      .flatMap((column) =>
+        ['asc', 'desc'].map((direction) => ({
+          value: `${key(column)}:${direction}`,
+          label: `${column.label} · ${direction === 'asc' ? 'Ascending' : 'Descending'}`,
+          sort: { key: key(column), direction },
+        })),
+      );
   function changeSort(column) {
     if (!props.source) return;
     setPage(1);
@@ -332,13 +355,109 @@ export default function RecordTable(props) {
           : column.defaultDirection || 'asc',
     }));
   }
+  createEffect(() => {
+    dashboardActions?.register(
+      actionId,
+      !unfilteredEmpty() && rows().length
+        ? [
+            {
+              label: `Export ${props.label} CSV`,
+              disabled: exporting() || result.loading,
+              onClick: () => exportRecords('csv'),
+            },
+            {
+              label: `Export ${props.label} JSON`,
+              disabled: exporting() || result.loading,
+              onClick: () => exportRecords('json'),
+            },
+          ]
+        : [],
+    );
+  });
   return (
-    <div class="record-list" ref={root}>
-      <Show when={!unfilteredEmpty() && rows().length}>
-        <Show
-          when={menuTarget()}
-          fallback={
-            <div class="record-export-actions">
+    <div class="record-list" ref={root} data-card-variant={recordCardVariant(props.label)}>
+      <Show when={!unfilteredEmpty()}>
+        <div class="record-list-toolbar" role="group" aria-label={`${props.label} controls`}>
+          <Show when={props.source && (props.query === undefined || props.onQueryChange)}>
+            <label class="workspace-search">
+              <Icon name="search" />
+              <input
+                type="search"
+                maxlength="200"
+                aria-label={`Search ${props.label}`}
+                placeholder={`Search ${props.label.toLowerCase()}…`}
+                value={props.query ?? search()}
+                onInput={(event) =>
+                  props.onQueryChange
+                    ? props.onQueryChange(event.currentTarget.value)
+                    : setSearch(event.currentTarget.value)
+                }
+              />
+            </label>
+          </Show>
+          {props.toolbarFilters}
+          {props.toolbarActions}
+          <Show when={canDelete() && selectedRows().length}>
+            <div class="record-toolbar-bulk" role="region" aria-label="Selected records">
+              <span aria-live="polite">{selectedRows().length} Selected</span>
+              <button
+                class="workspace-button secondary small icon-only"
+                aria-label={deleting() ? 'Deleting selected records' : 'Delete Selected'}
+                title="Delete selected records"
+                disabled={deleting() || result.loading}
+                onClick={deleteSelected}
+              >
+                <Icon name={deleting() ? 'loading' : 'delete'} />
+              </button>
+              <button
+                class="workspace-button secondary small icon-only"
+                aria-label="Clear Selection"
+                title="Clear selection"
+                disabled={deleting()}
+                onClick={() => setSelected([])}
+              >
+                <Icon name="close" />
+              </button>
+            </div>
+          </Show>
+          <div class="record-toolbar-actions">
+            <Show when={props.source && columns().some((column) => column.sortable !== false)}>
+              <Dropdown
+                ariaLabel="Sort records by"
+                icon="sort"
+                iconOnly
+                value={`${sort().key || key(columns().find((column) => column.sortable !== false))}:${sort().direction}`}
+                options={sortOptions()}
+                onChange={(value) => {
+                  const option = sortOptions().find((option) => option.value === value);
+                  if (option) {
+                    setPage(1);
+                    setSort(option.sort);
+                  }
+                }}
+              />
+            </Show>
+            <div class="record-view-toggle" role="group" aria-label={`${props.label} view`}>
+              <button
+                type="button"
+                aria-label="Cards"
+                title="Card view"
+                aria-pressed={cardView()}
+                onClick={() => changeView('cards')}
+              >
+                <Icon name="cards" />
+              </button>
+              <button
+                type="button"
+                aria-label="Table"
+                title="Table view"
+                aria-pressed={!cardView()}
+                onClick={() => changeView('table')}
+              >
+                <Icon name="table" />
+              </button>
+            </div>
+            <Show when={!dashboardActions && rows().length}>
               <ActionMenu
                 label={`More ${props.label} actions`}
                 disabled={exporting() || result.loading}
@@ -347,52 +466,9 @@ export default function RecordTable(props) {
                   { label: 'Export JSON', onClick: () => exportRecords('json') },
                 ]}
               />
-            </div>
-          }
-        >
-          <Portal mount={menuTarget()}>
-            <ActionMenu
-              label={`More ${props.label} actions`}
-              disabled={exporting() || result.loading}
-              items={[
-                { label: 'Export CSV', onClick: () => exportRecords('csv') },
-                { label: 'Export JSON', onClick: () => exportRecords('json') },
-              ]}
-            />
-          </Portal>
-        </Show>
-      </Show>
-      <Show when={canDelete() && selectedRows().length}>
-        <div class="record-bulk-actions" role="region" aria-label="Selected records">
-          <span aria-live="polite">{selectedRows().length} Selected</span>
-          <button
-            class="workspace-button secondary small"
-            disabled={deleting() || result.loading}
-            onClick={deleteSelected}
-          >
-            {deleting() ? 'Deleting…' : 'Delete Selected'}
-          </button>
-          <button
-            class="workspace-button secondary small"
-            disabled={deleting()}
-            onClick={() => setSelected([])}
-          >
-            Clear Selection
-          </button>
+            </Show>
+          </div>
         </div>
-      </Show>
-      <Show when={props.source && props.query === undefined && !unfilteredEmpty()}>
-        <label class="workspace-search record-list-search">
-          <Icon name="search" />
-          <input
-            type="search"
-            maxlength="200"
-            aria-label={`Search ${props.label}`}
-            placeholder={`Search ${props.label.toLowerCase()}…`}
-            value={search()}
-            onInput={(event) => setSearch(event.currentTarget.value)}
-          />
-        </label>
       </Show>
       <Show when={result.error}>
         <ToastMessage tone="error">{result.error.message}</ToastMessage>
@@ -402,12 +478,12 @@ export default function RecordTable(props) {
           class="record-table-scroll"
           classList={{
             'is-ready': !!activeResult() || !props.source,
-            'is-card-view': !!props.renderCard || isMobile(),
+            'is-card-view': cardView(),
           }}
           aria-busy={result.loading}
         >
           <Show
-            when={props.renderCard || isMobile()}
+            when={cardView()}
             fallback={
               <table class="record-table">
                 <caption class="sr-only">{props.label}</caption>
@@ -484,43 +560,6 @@ export default function RecordTable(props) {
               </table>
             }
           >
-            <Show when={isMobile() && !props.renderCard}>
-              <div class="mobile-record-controls">
-                <For each={columns().filter((column) => column.headerStart)}>
-                  {(column) => (
-                    <label class="mobile-select-all">
-                      {column.headerStart()}
-                      <span>Select All</span>
-                    </label>
-                  )}
-                </For>
-                <Show when={props.source}>
-                  <Dropdown
-                    ariaLabel="Sort records by"
-                    value={sort().key || key(columns().find((column) => column.sortable !== false))}
-                    options={columns()
-                      .filter((column) => column.sortable !== false)
-                      .map((column) => ({ value: key(column), label: column.label }))}
-                    onChange={(value) =>
-                      changeSort(columns().find((column) => key(column) === value))
-                    }
-                  />
-                  <button
-                    type="button"
-                    class="workspace-button secondary small icon-only"
-                    aria-label={sort().direction === 'asc' ? 'Sort descending' : 'Sort ascending'}
-                    onClick={() =>
-                      changeSort(
-                        columns().find((column) => key(column) === sort().key) ||
-                          columns().find((column) => column.sortable !== false),
-                      )
-                    }
-                  >
-                    <Icon name={sort().direction === 'asc' ? 'sort-up' : 'sort-down'} />
-                  </button>
-                </Show>
-              </div>
-            </Show>
             <div class="record-card-list" role="list" aria-label={props.label}>
               <Show
                 when={!isPendingView()}

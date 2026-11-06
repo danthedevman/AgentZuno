@@ -13,10 +13,15 @@ See [Roles & Features](roles-and-features.md) for the broader role guide. Knowle
 
 ## Organize bases and topics
 
-1. Open **Knowledge → Bases** and create a knowledge base, such as IT Support.
-2. Open the base and add a topic, such as Getting Connected. Topics group related articles and can be expanded to browse their contents.
-3. Create an article from the base or topic. Give it a clear title and select its required topic.
-4. To change the base name, description, or access, select **Edit Knowledge Base** from its detail view. Set the permissions in the form and select **Save** to save both the base details and access settings.
+1. Open **Knowledge**. The left explorer contains knowledge bases, topic folders, and articles. Expand folders with their chevrons or the arrow keys.
+2. As an Admin, choose **Knowledge actions → Add Knowledge Base** to create a base, such as IT Support.
+3. Select the base and choose **Knowledge actions → Add Topic**. Select a topic and repeat to add subtopics, up to three topic levels. A new topic inherits its folder's base; parent placement is set when it is created.
+4. Select a folder to browse its contents. Select an article in the explorer to read it on the right, with attachments beside the content. **Add Article** opens the chat editor with the selected base/topic already filled in.
+5. Rename a folder or change its description and access with **Knowledge actions → Edit Knowledge Base** or **Edit Topic**. Quick-edit forms save their permissions with the record.
+
+Drag the divider to resize the explorer between 220 and 420 pixels, while retaining space for the article. Keyboard users can focus the divider and use the arrow keys, Home, or End. On phones, use **Browse knowledge folders** to switch between the explorer and content.
+
+Base, ancestor-topic, topic, and article permissions apply together. Restricting a parent folder also restricts the articles beneath it. Topics organize content; they never grant broader access.
 
 Use separate bases when teams need different collections or access boundaries. Use topics to make a collection easier to browse.
 

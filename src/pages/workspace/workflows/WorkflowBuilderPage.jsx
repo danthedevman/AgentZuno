@@ -741,6 +741,12 @@ export default function WorkflowBuilderPage() {
                   definition={definition()}
                   workflow={current()}
                   canManage={isAdmin()}
+                  disabled={saving() || sending() || processing()}
+                  onChange={(value) => {
+                    setCodeDefinition(value);
+                    setSourceEdited(false);
+                    setHasEdits(true);
+                  }}
                   zoom={visualZoom()}
                   onZoomChange={setVisualZoom}
                 />

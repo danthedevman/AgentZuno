@@ -86,6 +86,7 @@ export default function Dropdown(props) {
   return (
     <div
       class="category-dropdown shared-dropdown"
+      classList={{ 'is-icon-only': props.iconOnly }}
       ref={container}
       onFocusOut={(event) => {
         if (!container.contains(event.relatedTarget)) setIsOpen(false);
@@ -102,6 +103,8 @@ export default function Dropdown(props) {
         data-required={props.required ?? true}
         data-selected-count={options().some((option) => option.value === value()) ? 1 : 0}
         aria-label={props.ariaLabel}
+        aria-description={props.iconOnly ? label(value()) : undefined}
+        title={props.iconOnly ? `${props.ariaLabel || 'Select'}: ${label(value())}` : undefined}
         aria-haspopup="listbox"
         aria-expanded={isOpen()}
         aria-controls={`${id}-list`}
@@ -112,10 +115,12 @@ export default function Dropdown(props) {
         <Show when={props.icon}>
           <Icon name={props.icon} />
         </Show>
-        <span>{label(value())}</span>
-        <span classList={{ 'category-chevron': true, 'is-open': isOpen() }}>
-          <Icon name="arrow" />
-        </span>
+        <Show when={!props.iconOnly}>
+          <span>{label(value())}</span>
+          <span classList={{ 'category-chevron': true, 'is-open': isOpen() }}>
+            <Icon name="arrow" />
+          </span>
+        </Show>
       </button>
       <Show when={isOpen()}>
         <div

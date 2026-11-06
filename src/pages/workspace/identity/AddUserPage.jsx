@@ -37,7 +37,6 @@ export default function AddUserPage() {
   }
   const sections = () => [
     {
-      title: 'User Details',
       fields: [{ id: 'email', label: 'Email', type: 'email', required: true, maxLength: 254 }],
     },
     {

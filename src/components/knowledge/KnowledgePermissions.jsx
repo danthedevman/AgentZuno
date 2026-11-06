@@ -89,7 +89,10 @@ export default function KnowledgePermissions(props) {
             { value: 'workspace', label: 'Workspace Members' },
             { value: 'restricted', label: 'Selected Users' },
           ]}
-          onChange={setMode}
+          onChange={(value) => {
+            setMode(value);
+            props.onChange?.();
+          }}
         />
         <Show when={mode() === 'restricted'}>
           <MultiSelectLookup
@@ -104,7 +107,10 @@ export default function KnowledgePermissions(props) {
                 label: item.name || item.email,
                 href: `/workspace/users/${item.userId || item.id}`,
               }))}
-            onChange={setUserIds}
+            onChange={(value) => {
+              setUserIds(value);
+              props.onChange?.();
+            }}
           />
         </Show>
         <p class="field-help">

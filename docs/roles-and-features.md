@@ -53,7 +53,7 @@ Chat attachments are private to their permitted conversation context. Do not ass
 
 ## Work on requests — Agent or Admin
 
-Start at My Work for your assigned work and personal reports. Use Inbox for accessible work and approvals, or My Requests to find a request. Open the request's conversation to work in its right-hand panel.
+Start at Dashboard and select My Work for your assigned work and personal reports. Everyone lands on Dashboard and can use My Requests there. Use Inbox for accessible work and approvals, or My Requests to find a request. Open the request's conversation to work in its right-hand panel.
 
 Agents work within their permitted assignment groups. Where allowed, assign a request to yourself, edit its details, add a public comment, or add an internal work note. Save edits explicitly. Employees see public comments; internal work notes stay with the support team.
 

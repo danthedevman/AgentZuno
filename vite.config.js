@@ -3,7 +3,7 @@ import solid from 'vite-plugin-solid';
 
 export default defineConfig({
   base: process.env.VITE_BASE_PATH || '/',
-  plugins: [solid()],
+  plugins: [solid({ ssr: true })],
   server: {
     host: '0.0.0.0',
     port: 3000,

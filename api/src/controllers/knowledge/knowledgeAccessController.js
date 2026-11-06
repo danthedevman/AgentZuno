@@ -1,3 +1,4 @@
+import { knowledgeDirectory } from '../../knowledge/knowledgeExplorer.js';
 import { ObjectId } from 'mongodb';
 import { deny, helpdeskScope, requireRole } from '../../identity/helpdeskRoles.js';
 import { listResponse } from '../../shared/listQuery.js';
@@ -98,7 +99,10 @@ export function createKnowledgeAccessController(store) {
     const ownerId = user.helpdeskOwnerId || user.id;
     const records = await store
       .collection('articles')
-      .find({ ownerId, status: 'Published' }, { projection: { body: 0, sections: 0 } })
+      .find(
+        { ownerId, ...(user.role === 'admin' ? {} : { status: 'Published' }) },
+        { projection: { body: 0, sections: 0 } },
+      )
       .toArray();
     const visible = [];
     for (const article of records)
@@ -106,9 +110,11 @@ export function createKnowledgeAccessController(store) {
     if (request.query.article) {
       const article = visible.find((item) => item._id.toHexString() === request.query.article);
       if (!article) deny('Article not found.', 404);
-      const current = await store
-        .collection('articles')
-        .findOne({ _id: article._id, ownerId, status: 'Published' });
+      const current = await store.collection('articles').findOne({
+        _id: article._id,
+        ownerId,
+        ...(user.role === 'admin' ? {} : { status: 'Published' }),
+      });
       if (!current || !(await canReadAuthoredArticle(store, user, current)))
         deny('Article not found.', 404);
       const locationRecord = async (id, type) => {
@@ -159,6 +165,11 @@ export function createKnowledgeAccessController(store) {
       id,
       name: name(id, 'General'),
       count: visible.filter((item) => item.base === id).length,
+      description: references.find((record) => record._id.toHexString() === id)?.description || '',
+      articles: visible
+        .filter((item) => item.base === id)
+        .slice(0, 3)
+        .map((item) => ({ id: item._id.toHexString(), title: item.title })),
     }));
     const inBase = visible.filter(
       (item) => !request.query.base || item.base === request.query.base,
@@ -169,16 +180,20 @@ export function createKnowledgeAccessController(store) {
           name: name(id, 'Topic'),
         }))
       : [];
-    const articles = request.query.base
-      ? inBase
-          .filter((item) => !request.query.topic || item.topicIds?.includes(request.query.topic))
-          .map((item) => ({
-            id: item._id.toHexString(),
-            title: item.title,
-            summary: item.summary || '',
-            updatedAt: item.updatedAt,
-          }))
-      : [];
+    const articles =
+      request.query.base || (typeof request.query.q === 'string' && request.query.q.trim())
+        ? inBase
+            .filter((item) => !request.query.topic || item.topicIds?.includes(request.query.topic))
+            .map((item) => ({
+              id: item._id.toHexString(),
+              title: item.title,
+              summary: item.summary || '',
+              baseId: item.base,
+              topicId: item.topicIds?.[0] || '',
+              status: item.status || 'Draft',
+              updatedAt: item.updatedAt,
+            }))
+        : [];
     response.json({
       bases,
       topics,
@@ -189,5 +204,12 @@ export function createKnowledgeAccessController(store) {
       ),
     });
   };
-  return { getKnowledgePermissionsKindId, putKnowledgePermissionsKindId, getKnowledgeCenter };
+  const getKnowledgeDirectory = async (request, response) =>
+    response.json(await knowledgeDirectory(store, request.helpdeskUser, request.query));
+  return {
+    getKnowledgePermissionsKindId,
+    putKnowledgePermissionsKindId,
+    getKnowledgeCenter,
+    getKnowledgeDirectory,
+  };
 }

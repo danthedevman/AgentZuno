@@ -1,4 +1,5 @@
 import ReleaseBanner from '../../components/marketing/ReleaseBanner.jsx';
+import { useScrollHeader } from '../../services/public/scrollHeader.js';
 import { A, useLocation, useNavigate } from '@solidjs/router';
 import { For, Show, createEffect, createSignal, onMount, onCleanup } from 'solid-js';
 import {
@@ -69,6 +70,8 @@ function DocsScreenshot(props) {
   );
 }
 export default function DocsPage() {
+  let publicHeader;
+  useScrollHeader(() => publicHeader);
   const location = useLocation(),
     navigate = useNavigate();
   const currentPath = () => {
@@ -195,7 +198,7 @@ export default function DocsPage() {
       <a class="docs-skip-link" href="#docs-main">
         Skip to content
       </a>
-      <header class="docs-header">
+      <header ref={publicHeader} class="docs-header scroll-public-header">
         <A href="/" class="docs-brand">
           <img
             src={publicAsset('/agentzuno-wordmark.svg')}

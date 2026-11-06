@@ -5,7 +5,7 @@ import TaskPage from './pages/workspace/requests/TaskPage.jsx';
 import DatabaseSetupPage from './pages/setup/DatabaseSetupPage.jsx';
 import SetupPage from './pages/workspace/SetupPage.jsx';
 import AuditRecordPage from './pages/workspace/reports/AuditRecordPage.jsx';
-import MyWorkPage from './pages/workspace/reports/MyWorkPage.jsx';
+import LegacyDashboardPage from './pages/workspace/reports/LegacyDashboardPage.jsx';
 import WorkspaceHomePage from './pages/workspace/WorkspaceHomePage.jsx';
 import LegacyQueuePage from './pages/workspace/identity/LegacyQueuePage.jsx';
 import DocsPage from './pages/public/DocsPage.jsx';
@@ -74,9 +74,10 @@ export default function App() {
       <Route path={['/workspace', '/workspace/:workspaceId']} component={WorkspaceLayout}>
         <Route path="/" component={WorkspaceHomePage} />
         <Route path="/setup" component={SetupPage} />
-        <Route path="/my-work" component={MyWorkPage} />
-        <Route path="/inbox" component={DashboardPage} />
-        <Route path="/requests" component={RequestsPage} />
+        <Route path="/dashboard" component={DashboardPage} />
+        <Route path="/my-work" component={() => <LegacyDashboardPage view="work" />} />
+        <Route path="/inbox" component={() => <RequestsPage inbox />} />
+        <Route path="/requests" component={() => <LegacyDashboardPage view="requests" />} />
         <Route path="/tickets" component={LegacyRequestsPage} />
         <Route path="/tickets/new" component={ChatRedirectPage} />
         <Route path="/tickets/:id" component={RequestRedirectPage} />

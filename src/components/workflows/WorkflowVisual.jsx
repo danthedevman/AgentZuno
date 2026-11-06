@@ -3,6 +3,31 @@ import A from '../WorkspaceLink.jsx';
 import Skeleton from '../Skeleton.jsx';
 import WorkflowFormNode from './WorkflowFormNode.jsx';
 import { api } from '../../services/api.js';
+import ReferenceLookup from '../ReferenceLookup.jsx';
+import { assignmentGroupOptions } from '../../utils/assignmentGroups.js';
+
+function AssignmentGroup(props) {
+  const options = () => assignmentGroupOptions(props.groups || []);
+  const exists = () => options().some((option) => option.value === props.value);
+  return (
+    <div class="workflow-assignment-group">
+      <ReferenceLookup
+        label="Assignment Group"
+        referenceTable="ref-group"
+        value={exists() ? props.value : ''}
+        options={options()}
+        disabled={props.disabled}
+        onOpen={props.onOpen}
+        onChange={props.onChange}
+      />
+      <Show when={props.value && !props.loading && !exists()}>
+        <small>
+          The assignment group “{props.value}” is unavailable. Choose an existing group.
+        </small>
+      </Show>
+    </div>
+  );
+}
 
 const actionNames = {
   'task.create': 'Create fulfillment task',
@@ -20,6 +45,26 @@ const actionNames = {
 };
 
 export default function WorkflowVisual(props) {
+  const [assignmentGroups, { refetch: refreshGroups }] = createResource(
+    () => props.canManage && props.definition && (props.workflow?.demoDatasetId || 'current'),
+    () =>
+      api(
+        `/api/helpdesk/queues?reference=1${props.workflow?.demoDatasetId ? '&includeDemo=1' : ''}`,
+      ),
+  );
+  function changeGroup(id, queueName, routing = false) {
+    const field = routing ? 'routing' : 'steps';
+    props.onChange?.({
+      ...props.definition,
+      [field]: props.definition[field].map((item) =>
+        item.id === id
+          ? routing
+            ? { ...item, queueName }
+            : { ...item, params: { ...item.params, queueName } }
+          : item,
+      ),
+    });
+  }
   const hasNamedApprovers = () =>
     props.canManage &&
     props.definition?.steps.some(
@@ -92,6 +137,20 @@ export default function WorkflowVisual(props) {
                   <li class="workflow-node">
                     <span>Choose the right support team</span>
                     <strong>{rule.queueName}</strong>
+                    <Show when={props.canManage && props.onChange}>
+                      <AssignmentGroup
+                        value={rule.queueName}
+                        groups={assignmentGroups.error ? [] : assignmentGroups.latest}
+                        loading={assignmentGroups.loading}
+                        disabled={
+                          props.disabled ||
+                          (assignmentGroups.loading && !assignmentGroups.latest) ||
+                          !!assignmentGroups.error
+                        }
+                        onOpen={refreshGroups}
+                        onChange={(value) => changeGroup(rule.id, value, true)}
+                      />
+                    </Show>
                     <p>
                       If{' '}
                       {rule.conditions
@@ -124,6 +183,26 @@ export default function WorkflowVisual(props) {
                                   ? 'Send a message to the support channel'
                                   : 'Complete the next step'}
                     </strong>
+                    <Show
+                      when={
+                        props.canManage &&
+                        props.onChange &&
+                        ['route', 'handoff', 'task.create'].includes(step.action)
+                      }
+                    >
+                      <AssignmentGroup
+                        value={step.params.queueName}
+                        groups={assignmentGroups.error ? [] : assignmentGroups.latest}
+                        loading={assignmentGroups.loading}
+                        disabled={
+                          props.disabled ||
+                          (assignmentGroups.loading && !assignmentGroups.latest) ||
+                          !!assignmentGroups.error
+                        }
+                        onOpen={refreshGroups}
+                        onChange={(value) => changeGroup(step.id, value)}
+                      />
+                    </Show>
                     <Show when={step.action === 'approval'}>
                       <div class="workflow-approver-list">
                         <small>Approvers</small>

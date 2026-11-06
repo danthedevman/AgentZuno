@@ -80,7 +80,7 @@ export default function CreatePage(props) {
                   label: recordType() === 'knowledge-base' ? 'Knowledge Bases' : 'Connectors',
                   href:
                     recordType() === 'knowledge-base'
-                      ? '/workspace/knowledge?tab=bases'
+                      ? '/workspace/knowledge'
                       : '/workspace/connectors',
                 },
                 props.record &&

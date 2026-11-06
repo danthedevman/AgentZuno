@@ -16,7 +16,7 @@ I wanted to see how quickly I could build an AI help desk using Codex and what I
 - **Conversational requests:** Guided forms, a browsable catalog, attachments, and request details alongside the conversation.
 - **Executable workflows:** TypeScript, conditional routing, user/group/manager approvals, visual previews, and published revisions.
 - **Support work:** My Work dashboards, assigned requests, group queues, request tasks, comments, work notes, and workload reports. Admins and authorized Agents can create and close tasks, including through confirmed Zuno actions.
-- **Shared knowledge:** Knowledge bases, topics, articles, reviewed AI proposals, and access controls.
+- **Shared knowledge:** A resizable knowledge explorer with bases, up to three topic levels, article readers, reviewed AI proposals, and inherited access controls.
 - **Organization data:** Workforce profiles, identity provisioning, reference records, and customizable Data Tables.
 - **Connections and governance:** Slack and email support, connector action controls, configurable AI providers, roles, searchable audit records, CSV/JSON exports, and version history.
 - **Demo data:** Load removable Tech, Media or Retail records into the current workspace from Settings. Published catalog workflows and knowledge work with your connected AI provider.
@@ -41,7 +41,7 @@ See [installation and development](docs/getting-started.md) for the complete set
 docker compose up --build -d
 ```
 
-Open [localhost:3000](http://localhost:3000), register an account, and configure an AI provider in Settings. Admins and Agents land on My Work; employees land on Chat.
+Open [localhost:3000](http://localhost:3000), register an account, and configure an AI provider in Settings. All roles land on Dashboard. My Requests is available there for everyone; Admins and Agents also have My Work.
 
 Deploy on Render with the included [`render.yaml`](render.yaml) Blueprint. See [Render setup and operational requirements](docs/deployment.md#deploy-on-render). This provisions paid services and requires a MongoDB Atlas connection.
 
@@ -55,6 +55,8 @@ Deploy on Render with the included [`render.yaml`](render.yaml) Blueprint. See [
 Approval permission and an explicit assignment are required to decide approvals. Role access does not override private-file or knowledge permissions. See [roles and everyday features](docs/roles-and-features.md) and the [Knowledge guide](docs/knowledge.md) for step-by-step instructions.
 
 Admins add users from the dedicated Add User page. Creating an invitation shows its shareable link when email delivery is not configured. Groups and data-table records share consistent details/edit forms with named sections and controls based on field types.
+
+Record lists open as cards and offer a table toggle, with the preference remembered in the browser per user, workspace, and module. Workflow visuals let Admins select an existing assignment group for routing and task steps; saving and publication still use server validation.
 
 ## Learn more
 

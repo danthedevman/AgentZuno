@@ -47,7 +47,6 @@ export default function ConnectorApplicationForm(props) {
         }
       }}
     >
-      <h2>Connection Details</h2>
       <label>
         Client ID
         <input

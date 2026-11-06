@@ -8,28 +8,31 @@ import A from '../../../components/WorkspaceLink.jsx';
 import { useWorkspace } from '../../../context/WorkspaceContext.jsx';
 import RecordHeader from '../../../components/records/RecordHeader.jsx';
 
-export default function ArticleReadPage() {
+export default function ArticleReadPage(props) {
   const params = useParams();
   const { access, workspace } = useWorkspace();
+  const articleId = () => props.articleId || params.id;
   const [article] = createResource(
-    () => `${params.workspaceId}:${params.id}`,
-    () => api(`/api/helpdesk/knowledge-center?article=${encodeURIComponent(params.id)}`),
+    () => `${params.workspaceId}:${articleId()}`,
+    () => api(`/api/helpdesk/knowledge-center?article=${encodeURIComponent(articleId())}`),
   );
   const content = () =>
     access()?.role === 'admin'
-      ? workspace()?.articles?.find((item) => item.id === params.id) ||
+      ? workspace()?.articles?.find((item) => item.id === articleId()) ||
         (article.error ? null : article())
       : article.error
         ? null
         : article();
   return (
     <section class="reading-page knowledge-center">
-      <Breadcrumbs
-        items={[
-          { label: 'Knowledge', href: '/workspace/knowledge' },
-          { label: content()?.title || 'Article' },
-        ]}
-      />
+      <Show when={!props.embedded}>
+        <Breadcrumbs
+          items={[
+            { label: 'Knowledge', href: '/workspace/knowledge' },
+            { label: content()?.title || 'Article' },
+          ]}
+        />
+      </Show>
       <Show when={article.loading}>
         <Skeleton label="Loading article" lines={8} />
       </Show>

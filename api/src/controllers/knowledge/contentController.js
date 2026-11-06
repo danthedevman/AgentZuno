@@ -117,6 +117,13 @@ export function createContentController(auth, store, designer = {}) {
         .status(403)
         .json({ error: 'Select a knowledge base and topics from your own workspace.' });
     if (
+      topicIds.some((id) => {
+        const topic = records.find((record) => record.type === 'topic' && record.id === id);
+        return topic?.knowledgeBaseId && topic.knowledgeBaseId !== base;
+      })
+    )
+      return response.status(400).json({ error: 'Choose topics from this knowledge base.' });
+    if (
       typeof title !== 'string' ||
       !title.trim() ||
       title.trim().length > 160 ||

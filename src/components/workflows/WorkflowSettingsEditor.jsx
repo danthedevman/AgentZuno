@@ -1,3 +1,4 @@
+import { assignmentGroupOptions } from '../../utils/assignmentGroups.js';
 import { createResource, createSignal, For, Show, onMount, onCleanup } from 'solid-js';
 import { api } from '../../services/api.js';
 import ReferenceLookup from '../ReferenceLookup.jsx';
@@ -221,11 +222,7 @@ export default function WorkflowSettingsEditor(props) {
         label="Default Assignment Group"
         value={route()?.params.queueName || ''}
         disabled={props.disabled || queues.loading || !route()}
-        options={(queues() || []).map((queue) => ({
-          value: queue.name,
-          label: queue.name,
-          href: `/workspace/users/groups/${queue.groupId || queue.id}`,
-        }))}
+        options={assignmentGroupOptions(queues() || [])}
         onChange={(queueName) =>
           props.onChange({
             ...props.value,

@@ -1,6 +1,8 @@
 import { Show } from 'solid-js';
 
 const icons = {
+  cards: 'grid_view',
+  table: 'table_rows',
   drawer: 'view_sidebar',
   calendar: 'calendar_today',
   notifications: 'notifications_none',
@@ -14,6 +16,7 @@ const icons = {
   ticket: 'confirmation_number',
   request: 'assignment',
   archive: 'archive',
+  delete: 'delete_outline',
   refresh: 'refresh',
   restore: 'unarchive',
   workflow: 'account_tree',
@@ -37,6 +40,8 @@ const icons = {
   'book-pen': 'edit_note',
   catalog: 'storefront',
   category: 'folder_open',
+  folder: 'folder',
+  'folder-open': 'folder_open',
   'chevron-right': 'chevron_right',
   'chevron-down': 'expand_more',
   laptop: 'laptop_mac',
@@ -49,6 +54,7 @@ const icons = {
   help: 'help_outline',
   arrow: 'arrow_forward',
   back: 'arrow_back',
+  filter: 'filter_list',
   sort: 'unfold_more',
   'sort-up': 'arrow_upward',
   'sort-down': 'arrow_downward',

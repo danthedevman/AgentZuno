@@ -95,7 +95,7 @@ export default function RequestsPage(props) {
       classList={{ 'reading-page': true, 'helpdesk-page': true, 'inbox-page': !!props.inbox }}
     >
       <div class="connections-heading">
-        <PageHeading title={props.inbox ? 'Inbox' : 'My Requests'} />
+        <PageHeading title={props.title || (props.inbox ? 'Inbox' : 'My Requests')} />
         <Show when={props.inbox}>
           <div
             class="inbox-status-filters"
@@ -141,6 +141,7 @@ export default function RequestsPage(props) {
           </div>
         </Show>
       </div>
+      {props.navigation}
       <Show
         when={session()?.user && !session().user.isDemo}
         fallback={
@@ -149,42 +150,6 @@ export default function RequestsPage(props) {
           </p>
         }
       >
-        <div data-list-actions class="inbox-toolbar" classList={{ 'requests-list-toolbar': true }}>
-          <label class="workspace-search" hidden={isListEmpty()}>
-            <Icon name="search" />
-            <input
-              type="search"
-              maxlength="200"
-              aria-label={props.inbox ? 'Search Inbox' : 'Search My Requests'}
-              placeholder={props.inbox ? 'Search inbox…' : 'Search requests…'}
-              value={requestQuery()}
-              onInput={(event) => setRequestQuery(event.currentTarget.value)}
-            />
-          </label>
-          <Show
-            when={props.inbox}
-            fallback={
-              <div class="ticket-filter" hidden={isListEmpty() && !status()}>
-                <Dropdown
-                  ariaLabel="Request status filter"
-                  value={status()}
-                  onChange={setStatus}
-                  options={[
-                    '',
-                    'open',
-                    'waiting-for-employee',
-                    'waiting-for-approval',
-                    'escalated',
-                    'resolved',
-                  ].map((value) => ({
-                    value,
-                    label: value ? statusLabel(value) : 'All Statuses',
-                  }))}
-                />
-              </div>
-            }
-          ></Show>
-        </div>
         <Show when={requests.error}>
           <ToastMessage tone="error">{requests.error.message}</ToastMessage>
         </Show>
@@ -199,6 +164,24 @@ export default function RequestsPage(props) {
               emptyAction={{ label: 'Start Chat', href: '/workspace/chat' }}
               source="/api/helpdesk/requests"
               query={requestQuery()}
+              onQueryChange={setRequestQuery}
+              toolbarFilters={
+                <Dropdown
+                  ariaLabel="Request status filter"
+                  icon="filter"
+                  iconOnly
+                  value={status()}
+                  onChange={setStatus}
+                  options={[
+                    '',
+                    'open',
+                    'waiting-for-employee',
+                    'waiting-for-approval',
+                    'escalated',
+                    'resolved',
+                  ].map((value) => ({ value, label: value ? statusLabel(value) : 'All Statuses' }))}
+                />
+              }
               sourceParams={{ status: status() || undefined }}
               refreshKey={revision()}
               onRowsChange={setPageRows}
@@ -222,34 +205,25 @@ export default function RequestsPage(props) {
                         <small>
                           {ticket.number || 'Request'} · {displayLabel(ticket.priority)} Priority
                         </small>
+                        <small class="record-row-details">
+                          <span
+                            class="activity-status"
+                            data-tone={
+                              ticket.status === 'resolved'
+                                ? 'positive'
+                                : ticket.status === 'escalated'
+                                  ? 'warning'
+                                  : 'informational'
+                            }
+                          >
+                            <span class="activity-status-dot" />
+                            {statusLabel(ticket.status)}
+                          </span>
+                          <span>{displayLabel(ticket.queueName) || 'Unassigned'}</span>
+                        </small>
                       </span>
                     </A>
                   ),
-                },
-                {
-                  label: 'Status',
-                  sortValue: (ticket) => statusLabel(ticket.status),
-                  render: (ticket) => (
-                    <span
-                      class="activity-status"
-                      data-tone={
-                        ticket.status === 'resolved'
-                          ? 'positive'
-                          : ticket.status === 'escalated'
-                            ? 'warning'
-                            : 'informational'
-                      }
-                    >
-                      <span class="activity-status-dot" />
-                      {statusLabel(ticket.status)}
-                    </span>
-                  ),
-                },
-                {
-                  key: 'Queue',
-                  label: 'Assignment Group',
-                  sortValue: (ticket) => displayLabel(ticket.queueName),
-                  render: (ticket) => displayLabel(ticket.queueName),
                 },
                 {
                   label: 'Updated',
@@ -280,6 +254,7 @@ export default function RequestsPage(props) {
           <InboxList
             onEmptyChange={setIsListEmpty}
             query={requestQuery()}
+            onQueryChange={setRequestQuery}
             refreshKey={revision()}
             onRowsChange={setPageRows}
             items={visibleRequests()}

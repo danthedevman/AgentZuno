@@ -46,6 +46,7 @@ export default function ActionMenu(props) {
         type="button"
         class="workspace-button secondary small icon-only"
         aria-label={props.label || 'More actions'}
+        title={props.label || 'More actions'}
         aria-haspopup="menu"
         aria-expanded={open()}
         aria-controls={id}
@@ -78,6 +79,7 @@ export default function ActionMenu(props) {
                   <button
                     role="menuitem"
                     type="button"
+                    disabled={item.disabled}
                     onClick={() => {
                       close();
                       item.onClick?.();

@@ -24,57 +24,59 @@ export default function HeroEmployeeRequest(props) {
         <span>MacBook Request</span>
       </header>
       <div class="hero-request-workbench" classList={{ 'has-record': props.stage >= 8 }}>
-        <div ref={transcript} class="hero-request-transcript">
-          <Show when={props.stage >= 1}>
-            <div class="hero-employee-message is-visible">I need a MacBook for my new role.</div>
-          </Show>
-          <Show when={props.stage >= 2}>
-            <p>
-              I can help with that. Complete the MacBook request below and I’ll send it to your
-              manager for approval.
-            </p>
-          </Show>
-          <Show when={props.stage >= 3}>
-            <div class="hero-generated-form hero-request-form is-visible">
-              <div class="hero-form-title">
-                <Icon name="request" />
-                <strong>MacBook Request</strong>
-              </div>
-              <div class="hero-example-field">
-                <span>Model</span>
-                <div>
-                  {props.stage >= 4 ? 'MacBook Air' : 'Choose a model'}
-                  <Icon name="chevron-down" />
+        <div class="hero-request-chat">
+          <div ref={transcript} class="hero-request-transcript">
+            <Show when={props.stage >= 1}>
+              <div class="hero-employee-message is-visible">I need a MacBook for my new role.</div>
+            </Show>
+            <Show when={props.stage >= 2}>
+              <p>
+                I can help with that. Complete the MacBook request below and I’ll send it to your
+                manager for approval.
+              </p>
+            </Show>
+            <Show when={props.stage >= 3}>
+              <div class="hero-generated-form hero-request-form is-visible">
+                <div class="hero-form-title">
+                  <Icon name="request" />
+                  <strong>MacBook Request</strong>
+                </div>
+                <div class="hero-example-field">
+                  <span>Model</span>
+                  <div>
+                    {props.stage >= 4 ? 'MacBook Air' : 'Choose a model'}
+                    <Icon name="chevron-down" />
+                  </div>
+                </div>
+                <div class="hero-example-field">
+                  <span>Accessories</span>
+                  <div>
+                    {props.stage >= 5 ? 'Mouse' : 'Choose accessories'}
+                    <Icon name="chevron-down" />
+                  </div>
+                </div>
+                <div class="hero-form-submit" classList={{ 'is-submitted': props.stage >= 7 }}>
+                  <span>{props.stage >= 7 ? 'Request Submitted' : 'Submit Request'}</span>
+                  <Icon name={props.stage >= 7 ? 'check' : 'arrow'} />
                 </div>
               </div>
-              <div class="hero-example-field">
-                <span>Accessories</span>
-                <div>
-                  {props.stage >= 5 ? 'Mouse' : 'Choose accessories'}
-                  <Icon name="chevron-down" />
-                </div>
-              </div>
-              <div class="hero-form-submit" classList={{ 'is-submitted': props.stage >= 7 }}>
-                <span>{props.stage >= 7 ? 'Request Submitted' : 'Submit Request'}</span>
-                <Icon name={props.stage >= 7 ? 'check' : 'arrow'} />
-              </div>
-            </div>
-          </Show>
-          <Show when={props.stage >= 8}>
-            <p>
-              Your request <strong>REQ-000001</strong> is submitted. You can follow its progress
-              here.
-            </p>
-          </Show>
-          <Show when={props.stage >= 10}>
-            <p>
-              Your manager approved the request. Desktop Support now has a Jira issue to prepare
-              your MacBook.
-            </p>
-          </Show>
-          <Show when={props.stage >= 11}>
-            <p>Your MacBook is ready. I’ve sent the completion update to Slack.</p>
-          </Show>
+            </Show>
+            <Show when={props.stage >= 8}>
+              <p>
+                Your request <strong>REQ-000001</strong> is submitted. You can follow its progress
+                here.
+              </p>
+            </Show>
+            <Show when={props.stage >= 10}>
+              <p>
+                Your manager approved the request. Desktop Support now has a Jira issue to prepare
+                your MacBook.
+              </p>
+            </Show>
+            <Show when={props.stage >= 11}>
+              <p>Your MacBook is ready. I’ve sent the completion update to Slack.</p>
+            </Show>
+          </div>
           <div class="hero-example-composer">
             <span>Message Zuno</span>
             <Icon name="arrow" />

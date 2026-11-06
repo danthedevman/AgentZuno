@@ -16,6 +16,26 @@ export default function ValidatedForm(props) {
   const noticeId = createUniqueId();
   const [markers, setMarkers] = createSignal([]);
   let observer;
+  let resizeObserver;
+  let markerFrame;
+  function alignMarkers() {
+    cancelAnimationFrame(markerFrame);
+    markerFrame = requestAnimationFrame(() => {
+      for (const marker of form.querySelectorAll('.required-marker')) {
+        const label = marker.closest('[data-required-label="true"]');
+        if (!label) continue;
+        const text = [...label.childNodes].find(
+          (node) => node.nodeType === Node.TEXT_NODE && node.textContent.trim(),
+        );
+        if (!text) continue;
+        const range = document.createRange();
+        range.selectNodeContents(text);
+        const line = range.getBoundingClientRect();
+        if (line.height)
+          marker.style.top = `${line.top - label.getBoundingClientRect().top + line.height / 2}px`;
+      }
+    });
+  }
   const prefix = createUniqueId();
   const [errors, setErrors] = createSignal([]);
   const knownFields = new Set();
@@ -68,6 +88,7 @@ export default function ValidatedForm(props) {
       required.some((item, index) => item.field !== previous[index].field)
     )
       setMarkers(required);
+    alignMarkers();
   }
   onMount(() => {
     updateMarkers();
@@ -78,6 +99,8 @@ export default function ValidatedForm(props) {
       attributes: true,
       attributeFilter: ['required', 'data-required', 'aria-invalid'],
     });
+    resizeObserver = new ResizeObserver(alignMarkers);
+    resizeObserver.observe(form);
   });
   function fieldLabel(field) {
     const label =
@@ -166,6 +189,8 @@ export default function ValidatedForm(props) {
   }
   onCleanup(() => {
     observer?.disconnect();
+    resizeObserver?.disconnect();
+    cancelAnimationFrame(markerFrame);
     knownFields.clear();
   });
   return (

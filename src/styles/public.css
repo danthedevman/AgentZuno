@@ -424,7 +424,8 @@ h1 {
 .required-marker {
   position: absolute;
   left: -14px;
-  top: 0;
+  top: 0.5lh;
+  transform: translateY(-50%);
   height: 1lh;
   align-items: center;
   display: inline-flex;
@@ -2413,7 +2414,7 @@ h1 {
   gap: 12px;
   margin: 0;
   padding-top: 24px;
-  border-top: 1px solid #818cf830;
+  border-top: 1px solid #263140;
   text-align: left;
 }
 .ownership-benefits span {
@@ -3037,7 +3038,6 @@ h1 {
 
 html:not(.app-ready)
   :is(
-    .landing-hero-copy,
     .marketing-copy,
     .marketing-section-intro,
     .marketing-workflow-preview,
@@ -3242,6 +3242,14 @@ html:not(.app-ready)
 
 .marketing-release-banner + .landing-top-navigation {
   top: 46px;
+}
+
+.marketing-release-banner,
+.marketing-release-banner > * {
+  opacity: 1;
+  transform: none;
+  animation: none;
+  transition: none;
 }
 
 @media (max-width: 400px) {
@@ -3723,7 +3731,6 @@ html:not(.app-ready)
     transition:
       opacity 800ms cubic-bezier(0.22, 1, 0.36, 1),
       transform 800ms cubic-bezier(0.22, 1, 0.36, 1);
-    transition-delay: var(--marketing-reveal-delay, 0ms);
   }
   .marketing-scroll-section .marketing-reveal.is-visible {
     opacity: 1;
@@ -3736,5 +3743,228 @@ html:not(.app-ready)
     transform: none;
     animation: none;
     transition: none;
+  }
+}
+
+.marketing-footer {
+  align-items: center;
+  justify-content: space-between;
+  column-gap: 48px;
+}
+.marketing-footer nav {
+  justify-content: flex-end;
+  align-items: center;
+}
+.scroll-public-header {
+  top: calc(-1 * var(--public-header-height, 60px));
+  background: transparent;
+  border-bottom: 0;
+  transition:
+    transform 240ms cubic-bezier(0.22, 1, 0.36, 1),
+    background 180ms ease;
+}
+.landing-main .landing-top-navigation {
+  position: sticky;
+  top: calc(-1 * var(--public-header-height, 60px));
+  left: auto;
+  right: auto;
+  z-index: 60;
+  width: 100%;
+  padding: 12px 32px;
+  background: transparent;
+}
+.docs-header.scroll-public-header {
+  z-index: 60;
+}
+.scroll-public-header.is-scroll-returned {
+  transform: translateY(100%);
+  background: #070a0ff5;
+}
+.hero-request-chat {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+.hero-request-chat .hero-request-transcript {
+  flex: 1;
+  min-height: 0;
+}
+.hero-request-chat > .hero-example-composer {
+  flex: 0 0 auto;
+  margin: 0 22px 18px;
+  background: #101a29;
+}
+.marketing-live-chat {
+  display: flex;
+  flex-direction: column;
+}
+.marketing-live-chat > header,
+.marketing-live-chat > .marketing-live-composer {
+  flex: 0 0 auto;
+}
+.marketing-live-chat > .marketing-live-composer {
+  margin-top: auto;
+}
+@media (max-width: 650px) {
+  .marketing-footer nav {
+    justify-content: flex-start;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .scroll-public-header {
+    transition: none;
+  }
+}
+
+@media (max-width: 650px) {
+  .landing-main .landing-top-navigation {
+    padding-inline: 16px;
+  }
+}
+
+/* Reveal text blocks and panels together, without animating their individual lines. */
+.marketing-scroll-section
+  :is(
+    .marketing-workflow-preview,
+    .marketing-knowledge-preview,
+    .marketing-platform-preview,
+    .marketing-feature-grid article,
+    .marketing-section-intro,
+    .ownership-benefits
+  )
+  > * {
+  opacity: 1;
+  animation: none !important;
+}
+@media (max-width: 760px) {
+  .docs-mobile-toolbar {
+    top: 0;
+    transition: top 240ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .docs-header.is-scroll-returned + .docs-mobile-toolbar {
+    top: var(--public-header-height, 60px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .docs-mobile-toolbar {
+    transition: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .landing-hero-copy {
+    animation: marketing-text-enter 800ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    transition: none;
+  }
+}
+@keyframes marketing-text-enter {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.marketing-static-preview {
+  min-width: 0;
+  font-family: 'Inter Variable', sans-serif;
+}
+.request-lifecycle {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 20px;
+  width: 100%;
+}
+.request-lifecycle article {
+  position: relative;
+  padding: 28px;
+  min-height: 240px;
+  border: 1px solid #263140;
+  border-radius: 14px;
+  background: #080d15;
+  text-align: left;
+}
+.marketing-diagram-icon {
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: #818cf814;
+  color: #a5b4fc;
+  flex: 0 0 40px;
+}
+.marketing-diagram-number {
+  float: right;
+  color: #65738b;
+  font-size: 12px;
+}
+.request-lifecycle h3,
+.marketing-workflow-diagram h3 {
+  font-size: 15px;
+  font-weight: 500;
+  margin: 22px 0 10px;
+  color: #e5eaf4;
+}
+.request-lifecycle p,
+.marketing-workflow-diagram p {
+  color: #9eacc1;
+  font-size: 13px;
+  line-height: 1.8;
+  margin: 0;
+}
+.marketing-workflow-diagram {
+  border: 1px solid #263140;
+  border-radius: 16px;
+  background: #080d15;
+  padding: 24px;
+}
+.marketing-workflow-diagram header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 14px;
+}
+.marketing-workflow-diagram header > span:last-child {
+  margin-left: auto;
+  font-size: 11px;
+  color: #92a0b7;
+}
+.marketing-workflow-diagram ol {
+  list-style: none;
+  margin: 28px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 16px;
+}
+.marketing-workflow-diagram li {
+  display: flex;
+  align-items: start;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid #263140;
+  border-radius: 10px;
+}
+.marketing-workflow-diagram h3 {
+  margin: 0 0 6px;
+}
+@media (max-width: 950px) {
+  .request-lifecycle {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 500px) {
+  .request-lifecycle {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .request-lifecycle article {
+    min-height: 200px;
+    padding: 24px;
   }
 }
