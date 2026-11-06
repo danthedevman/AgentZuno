@@ -39,7 +39,7 @@ export default function HomePage() {
   const [hasConfiguredBackend, setHasConfiguredBackend] = createSignal(false);
   const [tagline, setTagline] = createSignal([
     'AgentZuno is an open source conversational AI help desk',
-    'Answer and automate user requests in Slack, Microsoft Teams, and email',
+    'Answer and automate employee requests in Slack, Microsoft Teams, and email',
     'Deploy in a day',
   ]);
 
