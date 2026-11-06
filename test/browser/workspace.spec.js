@@ -197,7 +197,7 @@ test('workflow publication, approval rejection and task completion persist throu
   await page
     .getByRole('textbox', { name: 'Title', exact: true })
     .fill('Prepare and verify the laptop');
-  await page.getByLabel(/^Due Date\b/).fill('2027-03-12');
+  await page.getByRole('textbox', { name: 'Due Date', exact: true }).fill('2027-03-12');
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.getByRole('textbox', { name: 'Title', exact: true })).toHaveCount(0);
   expect((await (await page.request.get(`/api/helpdesk/tasks/${task.id}`)).json()).title).toBe(
@@ -285,8 +285,10 @@ test('task property rows, due dates and activity fit both desktop and mobile', a
     true,
   );
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
-  await expect(page.getByLabel(/^Due Date\b/)).toHaveValue('2027-03-12');
-  await page.getByLabel(/^Due Date\b/).fill('2027-03-15');
+  await expect(page.getByRole('textbox', { name: 'Due Date', exact: true })).toHaveValue(
+    '2027-03-12',
+  );
+  await page.getByRole('textbox', { name: 'Due Date', exact: true }).fill('2027-03-15');
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.getByRole('textbox', { name: 'Title', exact: true })).toHaveCount(0);
   expect((await (await page.request.get(`/api/helpdesk/tasks/${task.id}`)).json()).dueDate).toBe(

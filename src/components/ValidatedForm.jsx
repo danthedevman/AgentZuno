@@ -37,9 +37,11 @@ export default function ValidatedForm(props) {
         range.selectNodeContents(text);
         const line = range.getBoundingClientRect();
         if (line.height) {
-          const bounds = label.getBoundingClientRect();
-          marker.style.top = `${line.top - bounds.top + line.height / 2}px`;
-          marker.style.left = `${line.right - bounds.left + 6}px`;
+          const container = marker.offsetParent;
+          if (!container) continue;
+          const bounds = container.getBoundingClientRect();
+          marker.style.top = `${line.top - bounds.top - container.clientTop + line.height / 2}px`;
+          marker.style.left = `${line.right - bounds.left - container.clientLeft + 6}px`;
           marker.style.visibility = 'visible';
         }
       }

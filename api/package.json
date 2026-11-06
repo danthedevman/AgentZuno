@@ -9,7 +9,7 @@
   "scripts": {
     "start": "node --env-file-if-exists=../.env src/index.js",
     "dev": "node --env-file-if-exists=../.env --watch src/index.js",
-    "test": "node --test",
+    "test": "node --test --test-concurrency=2",
     "worker": "node --env-file-if-exists=../.env src/worker.js",
     "workflow:test": "node scripts/preview-workflow.mjs"
   },

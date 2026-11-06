@@ -2,7 +2,7 @@
 
 Use the [roles and features guide](roles-and-features.md) to identify which Admin, Agent, User, and Read Only journeys your change affects. Test API authorization as well as the visible controls.
 
-Install project dependencies with `npm ci` and `npm --prefix api ci`. Run `npm run format:check`, `npm run build`, and `npm run test:ui`. The API suite runs with `npm --prefix api test`; database coverage also requires the MongoDB and PostgreSQL test connections described in the repository's database CI workflow. Do not treat skipped database tests as passing adapter coverage.
+Install project dependencies with `npm ci` and `npm --prefix api ci`. Run `npm run format:check`, `npm run build`, and `npm run test:ui`. The API suite runs with `npm --prefix api test` and limits concurrent test files to two to bound database connection use; database coverage also requires the MongoDB and PostgreSQL test connections described in the repository's database CI workflow. Do not treat skipped database tests as passing adapter coverage.
 
 ## Browser regressions
 

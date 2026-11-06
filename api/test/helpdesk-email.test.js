@@ -287,7 +287,7 @@ test(
       workflow = await workflows.save(owner, null, {
         name: 'Phone routing',
         department: 'it',
-        keywords: ['office phone'],
+        keywords: [],
         action: 'route',
         queueName: 'desktop-support',
         enabled: true,
@@ -295,7 +295,7 @@ test(
         definition: {
           version: 1,
           name: 'Phone routing',
-          trigger: { phrases: [] },
+          trigger: { department: 'it', phrases: [] },
           form: {
             title: 'Phone support',
             fields: [{ id: 'details', label: 'Details', type: 'textarea', required: true }],
