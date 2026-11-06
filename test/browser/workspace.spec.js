@@ -1610,6 +1610,7 @@ test('README shows fictional IT chat cards and a populated workflow audit', asyn
     fullPage: true,
     animations: 'disabled',
   });
+  await page.setViewportSize({ width: 1440, height: 1400 });
   await page.goto(
     '/workspace/222222222222222222222222/reports/audit/44444444-4444-4444-8444-444444444444',
   );
@@ -1618,7 +1619,69 @@ test('README shows fictional IT chat cards and a populated workflow audit', asyn
   await expect(page.locator('.record-card').first()).toBeVisible();
   await page.screenshot({
     path: 'public/help/readme-workflow-audit-dark.png',
-    fullPage: true,
+    fullPage: false,
+    animations: 'disabled',
+  });
+  const create = async (url, data) => {
+    const response = await page.request.post(url, { data });
+    expect(response.ok(), await response.text()).toBe(true);
+    return response.json();
+  };
+  const base = await create('/api/records/knowledge-base', {
+    name: 'IT Service Desk',
+    description: 'Guides for secure access, devices, and everyday IT support.',
+  });
+  const topics = [];
+  for (const name of ['Apps and Access', 'Devices', 'Security'])
+    topics.push(
+      await create('/api/topics', {
+        name,
+        description: '',
+        articleIds: [],
+        knowledgeBaseId: base.id,
+      }),
+    );
+  const examples = [
+    {
+      title: 'Request access to a business app',
+      topic: topics[0],
+      body: '<p>Ask Zuno for access to the application you need. Include your team, the requested role, and your business reason.</p><h2>Approval and fulfillment</h2><p>Your manager reviews the request before IT provisions access. Track updates in the request conversation.</p>',
+    },
+    {
+      title: 'Set up your new laptop',
+      topic: topics[1],
+      body: '<p>Connect to your home or office network and sign in with your workspace account.</p><h2>First-day checklist</h2><ul><li>Install operating system updates.</li><li>Register multifactor authentication.</li><li>Confirm disk encryption is enabled.</li><li>Install approved applications through IT.</li></ul>',
+    },
+    {
+      title: 'Connect to the company VPN',
+      topic: topics[2],
+      body: '<p>Use the VPN to reach internal company systems when working away from the office.</p><h2>Before you begin</h2><ul><li>Use a company-managed laptop with current security updates.</li><li>Have your multifactor authentication device ready.</li></ul><h2>Connect securely</h2><ol><li>Open your approved VPN client.</li><li>Select the company connection and sign in with your workspace account.</li><li>Approve the multifactor prompt you initiated.</li><li>Wait for Connected before opening an internal application.</li></ol><h2>If you cannot connect</h2><p>Check your internet connection and restart the VPN client. If the problem continues, ask Zuno to open an IT support request. Include the error message and time of the failed attempt. Never share passwords or verification codes.</p>',
+    },
+  ];
+  let article;
+  for (const example of examples)
+    article = await create('/api/articles', {
+      title: example.title,
+      body: example.body,
+      status: 'Published',
+      knowledgeBaseId: base.id,
+      topicIds: [example.topic.id],
+    });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto(
+    `/workspace/222222222222222222222222/knowledge?base=${base.id}&topic=${topics[2].id}&article=${article.id}`,
+  );
+  await expect(
+    page.getByRole('heading', { name: 'Connect to the company VPN', exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole('treeitem', { name: 'Security', exact: true })).toHaveAttribute(
+    'aria-expanded',
+    'true',
+  );
+  await page.evaluate(() => document.fonts.ready);
+  await page.screenshot({
+    path: 'public/help/readme-knowledge-dark.png',
+    fullPage: false,
     animations: 'disabled',
   });
 });

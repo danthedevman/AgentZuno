@@ -1,3 +1,4 @@
+import { deleteWorkflow } from '../../workflows/deleteWorkflow.js';
 import { validateWorkflowReferences } from '../../workflows/workflowReferences.js';
 
 import { validateWorkflowDepartment } from '../../workflows/workflowDepartments.js';
@@ -199,6 +200,10 @@ export function createHelpdeskWorkflowsController(store, chats) {
     getWorkflowConversationsId,
     postWorkflows,
     putWorkflowsId,
+    deleteWorkflowsId: async (request, response) =>
+      response.json(
+        await deleteWorkflow(store, request.helpdeskUser, request.params.id, request.body),
+      ),
     postWorkflowConversations,
     postWorkflowConversationsIdMessages,
   };

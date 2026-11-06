@@ -53,3 +53,7 @@ An empty Inbox may mean no work is currently assigned to your groups. Ask an Adm
 ## Request selection
 
 The configured support provider infers intent from permitted published workflow names, descriptions and forms, then selects the exact workflow through a typed tool. Trigger phrases are not required or pattern-matched. Ambiguous requests need a clarification; an incidental mention or status question should not offer a new form. The server checks workspace, current permissions, department, publication and revision before exposing or submitting a selected form. A selection only prepares review: the user must explicitly submit before any workflow action runs.
+
+### Deleting a workflow
+
+Admins can delete a saved workflow from Settings → Danger Zone. Preserve existing requests and Preserve workflow history both default off for each deletion. The typed-name confirmation lists the selected effects. Keeping requests retains their tasks and attachments; pending workflow approvals return to open requests. Keeping history retains execution runs and saved versions. Pending runs stop, while running or uncertain external actions block deletion until they finish or their delivery state is reviewed. Governance audits remain regardless of these choices. Deleting the workflow prevents new submissions and does not delete private chat transcripts.

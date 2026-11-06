@@ -18,6 +18,7 @@ export function installHelpdeskWorkflowRoutes(app, store, chats) {
   app.get('/api/helpdesk/workflow-conversations/:id', controller.getWorkflowConversationsId);
   app.post('/api/helpdesk/workflows', controller.postWorkflows);
   app.put('/api/helpdesk/workflows/:id', controller.putWorkflowsId);
+  app.delete('/api/helpdesk/workflows/:id', controller.deleteWorkflowsId);
   app.post('/api/helpdesk/workflow-conversations', controller.postWorkflowConversations);
   app.post(
     '/api/helpdesk/workflow-conversations/:id/messages',

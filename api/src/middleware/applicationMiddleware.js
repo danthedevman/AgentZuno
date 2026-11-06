@@ -209,7 +209,7 @@ export function installApplicationMiddleware(app, { auth, integrations, customDo
         ].includes(request.path)) ||
       (request.method === 'POST' &&
         /^\/api\/helpdesk\/workflow-runs\/[a-f0-9]{64}\/decisions$/.test(request.path)) ||
-      (request.method === 'PUT' &&
+      (['PUT', 'DELETE'].includes(request.method) &&
         /^\/api\/helpdesk\/workflows\/[a-f0-9]{24}$/.test(request.path)) ||
       (request.method === 'POST' &&
         /^\/api\/helpdesk\/workflow-conversations\/[a-f0-9]{24}\/(messages|ticket)$/.test(

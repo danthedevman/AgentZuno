@@ -1,3 +1,4 @@
+import WorkflowDangerZone from '../../../components/workflows/WorkflowDangerZone.jsx';
 import { pollConversation } from '../../../services/chat/conversationPolling.js';
 import ChatPanelToolbar from '../../../components/chat/ChatPanelToolbar.jsx';
 import { hasWorkflowChanges } from '../../../services/workflows/workflowPublication.js';
@@ -143,6 +144,7 @@ export default function WorkflowBuilderPage() {
   const [message, setMessage] = createSignal('');
   const [sending, setSending] = createSignal(false);
   const [saving, setSaving] = createSignal(false);
+  const [deleting, setDeleting] = createSignal(false);
   const [savedDefinition, setSavedDefinition] = createSignal('');
   const [hasEdits, setHasEdits] = createSignal(false);
   const [saveStatus, setSaveStatus] = createSignal('');
@@ -241,6 +243,7 @@ export default function WorkflowBuilderPage() {
       !value ||
       sending() ||
       saving() ||
+      deleting() ||
       processing() ||
       serialized === savedDefinition() ||
       serialized === lastAttempt()
@@ -337,7 +340,7 @@ export default function WorkflowBuilderPage() {
   async function save(enabled = false, automatic = false, unpublish = false) {
     setError('');
     setMessage('');
-    if (saving()) return;
+    if (saving() || deleting()) return;
     setSaving(true);
     setSaveStatus('Saving Draft…');
     const snapshot = JSON.stringify({ definition: definition(), source: source() });
@@ -852,6 +855,20 @@ export default function WorkflowBuilderPage() {
                     }}
                   />
                 </Show>
+              </Show>
+              <Show when={tab() === 'settings' && current()} keyed>
+                {(workflow) => (
+                  <WorkflowDangerZone
+                    workflow={workflow}
+                    disabled={saving() || sending() || processing()}
+                    onBusy={setDeleting}
+                    onDeleted={() => {
+                      setHasEdits(false);
+                      window.dispatchEvent(new Event('agentzuno-form-saved'));
+                      navigate(path('/workspace/workflows'));
+                    }}
+                  />
+                )}
               </Show>
               <Show when={tab() === 'typescript'}>
                 <Show

@@ -33,6 +33,10 @@ Build and review a workflow alongside the Admin conversation.
 
 ![Workflow builder with its request form, approval, and routing steps](public/help/readme-workflow-builder-dark.png)
 
+Explore a populated IT knowledge base with searchable folders, topics, and an article reader.
+
+![IT Service Desk knowledge with device, access, and security guides](public/help/readme-knowledge-dark.png)
+
 Browse IT-team chat activity as cards, then open a single conversation record.
 
 ![Chat Activity cards with fictional IT-team conversations](public/help/readme-chat-activity-dark.png)
@@ -65,6 +69,8 @@ Approval permission and an explicit assignment are required to decide approvals.
 Admins add users from the dedicated Add User page. Creating an invitation shows its shareable link when email delivery is not configured. Data Table records open in a full-height workbench with the record form on the left and resizable Comments, Work Notes, and Related records tabs on the right. Fields follow their schema order in one continuous form; breadcrumbs and Save/Cancel share a fixed header while the form scrolls. On mobile, Form and Activity switch between panes. Groups use the shared details/edit controls.
 
 Record lists open as cards and offer a table toggle, with the preference remembered in the browser per user, workspace, and module. Workflow visuals let Admins select an existing assignment group for routing and task steps; saving and publication still use server validation.
+
+Workflow Settings includes an Admin-only Danger Zone. Preserve existing requests and Preserve workflow history both default off; the exact-name confirmation explains which records will be removed. Governance audits always remain. Active or uncertain workflow actions block deletion.
 
 Deletion and removal prompts share one dialog layout. When a name is required, enter it exactly in the full-width confirmation field; Cancel and Escape leave the item unchanged.
 
