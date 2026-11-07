@@ -8,6 +8,8 @@ Install project dependencies with `npm ci` and `npm --prefix api ci`. Run `npm r
 
 Install [Playwright](https://playwright.dev/docs/intro)'s Chromium browser with `npx playwright install chromium`. After `npm run build`, run `npm run test:browser`.
 
+The desktop and mobile checks run serially with a ten-minute total budget and a 30-second limit per test. A suite timeout can interrupt a passing test; inspect the report's global errors before treating the last open test as the cause.
+
 The browser suite starts an isolated in-memory API on port 4181 and a web preview on port 4180. These ports must be free. It never reuses a running application server, connects to your database, or calls a live AI provider. Tests use a fictional signed-in workspace seeded through the ordinary Settings demo-data API. Authentication is a test-only cookie fixture in the isolated server, not an application login method.
 
 Desktop and phone checks cover startup routing, article creation with base context, conversation headers, profile layout, and navigation controls. Desktop checks also open a submitted request and a workflow visual. The setup-routing check supplies a setup-required status response; it does not provision a real database. Authentication, persistence, and database isolation still require their API tests.
