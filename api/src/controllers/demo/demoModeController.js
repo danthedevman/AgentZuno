@@ -252,7 +252,7 @@ export function createDemoModeController(store, service) {
             tag,
             workflow,
             savedWorkflow.publishedConfig || value,
-            `Build a ${item.name} workflow with a request form and optional additional details. Route submitted requests to ${groupName} and display the item in the catalog.`,
+            `Build a ${item.name} workflow with a request form and optional additional details. Route submitted requests to ${groupName}.`,
           );
         }
         for (const [index, item] of examples.requests.entries()) {

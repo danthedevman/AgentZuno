@@ -144,7 +144,7 @@ test('request conversations and workflow visuals render current app records', as
   await expect(page.getByText('Request Form', { exact: true }).first()).toBeVisible();
   await expect(page.locator('.conversation-skeleton')).toHaveCount(0);
   if (process.env.UPDATE_README_SCREENSHOTS) {
-    await page.getByRole('button', { name: 'Zoom out', exact: true }).click();
+    await page.setViewportSize({ width: 1536, height: 1100 });
     await page.screenshot({ path: 'public/help/readme-workflow-builder-dark.png' });
   }
 });

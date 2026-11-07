@@ -31,7 +31,7 @@ Screenshots use fictional development records.
 
 Build and review a workflow alongside the Admin conversation.
 
-![Workflow builder with its request form, approval, and routing steps](public/help/readme-workflow-builder-dark.png)
+![Workflow builder with its request form and routing steps](public/help/readme-workflow-builder-dark.png)
 
 Explore a populated IT knowledge base with searchable folders, topics, and an article reader.
 
