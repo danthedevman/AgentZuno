@@ -1,3 +1,4 @@
+import { isOperationalField } from '../../../utils/recordFields.js';
 import Icon from '../../../components/Icon.jsx';
 import TooltipRegion from '../../../components/TooltipRegion.jsx';
 import DataRecordDeletion from '../../../components/data/DataRecordDeletion.jsx';
@@ -22,6 +23,9 @@ export default function DataRecordPage() {
   const { access } = useWorkspace();
   const { session } = useSession();
   let selectPanel;
+  let validateContent, validateProperties, showProperties;
+  const contentFields = () => (table()?.fields || []).filter((field) => !isOperationalField(field));
+  const propertyFields = () => (table()?.fields || []).filter(isOperationalField);
   const { notify } = useToasts();
   const isAdmin = () => !access.error && access()?.role === 'admin';
   const isNew = () => params.recordId === 'new';
@@ -65,6 +69,16 @@ export default function DataRecordPage() {
   });
   async function save(event) {
     event.preventDefault();
+    if (validateContent && !validateContent()) {
+      selectPanel?.('left');
+      return;
+    }
+    if (propertyFields().length && validateProperties && !validateProperties()) {
+      showProperties?.();
+      selectPanel?.('right');
+      queueMicrotask(() => validateProperties());
+      return;
+    }
     setSaving(true);
     try {
       await api(
@@ -218,8 +232,11 @@ export default function DataRecordPage() {
               <Show when={!table.error && table() && (isNew() || (!record.error && record()))}>
                 <RecordForm
                   id="data-record-form"
+                  validationRef={(validate) => {
+                    validateContent = validate;
+                  }}
                   showDescriptionBlocks={false}
-                  fields={table().fields}
+                  fields={contentFields()}
                   values={values()}
                   detailsOnly={!isEditing()}
                   readOnly={!isEditing()}
@@ -253,6 +270,34 @@ export default function DataRecordPage() {
               recordId={params.recordId}
               tableId={params.id}
               isNew={isNew()}
+              onPropertiesReady={(show) => {
+                showProperties = show;
+              }}
+              propertiesContent={() => (
+                <Show when={!table.error && table() && (isNew() || (!record.error && record()))}>
+                  <Show
+                    when={propertyFields().length}
+                    fallback={<p class="field-help">No additional properties.</p>}
+                  >
+                    <RecordForm
+                      id="data-record-properties-form"
+                      validationRef={(validate) => {
+                        validateProperties = validate;
+                      }}
+                      fields={propertyFields()}
+                      values={values()}
+                      detailsOnly={!isEditing()}
+                      readOnly={!isEditing()}
+                      readOnlyFields={table().readOnlyFields}
+                      includeDemo={Boolean(record()?.demoDatasetId)}
+                      onChange={(key, value) =>
+                        setValues((previous) => ({ ...previous, [key]: value }))
+                      }
+                      onSubmit={save}
+                    />
+                  </Show>
+                </Show>
+              )}
               relatedContent={() => (
                 <Show
                   when={relatedFields().length}

@@ -88,7 +88,7 @@ export default function RecordField(props) {
           required={props.field.required}
           options={availableOptions()}
           onOpen={() => {
-            if (!props.field.options) refetch();
+            if (!props.field.options) return refetch();
           }}
           disabled={props.disabled || (options.loading && !options.latest) || !!options.error}
           readOnly={isReadOnly()}
@@ -99,7 +99,7 @@ export default function RecordField(props) {
         <ReferenceLookup
           referenceTable={props.field.referenceTable}
           onOpen={() => {
-            if (!props.field.options) refetch();
+            if (!props.field.options) return refetch();
           }}
           name={props.field.id}
           label={props.field.label}

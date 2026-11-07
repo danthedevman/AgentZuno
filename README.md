@@ -47,7 +47,7 @@ Inspect a populated workflow audit record with its request, tool call, versions,
 
 ## Get started
 
-See [installation and development](docs/getting-started.md) for the complete setup. After creating `.env` from `.env.example` and setting a private credential encryption key:
+See [installation and development](docs/getting-started.md) for the complete setup and [deployment and local account recovery](docs/deployment.md) for operational guidance. After creating `.env` from `.env.example` and setting a private credential encryption key:
 
 ```sh
 docker compose up --build -d

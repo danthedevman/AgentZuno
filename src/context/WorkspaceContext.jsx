@@ -88,6 +88,11 @@ export function WorkspaceProvider(props) {
     });
   }
   const currentWorkspace = () => wrap(workspace());
+  async function refreshWorkspace() {
+    // A refresh must include sections that are still loading, rather than erase their results.
+    await Promise.allSettled([...pending.values()]);
+    return refetch();
+  }
   currentWorkspace.sectionLoaded = (name) => {
     sectionVersion();
     return loaded.has(name);
@@ -101,7 +106,7 @@ export function WorkspaceProvider(props) {
         workspace: currentWorkspace,
         access: props.access,
         refreshAccess: props.refreshAccess,
-        refresh: refetch,
+        refresh: refreshWorkspace,
         updateArticle: (article) => {
           mutate((current) =>
             current

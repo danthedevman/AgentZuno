@@ -1,11 +1,11 @@
-import { rateLimit } from 'express-rate-limit';
+import { createRateLimiter } from '../../middleware/rateLimits.js';
 
 import { createIdentityController } from '../../controllers/identity/identityController.js';
 export function installIdentityRoutes(app, store, auth) {
   const controller = createIdentityController(store, auth);
   app.use(
     '/api/auth/oidc',
-    rateLimit({
+    createRateLimiter(app, 'identityRoutes', {
       windowMs: 60000,
       limit: 30,
       standardHeaders: 'draft-8',

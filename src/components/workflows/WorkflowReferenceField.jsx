@@ -27,14 +27,17 @@ export default function WorkflowReferenceField(props) {
     },
     async (url) => {
       const sourceIdentity = identity();
-      return { identity: sourceIdentity, rows: await api(url) };
+      return { identity: sourceIdentity, query: query(), rows: await api(url) };
     },
   );
   createEffect(() => {
-    if (!options.error && options()?.identity === identity())
+    if (!options.error && options()?.identity === identity() && options()?.query === query())
       setCached((previous) => [
         ...new Map(
-          [...previous, ...options().rows].map((option) => [option.value, option]),
+          [
+            ...(query() ? previous.filter((option) => option.value === props.value) : []),
+            ...options().rows,
+          ].map((option) => [option.value, option]),
         ).values(),
       ]);
   });
@@ -42,7 +45,12 @@ export default function WorkflowReferenceField(props) {
     <div class="workflow-reference-field" aria-busy={options.loading}>
       <ReferenceLookup
         referenceTable={props.field.referenceTable}
-        onOpen={() => refetch()}
+        onOpen={() => {
+          setSearch('');
+          setQuery('');
+          setCached([]);
+          return refetch();
+        }}
         name={props.field.id}
         label={props.field.label}
         required={props.field.required}

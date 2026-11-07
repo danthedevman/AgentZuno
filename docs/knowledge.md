@@ -19,7 +19,7 @@ As an Admin, select **Add Article** in the intended folder. Its base and topic a
 
 > Write a guide for connecting to company Wi-Fi on Mac and Windows. Explain how to sign in and where to ask for help.
 
-Review the proposed preview, request changes if needed, and approve it before saving. You can also edit the title and body manually. Use History for past authoring conversations and Attachments for related files.
+New articles save or publish directly without a review step. The Preview tab shows the current content for new articles, or the saved article when editing without proposed changes. For existing articles, review proposed changes in the sticky approval bar, request changes if needed, and select **Approve Changes** before **Save** or **Publish** becomes available. Editing approved fields requires another review. The top **Preview** button only opens the current proposal or saved article in a standalone read-only page; it does not create a proposal. You can also edit the title and body manually. Use History for past authoring conversations and Attachments for related files.
 
 ## Publish and maintain content
 

@@ -1,4 +1,4 @@
-import { rateLimit } from 'express-rate-limit';
+import { createRateLimiter } from '../../middleware/rateLimits.js';
 import express from 'express';
 
 import { initializeInstallation } from '../../storage/configuration.js';
@@ -10,7 +10,7 @@ export function installDatabaseSetupRoutes(app) {
   app.get('/api/installation/database', controller.getInstallationDatabase);
   app.post(
     '/api/installation/database',
-    rateLimit({
+    createRateLimiter(app, 'setupRoutes', {
       windowMs: 60000,
       limit: 10,
       standardHeaders: 'draft-8',

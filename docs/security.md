@@ -17,7 +17,7 @@ AgentZuno is an actively developed project. These controls describe implemented 
 ## Limits to account for
 
 - Public deployment requires HTTPS, secure cookies, service hardening, backups, and network restrictions; the default Compose stack does not provide all production protections.
-- Email verification and password recovery are not implemented.
+- Email verification and public email password recovery are not implemented. A server-only interactive recovery command resets local password accounts and revokes their sessions; identity accounts recover through their identity provider. See [local account recovery](deployment.md#local-account-recovery).
 - A native Microsoft Teams bot is implemented; configure and validate its Azure/Bot Framework registration before use. ServiceNow/Jira workflow actions are not implemented.
 - Authored knowledge uses local Ollama embeddings and a separate Qdrant collection, combined with MongoDB keyword retrieval. Vector matches are candidates only; current publication, generation, workspace and base/topic/article permissions are rechecked. Local index outages fall back to authorized keyword retrieval. The semantic candidate scan is bounded to 2,000 indexed articles per workspace; larger workspaces currently use keyword retrieval until this limit is expanded.
 - Background jobs and external workflow actions do not guarantee exactly-once delivery.
@@ -32,6 +32,8 @@ Before distributing or deploying, review dependencies and licenses, scan the com
 
 ## Request limits and input validation
 
-Every API route has an IP-based budget of 3,000 requests per minute. Database setup, identity login, OAuth initiation, domain verification, SMTP testing, and knowledge/attachment reads have tighter route budgets. A blocked request returns HTTP 429 with a retry interval. Limits use process-local memory: they reset when the API restarts and are not shared across replicas. For production replicas, configure a shared rate-limit store or enforce aggregate limits at the trusted ingress. Users behind a shared NAT share IP budgets. Do not enable blanket proxy trust; configure only your trusted ingress before relying on forwarded client addresses.
+Every API route has an IP-based budget of 3,000 requests per minute. Database setup, identity login, OAuth initiation, domain verification, SMTP testing, and knowledge/attachment reads have tighter route budgets. A blocked request returns HTTP 429 with a retry interval. Login and registration share a 15-attempt per-minute budget. With `REDIS_URL` configured, budgets are shared across API replicas and survive API restarts. Configured Redis failures return HTTP 503 rather than bypassing protection. Without Redis, limits use process-local memory suitable only for single-process development. Compose supplies Redis with AOF persistence and no eviction. Users behind a shared NAT share IP budgets. Do not enable blanket proxy trust; configure only your trusted ingress before relying on forwarded client addresses.
 
 Binary upload endpoints accept actual parsed Buffers only; JSON objects and arrays cannot impersonate files. File-name headers and knowledge/workflow query references must have the expected scalar types. List sorting resolves only configured columns, and email validation uses bounded checks without ambiguous backtracking.
+
+The Docker and Render web servers apply CSP, nosniff, and referrer headers to application HTML and static files. CSP permits inline styles required by the UI, but not inline executable scripts. Set HSTS and TLS policy at the public HTTPS ingress. Cookies become Secure automatically when `APP_ORIGIN` uses HTTPS; `COOKIE_SECURE=true` can also enforce it explicitly.

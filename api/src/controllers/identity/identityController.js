@@ -1,3 +1,4 @@
+import { secureCookies } from '../../identity/cookieSecurity.js';
 import * as oidc from 'openid-client';
 import { provisionIdentityUser } from '../../identity/helpdeskProvisioning.js';
 import { randomBytes } from 'node:crypto';
@@ -147,7 +148,7 @@ export function createIdentityController(store, auth) {
     response.cookie('agentzuno_oidc', browser, {
       httpOnly: true,
       sameSite: 'lax',
-      secure: process.env.COOKIE_SECURE === 'true',
+      secure: secureCookies(),
       maxAge: 600000,
       path: '/api/auth/oidc',
     });

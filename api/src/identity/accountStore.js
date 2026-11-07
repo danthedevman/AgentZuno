@@ -1,6 +1,7 @@
 import { createStorageClient } from '../storage/index.js';
 import { auditDatabase } from '../records/recordAudit.js';
 import { createHash } from 'node:crypto';
+import { queryString } from '../shared/queryValues.js';
 
 export function createAccountStore(uri = process.env.MONGODB_URI, databaseOverride) {
   const client = databaseOverride
@@ -21,21 +22,29 @@ export function createAccountStore(uri = process.env.MONGODB_URI, databaseOverri
   }
   return {
     async findById(id) {
-      return client.configured ? database().collection('users').findOne({ id }) : null;
+      return client.configured
+        ? database()
+            .collection('users')
+            .findOne({ id: queryString(id, 24) })
+        : null;
     },
     async findUser(email) {
-      return client.configured ? database().collection('users').findOne({ email }) : null;
+      return client.configured
+        ? database()
+            .collection('users')
+            .findOne({ email: queryString(email, 254) })
+        : null;
     },
     async createUser(user) {
       await ready();
       await database().collection('users').insertOne(user);
     },
-    async saveSession(token, user, expiresAt) {
+    async saveSession(token, user, expiresAt, sessionVersion = '') {
       if (client.configured) {
         await ready();
         await database()
           .collection('sessions')
-          .insertOne({ _id: hash(token), user, expiresAt: new Date(expiresAt) });
+          .insertOne({ _id: hash(token), user, sessionVersion, expiresAt: new Date(expiresAt) });
       }
     },
     async session(token) {

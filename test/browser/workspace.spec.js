@@ -49,6 +49,13 @@ test('New Article supports an absent article, base context, tabs and aligned con
       .click();
   await expect(page.getByRole('button', { name: 'Review Changes', exact: true })).toHaveCount(0);
   await expect(page.getByRole('textbox', { name: 'Title', exact: true })).toBeVisible();
+  const baseLookup = page.getByRole('combobox', { name: 'Knowledge Base', exact: true });
+  await expect(baseLookup).toHaveValue('');
+  await expect(page.getByRole('navigation', { name: 'Article location' })).not.toContainText(
+    'ServiceNow',
+  );
+  await baseLookup.click();
+  await page.getByRole('option').first().click();
   const baseLink = page.getByRole('link', { name: /Open .* in a new tab/ });
   await expect(baseLink).toBeVisible();
   const baseId = (await baseLink.getAttribute('href')).split('/').at(-1);
@@ -188,6 +195,14 @@ test('workflow publication, approval rejection and task completion persist throu
   await page.goto(`/workspace/222222222222222222222222/tasks/${task.id}`);
   await expect(page.getByRole('textbox', { name: 'Title', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
+  await expect(
+    page.locator('.data-record-topbar').getByRole('button', { name: 'Save', exact: true }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole('complementary', { name: 'Task properties and activity' })
+      .getByRole('textbox', { name: 'Due Date', exact: true }),
+  ).toBeVisible();
   await page.getByRole('textbox', { name: 'Title', exact: true }).fill('Unsaved task title');
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(page.getByRole('textbox', { name: 'Title', exact: true })).toHaveCount(0);
@@ -209,6 +224,7 @@ test('workflow publication, approval rejection and task completion persist throu
   const saved = await (await page.request.get(`/api/helpdesk/tasks/${task.id}`)).json();
   expect(saved.status).toBe('closed');
   expect(saved.dueDate).toBe('2027-03-12');
+  await page.getByRole('tab', { name: 'Comments', exact: true }).click();
   await page
     .getByRole('textbox', { name: 'Comment', exact: true })
     .fill('Please confirm the handoff');
@@ -278,9 +294,11 @@ test('task property rows, due dates and activity fit both desktop and mobile', a
   await page.goto(`/workspace/222222222222222222222222/tasks/${task.id}`);
   await expect(
     page.getByRole('heading', { name: 'Verify device handoff', exact: true }),
-  ).toBeVisible();
+  ).toBeAttached();
+  if (testInfo.project.name === 'mobile')
+    await page.getByRole('button', { name: 'Activity', exact: true }).click();
   await expect(page.getByRole('tab', { name: 'Comments', exact: true })).toBeVisible();
-  const sheet = page.locator('.record-property-sheet');
+  const sheet = page.locator('.data-record-timeline .record-property-sheet');
   await expect(sheet).toBeVisible();
   expect(await sheet.evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(
     true,
@@ -295,6 +313,7 @@ test('task property rows, due dates and activity fit both desktop and mobile', a
   expect((await (await page.request.get(`/api/helpdesk/tasks/${task.id}`)).json()).dueDate).toBe(
     '2027-03-15',
   );
+  await page.getByRole('tab', { name: 'Comments', exact: true }).click();
   const commentField = page.getByRole('textbox', { name: 'Comment', exact: true });
   await commentField.fill('@Alex');
   await page.getByRole('option', { name: '@Alex Morgan', exact: true }).click();
@@ -351,6 +370,7 @@ test('application descriptions align with fields and empty records keep both sta
     await page.getByRole('button', { name: 'Activity', exact: true }).click();
   await expect(page.getByRole('tab', { name: 'Comments', exact: true })).toBeVisible();
   await expect(page.getByRole('tab', { name: 'Work Notes', exact: true })).toBeVisible();
+  await page.getByRole('tab', { name: 'Comments', exact: true }).click();
   await expect(page.getByText('No comments yet', { exact: true })).toBeVisible();
   await page.getByRole('tab', { name: 'Related records', exact: true }).click();
   await expect(page.getByText('No related records linked.', { exact: true })).toBeVisible();
@@ -1101,7 +1121,25 @@ test('article review appears only for actual chat changes and shows before-after
   await page
     .context()
     .addCookies([{ name: 'browser_test', value: '1', url: 'http://127.0.0.1:4180' }]);
-  let candidate = { title: '', body: '' };
+  const baseResponse = await page.request.post('/api/records/knowledge-base', {
+    data: { name: 'Existing article review fixture', description: '' },
+  });
+  const base = await baseResponse.json();
+  const topicResponse = await page.request.post('/api/topics', {
+    data: { name: 'Review fixture', description: '', articleIds: [], knowledgeBaseId: base.id },
+  });
+  const topic = await topicResponse.json();
+  const articleResponse = await page.request.post('/api/articles', {
+    data: {
+      title: 'Original fixture',
+      body: '<p>Original content.</p>',
+      status: 'Draft',
+      knowledgeBaseId: base.id,
+      topicIds: [topic.id],
+    },
+  });
+  const article = await articleResponse.json();
+  let candidate = { title: article.title, body: article.body };
   await page.route('**/api/helpdesk/article-conversations/eeeeeeeeeeeeeeeeeeeeeeee', (route) =>
     route.fulfill({
       json: {
@@ -1122,7 +1160,7 @@ test('article review appears only for actual chat changes and shows before-after
     }),
   );
   await page.goto(
-    '/workspace/222222222222222222222222/create/article?chat=eeeeeeeeeeeeeeeeeeeeeeee',
+    `/workspace/222222222222222222222222/articles/${article.id}/edit?chat=eeeeeeeeeeeeeeeeeeeeeeee`,
   );
   if (isMobile)
     await page
@@ -1141,6 +1179,31 @@ test('article review appears only for actual chat changes and shows before-after
     'Use the portal.',
   );
   await expect(page.locator('.change-review-line.is-add')).not.toHaveCount(0);
+  const save = page.getByRole('button', { name: 'Save', exact: true });
+  const publish = page.getByRole('button', { name: 'Publish', exact: true });
+  await expect(save).toBeDisabled();
+  await expect(publish).toBeDisabled();
+  let previewWrites = 0;
+  page.on('request', (request) => {
+    if (request.method() === 'POST' && request.url().endsWith('/article-proposals'))
+      previewWrites++;
+  });
+  const popup = page.waitForEvent('popup');
+  await page.getByRole('button', { name: 'Preview', exact: true }).click();
+  const standalone = await popup;
+  await expect(standalone).toHaveURL(/\/preview\/.*\/proposals\/ffffffffffffffffffffffff$/);
+  await standalone.close();
+  expect(previewWrites).toBe(0);
+  await expect(page.locator('.article-review-bar')).toHaveCSS('position', 'sticky');
+  await page.getByRole('button', { name: 'Approve Changes', exact: true }).click();
+  await expect(save).toBeEnabled();
+  await expect(publish).toBeEnabled();
+  await page.getByRole('tab', { name: 'Editor', exact: true }).click();
+  await page
+    .getByRole('textbox', { name: 'Title', exact: true })
+    .fill('An additional unreviewed edit');
+  await expect(save).toBeDisabled();
+  await expect(publish).toBeDisabled();
 });
 
 test('public header follows scroll direction without shifting the page', async ({
@@ -1341,8 +1404,8 @@ test('knowledge explorer creates bases and topics and opens articles in the sele
   const emptyBase = explorer
     .getByRole('treeitem', { name, exact: true })
     .locator('.knowledge-tree-empty');
-  const emptyBaseAction = emptyBase.getByRole('link', { name: 'Add article', exact: true });
-  await expect(emptyBaseAction).toHaveAttribute('href', new RegExp(`base=${baseId}$`));
+  const emptyBaseAction = emptyBase.getByRole('button', { name: 'Add Topic', exact: true });
+  await expect(emptyBase.getByText('No topics', { exact: true })).toBeAttached();
   if (!isMobile) {
     await toolbar.getByRole('button', { name: 'Refresh knowledge folders' }).focus();
     await toolbar.hover();
@@ -1382,7 +1445,7 @@ test('knowledge explorer creates bases and topics and opens articles in the sele
   const emptyTopic = explorer
     .getByRole('treeitem', { name: 'Getting started', exact: true })
     .locator('.knowledge-tree-empty');
-  const emptyTopicAction = emptyTopic.getByRole('link', { name: 'Add article', exact: true });
+  const emptyTopicAction = emptyTopic.getByRole('link', { name: 'Add Article', exact: true });
   await expect(emptyTopicAction).toHaveAttribute(
     'href',
     new RegExp(`base=${baseId}&topic=${topicId}$`),
@@ -1811,7 +1874,7 @@ test('empty knowledge folders can be deleted from their editor after typed confi
   expect(deleted.status()).toBe(404);
 });
 
-test('workflow Settings danger zone uses default-off preservation choices and typed confirmation', async ({
+test('workflow Settings danger zone uses default-on preservation choices and typed confirmation', async ({
   page,
   isMobile,
 }, testInfo) => {
@@ -1855,8 +1918,10 @@ test('workflow Settings danger zone uses default-off preservation choices and ty
   const danger = page.getByRole('region', { name: 'Danger Zone', exact: true });
   const requests = danger.getByRole('switch', { name: 'Preserve existing requests', exact: true });
   const history = danger.getByRole('switch', { name: 'Preserve workflow history', exact: true });
-  await expect(requests).toHaveAttribute('aria-checked', 'false');
-  await expect(history).toHaveAttribute('aria-checked', 'false');
+  await expect(requests).toHaveAttribute('aria-checked', 'true');
+  await expect(history).toHaveAttribute('aria-checked', 'true');
+  await requests.click();
+  await history.click();
   await danger.getByRole('button', { name: 'Delete Workflow', exact: true }).click();
   const confirmation = page.getByRole('dialog', { name: 'Delete Workflow', exact: true });
   await expect(confirmation).toContainText('Workflow runs and saved versions will be deleted.');
@@ -2393,8 +2458,9 @@ test('workflow reference fields and their options use the full form width', asyn
   await page.route(`**/api/helpdesk/workflows/${id}/view`, (route) =>
     route.fulfill({ json: { workflowId: id, chatId: null } }),
   );
+  let isDeleted = false;
   await page.route('**/api/helpdesk/data/tables/users/options', (route) =>
-    route.fulfill({ json: [option] }),
+    route.fulfill({ json: isDeleted ? [] : [option] }),
   );
   await page.goto(`/workspace/222222222222222222222222/workflows/${id}/edit`);
   if (isMobile)
@@ -2403,6 +2469,13 @@ test('workflow reference fields and their options use the full form width', asyn
       .getByRole('button', { name: 'Workflow', exact: true })
       .click();
   const form = page.getByRole('region', { name: 'Vendor access', exact: true });
+  for (const button of await page
+    .getByRole('group', { name: 'Workflow zoom', exact: true })
+    .getByRole('button')
+    .all()) {
+    expect((await button.boundingBox()).height).toBeLessThanOrEqual(28);
+    expect((await button.boundingBox()).width).toBeLessThanOrEqual(28);
+  }
   const reference = form.getByRole('combobox', { name: 'Vendor profile', exact: true });
   const control = form.locator('.multi-select-control');
   const textarea = form.getByRole('textbox', { name: /Business reason/ });
@@ -2427,5 +2500,144 @@ test('workflow reference fields and their options use the full form width', asyn
   await list.getByRole('option', { name: option.label, exact: true }).click();
   await expect(list).toHaveCount(0);
   await expect(form.locator('.selection-pill')).toContainText('Alex Example');
+  isDeleted = true;
+  await reference.click();
+  await expect(form.getByRole('option', { name: option.label, exact: true })).toHaveCount(0);
+  await expect(form.getByText('No matches found.', { exact: true })).toBeVisible();
+  await expect(form.locator('.selection-pill')).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('saved article preview is read-only and a disposable article publishes only after review', async ({
+  page,
+  isMobile,
+}) => {
+  await page
+    .context()
+    .addCookies([{ name: 'browser_test', value: '1', url: 'http://127.0.0.1:4180' }]);
+  // These records exist only in scripts/browser-test-api.mjs's disposable in-memory database.
+  const create = async (url, data) => {
+    const response = await page.request.post(url, { data });
+    expect(response.ok(), await response.text()).toBe(true);
+    return response.json();
+  };
+  const base = await create('/api/records/knowledge-base', {
+    name: `Preview test ${isMobile ? 'mobile' : 'desktop'}`,
+    description: 'Disposable browser fixture',
+  });
+  const topic = await create('/api/topics', {
+    name: 'Preview fixture',
+    description: '',
+    articleIds: [],
+    knowledgeBaseId: base.id,
+  });
+  const article = await create('/api/articles', {
+    title: 'Disposable preview article',
+    body: '<p>Content created only for this browser test.</p>',
+    status: 'Published',
+    knowledgeBaseId: base.id,
+    topicIds: [topic.id],
+  });
+  await page.goto(`/workspace/222222222222222222222222/articles/${article.id}/edit`);
+  if (isMobile)
+    await page
+      .getByRole('group', { name: 'Conversation view' })
+      .getByRole('button', { name: 'Article', exact: true })
+      .click();
+  let proposalWrites = 0;
+  page.on('request', (request) => {
+    if (request.method() === 'POST' && request.url().endsWith('/article-proposals'))
+      proposalWrites++;
+  });
+  await page.getByRole('tab', { name: 'Preview', exact: true }).click();
+  await expect(page.locator('.article-builder-content > h1')).toHaveText(article.title);
+  await expect(page.locator('.article-review-bar')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Review Changes', exact: true })).toHaveCount(0);
+  const popup = page.waitForEvent('popup');
+  await page.getByRole('button', { name: 'Preview', exact: true }).click();
+  const standalone = await popup;
+  await expect(standalone).toHaveURL(new RegExp(`/preview/.*/articles/${article.id}$`));
+  await expect(standalone.getByRole('heading', { name: article.title, exact: true })).toBeVisible();
+  await expect(standalone.locator('.article-brand img')).toHaveAttribute(
+    'src',
+    /agentzuno-wordmark(?:-light)?\.svg$/,
+  );
+  await standalone.close();
+  expect(proposalWrites).toBe(0);
+  await page.getByRole('tab', { name: 'Editor', exact: true }).click();
+  const title = `${article.title} reviewed`;
+  await page.getByRole('textbox', { name: 'Title', exact: true }).fill(title);
+  await expect(page.getByRole('button', { name: 'Review Changes', exact: true })).toBeVisible();
+  await page.getByRole('textbox', { name: 'Title', exact: true }).fill(article.title);
+  await expect(page.getByRole('button', { name: 'Review Changes', exact: true })).toHaveCount(0);
+  await page.getByRole('textbox', { name: 'Title', exact: true }).fill(title);
+  const publish = page.getByRole('button', { name: 'Publish Changes', exact: true });
+  await expect(publish).toBeDisabled();
+  await page.getByRole('button', { name: 'Review Changes', exact: true }).click();
+  await page.getByRole('button', { name: 'Approve Changes', exact: true }).click();
+  expect((await (await page.request.get(`/api/articles/${article.id}`)).json()).title).toBe(
+    article.title,
+  );
+  await expect(publish).toBeEnabled();
+  await publish.click();
+  await expect(page.getByText('Article published.', { exact: true })).toBeVisible();
+  if (isMobile)
+    await page
+      .getByRole('group', { name: 'Conversation view' })
+      .getByRole('button', { name: 'Article', exact: true })
+      .click();
+  await expect(page.getByRole('textbox', { name: 'Title', exact: true })).toHaveValue(title);
+  expect((await (await page.request.get(`/api/articles/${article.id}`)).json()).title).toBe(title);
+});
+
+test('new articles save and publish directly without a review step', async ({ page, isMobile }) => {
+  await page
+    .context()
+    .addCookies([{ name: 'browser_test', value: '1', url: 'http://127.0.0.1:4180' }]);
+  const create = async (url, data) => {
+    const response = await page.request.post(url, { data });
+    expect(response.ok(), await response.text()).toBe(true);
+    return response.json();
+  };
+  const base = await create('/api/records/knowledge-base', {
+    name: 'New article fixture',
+    description: '',
+  });
+  const topic = await create('/api/topics', {
+    name: 'New article fixture',
+    description: '',
+    articleIds: [],
+    knowledgeBaseId: base.id,
+  });
+  let proposalWrites = 0;
+  page.on('request', (request) => {
+    if (request.method() === 'POST' && request.url().endsWith('/article-proposals'))
+      proposalWrites++;
+  });
+  for (const action of ['Save', 'Publish']) {
+    await page.goto(
+      `/workspace/222222222222222222222222/create/article?base=${base.id}&topic=${topic.id}`,
+    );
+    if (isMobile)
+      await page
+        .getByRole('group', { name: 'Conversation view' })
+        .getByRole('button', { name: 'Article', exact: true })
+        .click();
+    await page.getByRole('textbox', { name: 'Title', exact: true }).fill(`${action} a new article`);
+    await page
+      .getByRole('textbox', { name: 'Body', exact: true })
+      .fill('New article content created only for this test.');
+    await expect(page.getByRole('button', { name: 'Review Changes', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Approve Changes', exact: true })).toHaveCount(0);
+    const savedResponse = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'POST' && response.url().endsWith('/api/articles'),
+    );
+    await page.getByRole('button', { name: action, exact: true }).click();
+    const response = await savedResponse;
+    expect(response.ok(), await response.text()).toBe(true);
+    expect((await response.json()).status).toBe(action === 'Save' ? 'Draft' : 'Published');
+    await expect(page).toHaveURL(/\/articles\/[a-f0-9]{24}\/edit$/);
+  }
+  expect(proposalWrites).toBe(0);
 });

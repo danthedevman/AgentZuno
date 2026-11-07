@@ -25,6 +25,8 @@ Open a task and choose **Edit**, update its details, then **Save**. Use **Close 
 
 Assigned people and group members find permitted tasks in Inbox. Users can comment on accessible tasks but cannot create or close fulfillment tasks. Read Only members cannot make changes.
 
+Tasks use the same resizable workbench as Data Records: title and details on the left; Properties, Comments, Work Notes, and Related Records on the right. Save and Cancel replace Edit in the top action bar.
+
 ![Task details and activity](/help/docs-task-record-dark.png)
 
 ## Comments, work notes, and mentions

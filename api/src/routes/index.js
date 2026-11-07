@@ -1,3 +1,4 @@
+import { createRateLimiter } from '../middleware/rateLimits.js';
 import { installSlackUserLinksRoutes } from './channels/slackUserLinksRoutes.js';
 import { installDataRecordOperationRoutes } from './data/dataRecordOperationsRoutes.js';
 import { installRecordActivityRoutes } from './records/recordActivityRoutes.js';
@@ -101,8 +102,9 @@ export function installApiRoutes(app, context) {
   app.put('/api/auth/preferences', controller.putAuthPreferences);
   app.post('/api/auth/impersonation', controller.postAuthImpersonation);
   app.get('/api/auth/session', controller.getAuthSession);
-  app.post('/api/auth/login', auth.login);
-  app.post('/api/auth/register', auth.register);
+  const loginLimit = createRateLimiter(app, 'authentication', { limit: 15 });
+  app.post('/api/auth/login', loginLimit, auth.login);
+  app.post('/api/auth/register', loginLimit, auth.register);
   app.get('/api/workspaces/:id', controller.getWorkspacesId);
   app.post('/api/auth/logout', auth.logout);
   app.get('/api/workspace', controller.getWorkspace);

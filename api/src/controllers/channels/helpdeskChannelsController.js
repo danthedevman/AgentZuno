@@ -1,3 +1,4 @@
+import { secureCookies } from '../../identity/cookieSecurity.js';
 import { saveConnectorActions } from '../../integrations/connectorActions.js';
 import { saveChannelApplication } from '../../channels/channelApplications.js';
 import { listResponse } from '../../shared/listQuery.js';
@@ -72,7 +73,7 @@ export function createHelpdeskChannelsController(store) {
     response.cookie('zuno_channel_oauth', result.browser, {
       httpOnly: true,
       sameSite: 'lax',
-      secure: process.env.COOKIE_SECURE === 'true',
+      secure: secureCookies(),
       maxAge: 600000,
       path: '/api/helpdesk/channels/oauth',
     });

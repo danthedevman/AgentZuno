@@ -1,11 +1,11 @@
-import { rateLimit } from 'express-rate-limit';
+import { createRateLimiter } from '../../middleware/rateLimits.js';
 
 import { createConnectionOAuthController } from '../../controllers/integrations/connectionOAuthController.js';
 export function installConnectionOAuthRoutes(app, store, service, fetcher = fetch) {
   const controller = createConnectionOAuthController(store, service, fetcher);
   app.use(
     '/api/connections/oauth/start',
-    rateLimit({
+    createRateLimiter(app, 'connectionOAuthRoutes', {
       windowMs: 60000,
       limit: 20,
       standardHeaders: 'draft-8',

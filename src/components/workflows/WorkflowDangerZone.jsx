@@ -6,8 +6,8 @@ import { useToasts } from '../../context/ToastContext.jsx';
 
 export default function WorkflowDangerZone(props) {
   const { notify } = useToasts();
-  const [preserveRequests, setPreserveRequests] = createSignal(false);
-  const [preserveHistory, setPreserveHistory] = createSignal(false);
+  const [preserveRequests, setPreserveRequests] = createSignal(true);
+  const [preserveHistory, setPreserveHistory] = createSignal(true);
   const [busy, setBusy] = createSignal(false);
   async function remove() {
     if (busy() || props.disabled || !props.workflow) return;
@@ -65,16 +65,14 @@ export default function WorkflowDangerZone(props) {
           disabled={busy() || props.disabled}
           onChange={setPreserveRequests}
         />
-        <p class="field-help">
-          Keep submitted requests, their tasks, and attachments. Off by default.
-        </p>
+        <p class="field-help">Keep submitted requests, their tasks, and attachments.</p>
         <Toggle
           label="Preserve workflow history"
           checked={preserveHistory()}
           disabled={busy() || props.disabled}
           onChange={setPreserveHistory}
         />
-        <p class="field-help">Keep execution runs and saved workflow versions. Off by default.</p>
+        <p class="field-help">Keep execution runs and saved workflow versions.</p>
         <button
           type="button"
           class="workspace-button secondary"

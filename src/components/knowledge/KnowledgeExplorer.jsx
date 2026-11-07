@@ -71,19 +71,37 @@ function Directory(props) {
         when={!result.loading && !result.error && !nodes.length && (props.baseId || props.search)}
       >
         <li role="none" class="knowledge-tree-empty">
-          <span>{props.search ? 'No matching folders or articles.' : 'Empty folder'}</span>
+          <span class="knowledge-empty-message">
+            {props.search
+              ? 'No matching folders or articles.'
+              : props.topicId
+                ? 'No articles'
+                : 'No topics'}
+          </span>
           <Show when={props.canManage && !props.search}>
-            <A
-              class="workspace-button secondary small knowledge-empty-add"
-              href={props.articleLink({
-                type: props.topicId ? 'topic' : 'base',
-                id: props.topicId || props.baseId,
-                baseId: props.baseId,
-              })}
+            <Show
+              when={props.topicId}
+              fallback={
+                <button
+                  type="button"
+                  class="workspace-button secondary small knowledge-empty-add"
+                  onClick={() =>
+                    props.onAddTopic({ type: 'base', id: props.baseId, baseId: props.baseId })
+                  }
+                >
+                  <Icon name="add" />
+                  Add Topic
+                </button>
+              }
             >
-              <Icon name="file-add" />
-              Add article
-            </A>
+              <A
+                class="workspace-button secondary small knowledge-empty-add"
+                href={props.articleLink({ type: 'topic', id: props.topicId, baseId: props.baseId })}
+              >
+                <Icon name="add" />
+                Add Article
+              </A>
+            </Show>
           </Show>
         </li>
       </Show>

@@ -1,3 +1,4 @@
+import ConversationStatus from '../../../components/chat/ConversationStatus.jsx';
 import WorkflowDangerZone from '../../../components/workflows/WorkflowDangerZone.jsx';
 import { pollConversation } from '../../../services/chat/conversationPolling.js';
 import ChatPanelToolbar from '../../../components/chat/ChatPanelToolbar.jsx';
@@ -1172,7 +1173,11 @@ export default function WorkflowBuilderPage() {
                         </button>
                       ),
                     },
-                    { key: 'status', label: 'Status' },
+                    {
+                      key: 'status',
+                      label: 'Status',
+                      render: (item) => <ConversationStatus status={item.status} />,
+                    },
                     {
                       label: 'Updated',
                       sortValue: (item) => Date.parse(item.updatedAt),

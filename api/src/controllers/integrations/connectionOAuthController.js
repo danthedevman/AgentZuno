@@ -1,3 +1,4 @@
+import { secureCookies } from '../../identity/cookieSecurity.js';
 import { decryptSecret } from '../../shared/secrets.js';
 import { randomBytes } from 'node:crypto';
 import { hash, failure, providers } from '../../integrations/connectionOAuth.js';
@@ -5,7 +6,7 @@ export function createConnectionOAuthController(store, service, fetcher = fetch)
   const cookieOptions = {
     httpOnly: true,
     sameSite: 'lax',
-    secure: process.env.COOKIE_SECURE === 'true',
+    secure: secureCookies(),
     path: '/api/connections/oauth',
     maxAge: 600000,
   };

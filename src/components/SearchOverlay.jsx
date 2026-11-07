@@ -71,7 +71,7 @@ export default function SearchOverlay(props) {
       ? !localResults.error && !localResults.loading && localResults()?.query === query().trim()
         ? localResults()?.rows || []
         : []
-      : !recent.error
+      : !recent.error && !recent.loading
         ? recent() || []
         : [];
   const localPending = () =>

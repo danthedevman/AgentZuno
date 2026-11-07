@@ -25,6 +25,7 @@ export default function MultiSelectLookup(props) {
     return target ? path(target) : '';
   };
   const [refreshing, setRefreshing] = createSignal(false);
+  const [refreshFailed, setRefreshFailed] = createSignal(false);
   let createLink;
   let container;
   let input;
@@ -41,14 +42,24 @@ export default function MultiSelectLookup(props) {
     );
   const selected = () => options().filter((option) => values().includes(option.value));
   const results = () =>
-    options().filter((option) => option.label.toLowerCase().includes(query().trim().toLowerCase()));
+    refreshing() || refreshFailed()
+      ? []
+      : options().filter((option) =>
+          option.label.toLowerCase().includes(query().trim().toLowerCase()),
+        );
   const readOnly = () => props.readOnly || props.disabled;
   function update(values) {
     setLocalValue(values);
     props.onChange?.(values);
   }
   function select(value) {
-    if (readOnly()) return;
+    if (
+      readOnly() ||
+      refreshing() ||
+      refreshFailed() ||
+      !results().some((option) => option.value === value)
+    )
+      return;
     setIsOpen(false);
     setQuery('');
     props.onSearch?.('');
@@ -65,8 +76,10 @@ export default function MultiSelectLookup(props) {
       if (!isOpen()) {
         const refresh = props.onOpen || workspaceContext?.refresh;
         setRefreshing(true);
-        Promise.resolve(refresh?.())
-          .catch(() => {})
+        setRefreshFailed(false);
+        Promise.resolve()
+          .then(() => refresh?.())
+          .catch(() => setRefreshFailed(true))
           .finally(() => setRefreshing(false));
       }
       setActiveIndex(0);
@@ -258,8 +271,12 @@ export default function MultiSelectLookup(props) {
                 </div>
               )}
             </For>
-            <Show when={!results().length}>
-              <p class="lookup-empty">No matches found.</p>
+            <Show when={!refreshing() && !results().length}>
+              <p class="lookup-empty">
+                {refreshFailed()
+                  ? 'Options could not be refreshed. Close and reopen to retry.'
+                  : 'No matches found.'}
+              </p>
             </Show>
           </div>
           <Show when={createHref() && !readOnly()}>

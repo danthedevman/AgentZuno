@@ -6,9 +6,9 @@ The bundled Compose configuration is a development starting point. Review it bef
 
 ## Production configuration
 
-- Serve the web application through HTTPS. Set `APP_ORIGIN` to its public HTTPS origin and `COOKIE_SECURE=true`.
+- Serve the web application through HTTPS. Set `APP_ORIGIN` to its public HTTPS origin; cookies automatically become Secure. `COOKIE_SECURE=true` also explicitly requires secure cookies. Configure HSTS at the HTTPS ingress.
 - Generate a private `CREDENTIAL_ENCRYPTION_KEY` and give the same value to the API and worker. Store it outside source control and retain a protected backup.
-- Restrict access to the API and infrastructure. The sample API port binds publicly; MongoDB, Redis, Qdrant, and Ollama host ports bind to loopback. Use authentication and network isolation appropriate to your deployment, including on shared hosts and container networks.
+- Restrict access to the API and infrastructure. The API and MongoDB, Redis, Qdrant, and Ollama host ports bind to loopback by default. Web reaches the API over the internal Docker network. Use authentication and network isolation appropriate to your deployment, including on shared hosts and container networks.
 - Pin and update container versions, review dependencies, and set resource limits suitable for your traffic.
 - Persist and back up the selected MongoDB or PostgreSQL database, Redis, and any vector storage you use. Redis uses AOF and no eviction; the selected application database remains authoritative.
 - Configure SMTP in Settings for emailed invitations, or copy and share invitation links without SMTP. Configure connectors through their dedicated pages; do not add provider secrets to Git remotes, source files, or screenshots.
@@ -81,3 +81,15 @@ The Pages build reads its base path from GitHub Pages configuration, so assets a
 Set `PUBLIC_SITE_URL` at build time to the public site’s canonical HTTPS URL, including a repository path if applicable. It defaults to `https://agentzuno.com/`. Compose passes `PUBLIC_SITE_URL` from `.env` as a web build argument; rebuild the web image after changing it. Set the matching Docker build argument on other hosts. The Pages workflow reads the URL and path from Pages configuration. Rebuild after changing the domain. The build generates page titles/descriptions, canonical links, social preview metadata, application structured data, `robots.txt`, and a sitemap containing only public routes. Authenticated routes use a separate noindex app shell; robots rules supplement authentication and do not protect private data. Nginx serves that shell for application routes.
 
 Submit the generated sitemap in [Google Search Console](https://search.google.com/search-console/about) and inspect the deployed pages after DNS and HTTPS work. Prerendering improves content availability; it does not guarantee indexing, rankings, or a performance score. See [Google’s JavaScript SEO guide](https://developers.google.com/search/docs/crawling-indexing/javascript/javascript-seo-basics).
+
+## Local account recovery
+
+An operator with shell access to the API server can reset a local password account without SMTP:
+
+```sh
+docker compose exec api npm run recover-account
+```
+
+For local Node development, run `npm --prefix api run recover-account` from the repository root with the same installation configuration as the API. The interactive command asks for the email, confirmation, and a new password twice. Password entry is hidden; passwords are never accepted as flags or printed. The reset revokes all sessions for that account, including impersonation sessions, and records a credential-free audit event. It does not create accounts, change permissions, or reset identity-only accounts. Recover identity accounts through their configured identity provider. Keep server access restricted; this command has the authority of the database operator.
+
+Email verification and public email reset links remain unavailable. SMTP currently serves invitations and notifications; configuring it does not enable a public recovery endpoint.

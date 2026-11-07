@@ -1,11 +1,11 @@
-import { rateLimit } from 'express-rate-limit';
+import { createRateLimiter } from '../../middleware/rateLimits.js';
 
 import { createCustomDomainsController } from '../../controllers/identity/customDomainsController.js';
 export function installCustomDomainRoutes(app, service) {
   const controller = createCustomDomainsController(service);
   app.use(
     '/api/helpdesk/domain',
-    rateLimit({
+    createRateLimiter(app, 'customDomainsRoutes', {
       windowMs: 60000,
       limit: 30,
       standardHeaders: 'draft-8',

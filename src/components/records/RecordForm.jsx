@@ -8,6 +8,7 @@ export default function RecordForm(props) {
   return (
     <ValidatedForm
       id={props.id}
+      validationRef={props.validationRef}
       class="create-form record-surface record-property-sheet"
       data-mode={props.detailsOnly ? 'details' : 'edit'}
       onSubmit={props.onSubmit}

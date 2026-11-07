@@ -1,3 +1,4 @@
+import ConversationStatus from '../../../components/chat/ConversationStatus.jsx';
 import Icon from '../../../components/Icon.jsx';
 import ChangeReview from '../../../components/records/ChangeReview.jsx';
 import { changedSections } from '../../../utils/textDiff.js';
@@ -32,6 +33,8 @@ import { useToasts } from '../../../context/ToastContext.jsx';
 
 export default function CreateArticlePage(props) {
   let selectMobilePanel;
+  let articleForm;
+  const [saveState, setSaveState] = createSignal('Draft');
   const { workspace, refresh, access } = useWorkspace();
   const { session } = useSession();
   const { notify } = useToasts();
@@ -39,6 +42,9 @@ export default function CreateArticlePage(props) {
   const path = useWorkspacePath();
   const [query, setQuery] = useSearchParams();
   const [articleId, setArticleId] = createSignal(props.article?.id || '');
+  const isCreatingArticle = () => !articleId() || props.article?.isAuthoringDraft === true;
+  const isLoadingPlacement = () =>
+    !workspace.sectionLoaded('knowledgeBases') || !workspace.sectionLoaded('topics');
   const [updatedAt, setUpdatedAt] = createSignal(props.article?.updatedAt || null);
   const [title, setTitle] = createSignal(props.article?.title || '');
   const [body, setBody] = createSignal(props.article?.body || '');
@@ -53,6 +59,7 @@ export default function CreateArticlePage(props) {
   const [prompt, setPrompt] = createSignal('');
   const [chatId, setChatId] = createSignal(query.chat || props.article?.authoringChatId || '');
   const [proposal, setProposal] = createSignal(null);
+  const [reviewApproved, setReviewApproved] = createSignal(false);
   const [chatBaseline, setChatBaseline] = createSignal(null);
   const [reviewSections, setReviewSections] = createSignal([]);
   const [reviewedResponse, setReviewedResponse] = createSignal('');
@@ -79,14 +86,6 @@ export default function CreateArticlePage(props) {
   createEffect(() => setChatId(query.chat || props.article?.authoringChatId || ''));
   const currentConversation = () =>
     !chatId() || conversation.error || conversation()?.id !== chatId() ? null : conversation();
-  createEffect(() => {
-    if (!base() && !query.base && workspace()?.knowledgeBases?.length)
-      setBase(
-        workspace().knowledgeBases.find(
-          (item) => props.article?.demoDatasetId || !item.demoDatasetId,
-        )?.id || '',
-      );
-  });
   let history;
   followChatProgress(
     () => history,
@@ -142,9 +141,15 @@ export default function CreateArticlePage(props) {
   });
   function changed() {
     setProposal(null);
+    setReviewApproved(false);
   }
   const articleSections = (before, after) => [
     { label: 'Title', before: before.title || '', after: after.title || '' },
+    {
+      label: 'Attachments',
+      before: (before.attachmentIds || []).join('\n'),
+      after: (after.attachmentIds || []).join('\n'),
+    },
     {
       label: 'Body',
       before: (before.body || '').replace(/></g, '>\n<'),
@@ -178,6 +183,7 @@ export default function CreateArticlePage(props) {
     body: props.article?.body || '',
     knowledgeBaseId: props.article?.base || base(),
     topicIds: props.article?.topicIds || topics(),
+    attachmentIds: props.article?.attachmentIds || [],
   });
   const hasChatChanges = () => {
     const current = currentConversation();
@@ -241,7 +247,7 @@ export default function CreateArticlePage(props) {
       setChatStarting(false);
     }
   }
-  async function review(state = status(), candidate, standalone = false, publishNow = false) {
+  async function review(state = status(), candidate, publishNow = false) {
     setBusy(true);
     setError('');
     try {
@@ -262,14 +268,9 @@ export default function CreateArticlePage(props) {
         articleSections(candidate ? chatBaseline() || savedDraft() : savedDraft(), result.draft),
       );
       setProposal(result);
+      setReviewApproved(false);
       setTab('preview');
-      if (!standalone) selectMobilePanel?.('right');
-      if (standalone)
-        window.open(
-          `/preview/${session().user.workspaceId}/proposals/${result.id}`,
-          '_blank',
-          'noopener',
-        );
+      selectMobilePanel?.('right');
     } catch (error) {
       setError(error.message);
     } finally {
@@ -297,9 +298,19 @@ export default function CreateArticlePage(props) {
     const response = current?.messages?.filter((message) => message.role === 'assistant').at(-1);
     const key =
       candidate && current.status === 'complete' && response ? `${chatId()}:${response.id}` : '';
-    if (!key || key === previewedResponse || busy() || !base() || !hasChatChanges()) return;
+    if (
+      !key ||
+      key === previewedResponse ||
+      busy() ||
+      (!isCreatingArticle() && !base()) ||
+      !hasChatChanges()
+    )
+      return;
     previewedResponse = key;
-    review(status(), candidate);
+    if (isCreatingArticle()) {
+      setTitle(candidate.title);
+      setBody(candidate.body);
+    } else review(status(), candidate);
   });
   async function unpublish() {
     if (
@@ -327,6 +338,58 @@ export default function CreateArticlePage(props) {
       setBusy(false);
     }
   }
+  async function finishSave(saved, isNew) {
+    setArticleId(saved.id);
+    setUpdatedAt(saved.updatedAt);
+    setTitle(saved.title);
+    setBody(saved.body);
+    setBase(saved.base);
+    setTopics(saved.topicIds);
+    setStatus(saved.status);
+    setAttachmentIds(saved.attachmentIds || []);
+    setReviewedResponse(
+      currentConversation()
+        ?.messages?.filter((message) => message.role === 'assistant')
+        .at(-1)?.id || '',
+    );
+    setProposal(null);
+    setReviewApproved(false);
+    setTab('editor');
+    await refresh();
+    if (isNew)
+      navigate(
+        path(
+          `/workspace/articles/${saved.id}/edit${chatId() ? `?chat=${encodeURIComponent(chatId())}` : ''}`,
+        ),
+        { replace: true },
+      );
+    notify({
+      tone: 'success',
+      message: saved.status === 'Published' ? 'Article published.' : 'Article saved.',
+    });
+  }
+  function submitNewArticle(state) {
+    setSaveState(state);
+    setTab('editor');
+    queueMicrotask(() => articleForm?.requestSubmit());
+  }
+  async function saveNewArticle(state) {
+    if (busy()) return;
+    setBusy(true);
+    setError('');
+    try {
+      const isNew = !articleId();
+      const saved = await api(isNew ? '/api/articles' : `/api/articles/${articleId()}`, {
+        method: isNew ? 'POST' : 'PATCH',
+        body: JSON.stringify(draft(state)),
+      });
+      await finishSave(saved, isNew);
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setBusy(false);
+    }
+  }
   async function approve(candidate) {
     const approvedProposal = candidate?.id ? candidate : proposal();
     setBusy(true);
@@ -337,33 +400,7 @@ export default function CreateArticlePage(props) {
         method: 'POST',
         body: JSON.stringify({ approved: true }),
       });
-      setArticleId(saved.id);
-      setUpdatedAt(saved.updatedAt);
-      setTitle(saved.title);
-      setBody(saved.body);
-      setBase(saved.base);
-      setTopics(saved.topicIds);
-      setStatus(saved.status);
-      setAttachmentIds(saved.attachmentIds || []);
-      setReviewedResponse(
-        currentConversation()
-          ?.messages?.filter((message) => message.role === 'assistant')
-          .at(-1)?.id || '',
-      );
-      setProposal(null);
-      setTab('editor');
-      await refresh();
-      if (isNew)
-        navigate(
-          path(
-            `/workspace/articles/${saved.id}/edit${chatId() ? `?chat=${encodeURIComponent(chatId())}` : ''}`,
-          ),
-          { replace: true },
-        );
-      notify({
-        tone: 'success',
-        message: saved.status === 'Published' ? 'Article published.' : 'Article saved.',
-      });
+      await finishSave(saved, isNew);
     } catch (error) {
       setError(error.message);
     } finally {
@@ -394,17 +431,32 @@ export default function CreateArticlePage(props) {
           <button
             type="button"
             class="workspace-button secondary small"
-            disabled={busy() || uploading()}
-            onClick={() => review(status(), undefined, true)}
+            disabled={busy() || uploading() || (!proposal() && !articleId())}
+            onClick={() =>
+              window.open(
+                `/preview/${session().user.workspaceId}/${proposal() ? `proposals/${proposal().id}` : `articles/${articleId()}`}`,
+                '_blank',
+                'noopener,noreferrer',
+              )
+            }
           >
             Preview
           </button>
-          <Show when={hasChatChanges()}>
+          <Show
+            when={
+              !isCreatingArticle() &&
+              (hasChatChanges() ||
+                (!reviewApproved() &&
+                  changedSections(articleSections(savedDraft(), draft())).length > 0))
+            }
+          >
             <button
               type="button"
               class="workspace-button secondary small"
               disabled={!canEdit() || busy() || uploading() || isGeneratingArticle()}
-              onClick={() => review(status(), currentConversation().candidate || draft())}
+              onClick={() =>
+                review(status(), hasChatChanges() ? currentConversation().candidate : undefined)
+              }
             >
               Review Changes
             </button>
@@ -419,12 +471,39 @@ export default function CreateArticlePage(props) {
               Unpublish
             </button>
           </Show>
+          <button
+            type="button"
+            class="workspace-button secondary small"
+            disabled={
+              isLoadingPlacement() ||
+              !canEdit() ||
+              busy() ||
+              uploading() ||
+              isGeneratingArticle() ||
+              (!isCreatingArticle() && !reviewApproved())
+            }
+            onClick={() => (isCreatingArticle() ? submitNewArticle('Draft') : approve(proposal()))}
+          >
+            <Icon name="save" />
+            Save
+          </button>
           <Show when={hasUnpublishedChanges()}>
             <button
               type="button"
               class="workspace-button small"
-              disabled={!canEdit() || busy() || uploading() || isGeneratingArticle()}
-              onClick={() => review('Published', proposal()?.draft, false, true)}
+              disabled={
+                isLoadingPlacement() ||
+                !canEdit() ||
+                busy() ||
+                uploading() ||
+                isGeneratingArticle() ||
+                (!isCreatingArticle() && !reviewApproved())
+              }
+              onClick={() =>
+                isCreatingArticle()
+                  ? submitNewArticle('Published')
+                  : review('Published', proposal()?.draft, true)
+              }
             >
               <Icon name="publish" />
 
@@ -452,6 +531,7 @@ export default function CreateArticlePage(props) {
               setQuery({ chat: undefined });
               setPrompt('');
               setProposal(null);
+              setReviewApproved(false);
             }}
           />
           <div ref={history} class="workflow-chat-history">
@@ -565,7 +645,10 @@ export default function CreateArticlePage(props) {
                   source={`/api/helpdesk/article-conversations?articleId=${encodeURIComponent(articleId())}`}
                   columns={[
                     { label: 'Conversation', render: (item) => item.title },
-                    { label: 'Status', render: (item) => item.status },
+                    {
+                      label: 'Status',
+                      render: (item) => <ConversationStatus status={item.status} />,
+                    },
                     {
                       label: 'Updated',
                       render: (item) => new Date(item.updatedAt).toLocaleString(),
@@ -583,10 +666,14 @@ export default function CreateArticlePage(props) {
             </Show>
             <Show when={tab() === 'editor'}>
               <ValidatedForm
+                ref={(element) => {
+                  articleForm = element;
+                }}
                 class="create-form"
                 onSubmit={(event) => {
                   event.preventDefault();
-                  review();
+                  if (isCreatingArticle()) saveNewArticle(saveState());
+                  else review();
                 }}
               >
                 <label>
@@ -661,19 +748,68 @@ export default function CreateArticlePage(props) {
                 <Show
                   when={proposal()}
                   fallback={
-                    <p>
-                      No proposed changes to review. Continue editing or ask the Admin agent for a
-                      change.
-                    </p>
+                    <>
+                      <h1>
+                        {(isCreatingArticle() ? title() : props.article?.title) ||
+                          'Untitled article'}
+                      </h1>
+                      <ArticleEditor
+                        readOnly
+                        content={(isCreatingArticle() ? body() : props.article?.body) || ''}
+                      />
+                    </>
                   }
                 >
                   {(item) => (
                     <>
-                      <p class="article-approval-notice">
-                        Review this {item().draft.status.toLowerCase()} article before approving.
-                        Your saved article has not changed.
-                      </p>
-                      <ChangeReview sections={reviewSections()} />
+                      <div class="article-review-bar">
+                        <p class="article-approval-notice">
+                          {reviewApproved()
+                            ? 'Changes approved. Save or publish when ready.'
+                            : 'Review these changes before approving. Your saved article has not changed.'}
+                        </p>
+                        <Show when={!reviewApproved()}>
+                          <div class="article-approval-actions">
+                            <button
+                              type="button"
+                              class="workspace-button secondary small"
+                              disabled={busy()}
+                              onClick={() => {
+                                setReviewedResponse(
+                                  currentConversation()
+                                    ?.messages?.filter((message) => message.role === 'assistant')
+                                    .at(-1)?.id || '',
+                                );
+                                setProposal(null);
+                                setReviewApproved(false);
+                              }}
+                            >
+                              Reject Changes
+                            </button>
+                            <button
+                              type="button"
+                              class="workspace-button small"
+                              disabled={busy() || item().status !== 'pending'}
+                              onClick={() => {
+                                setTitle(item().draft.title);
+                                setBody(item().draft.body);
+                                setReviewedResponse(
+                                  currentConversation()
+                                    ?.messages?.filter((message) => message.role === 'assistant')
+                                    .at(-1)?.id || '',
+                                );
+                                setReviewApproved(true);
+                              }}
+                            >
+                              <Icon name="check" />
+                              Approve Changes
+                            </button>
+                          </div>
+                        </Show>
+                      </div>
+                      <Show when={!reviewApproved()}>
+                        <ChangeReview sections={reviewSections()} />
+                      </Show>
                       <h1>{item().draft.title}</h1>
                       <ArticleEditor readOnly content={item().draft.body} />
                       <Show when={item().draft.attachmentIds?.length}>
@@ -686,35 +822,6 @@ export default function CreateArticlePage(props) {
                           {(file) => <p>{file.name}</p>}
                         </For>
                       </Show>
-                      <div class="article-approval-actions">
-                        <button
-                          type="button"
-                          class="workspace-button"
-                          disabled={busy() || item().status !== 'pending'}
-                          onClick={approve}
-                        >
-                          <Icon name="publish" />
-                          Approve &amp; {item().draft.status === 'Published' ? 'Publish' : 'Save'}
-                        </button>
-                        <button
-                          type="button"
-                          class="workspace-button secondary"
-                          disabled={busy()}
-                          onClick={() => {
-                            setProposal(null);
-                            setTab('editor');
-                          }}
-                        >
-                          Reject Changes
-                        </button>
-                        <a
-                          href={`/preview/${session()?.user?.workspaceId}/proposals/${item().id}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          Open Standalone Preview
-                        </a>
-                      </div>
                     </>
                   )}
                 </Show>

@@ -11,7 +11,8 @@
     "dev": "node --env-file-if-exists=../.env --watch src/index.js",
     "test": "node --test --test-concurrency=2",
     "worker": "node --env-file-if-exists=../.env src/worker.js",
-    "workflow:test": "node scripts/preview-workflow.mjs"
+    "workflow:test": "node scripts/preview-workflow.mjs",
+    "recover-account": "node --env-file-if-exists=../.env scripts/recover-account.mjs"
   },
   "dependencies": {
     "bullmq": "^6.5.1",
@@ -26,6 +27,7 @@
     "openid-client": "^6.8.8",
     "pg": "^8.23.1",
     "quickjs-emscripten": "^0.32.0",
+    "rate-limit-redis": "^6.0.2",
     "sanitize-html": "^2.18.1",
     "sharp": "^0.35.5",
     "typescript": "^5.9.3"

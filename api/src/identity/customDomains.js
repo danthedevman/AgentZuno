@@ -1,3 +1,4 @@
+import { secureCookies } from './cookieSecurity.js';
 import { resolveTxt } from 'node:dns/promises';
 import { resolveCname } from 'node:dns/promises';
 import { databaseConfiguration, needsDatabaseSetup } from '../storage/configuration.js';
@@ -78,7 +79,7 @@ export function createCustomDomains(store, dns = { resolveTxt, resolveCname }) {
       enabled: record?.enabled === true,
       verifiedAt: record?.verifiedAt || null,
       dnsReady: record?.dnsReady === true,
-      hostingConfigured: !!target() && process.env.COOKIE_SECURE === 'true',
+      hostingConfigured: !!target() && secureCookies(),
       target: target(),
       txtName: record ? `_zuno-verification.${record.domain}` : '',
       txtValue: record ? `zuno-verification=${record.token}` : '',
@@ -144,7 +145,7 @@ export function createCustomDomains(store, dns = { resolveTxt, resolveCname }) {
     if (!result.owned)
       fail('The DNS verification TXT record was not found. Check the record and try again.', 409);
     if (enabled !== undefined) {
-      if (enabled && (!result.routed || !target() || process.env.COOKIE_SECURE !== 'true'))
+      if (enabled && (!result.routed || !target() || !secureCookies()))
         fail(
           'Configure the CNAME target, HTTPS at your hosting provider, and secure cookies before enabling this portal.',
           409,
@@ -169,7 +170,7 @@ export function createCustomDomains(store, dns = { resolveTxt, resolveCname }) {
     if (needsDatabaseSetup() || !databaseConfiguration()) return null;
     const record = await collection().findOne({ domain: host });
     if (!record) return null;
-    if (!record.enabled || !record.verified || process.env.COOKIE_SECURE !== 'true' || !target())
+    if (!record.enabled || !record.verified || !secureCookies() || !target())
       fail('This portal domain is not enabled.', 421);
     const key = `${record.domain}:${record.token}:${target()}`;
     let result = cache.get(key);

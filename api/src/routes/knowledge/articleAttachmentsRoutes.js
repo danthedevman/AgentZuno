@@ -1,4 +1,4 @@
-import { rateLimit } from 'express-rate-limit';
+import { createRateLimiter } from '../../middleware/rateLimits.js';
 
 import { createArticleAttachmentsController } from '../../controllers/knowledge/articleAttachmentsController.js';
 export function installArticleAttachmentRoutes(app, store) {
@@ -9,7 +9,7 @@ export function installArticleAttachmentRoutes(app, store) {
       '/api/helpdesk/article-attachments/:id',
       '/api/helpdesk/article-attachments',
     ],
-    rateLimit({
+    createRateLimiter(app, 'articleAttachmentsRoutes', {
       windowMs: 60000,
       limit: 120,
       standardHeaders: 'draft-8',

@@ -4,7 +4,7 @@ import { installApiRoutes } from './routes/index.js';
 import { installChannelEventRoutes } from './routes/channels/channelEventsRoutes.js';
 
 import { createHelpdeskTeams } from './channels/helpdeskTeams.js';
-import { rateLimit } from 'express-rate-limit';
+import { createRateLimits, createRateLimiter } from './middleware/rateLimits.js';
 
 import { installDatabaseSetupRoutes } from './routes/storage/setupRoutes.js';
 
@@ -30,9 +30,12 @@ import { createIntegrationService } from './integrations/integrations.js';
 
 export function createApi(options = {}) {
   const app = express();
+  app.locals.rateLimits = createRateLimits({
+    redisUrl: options.database ? '' : process.env.REDIS_URL,
+  });
   app.use(
     '/api',
-    rateLimit({
+    createRateLimiter(app, 'global', {
       windowMs: 60000,
       limit: 3000,
       standardHeaders: 'draft-8',
@@ -52,7 +55,13 @@ export function createApi(options = {}) {
   const analytics = createKnowledgeAnalytics(integrations, loadWorkspace, integrationService);
   app.locals.close = async () => {
     await Promise.allSettled([...(app.locals.auditPending || [])]);
-    return Promise.all([store.close(), auth.close(), integrations.close(), queues.close()]);
+    return Promise.all([
+      store.close(),
+      auth.close(),
+      integrations.close(),
+      queues.close(),
+      app.locals.rateLimits.close(),
+    ]);
   };
 
   app.disable('x-powered-by');

@@ -1,11 +1,11 @@
-import { rateLimit } from 'express-rate-limit';
+import { createRateLimiter } from '../../middleware/rateLimits.js';
 
 import { createKnowledgeAccessController } from '../../controllers/knowledge/knowledgeAccessController.js';
 export function installKnowledgeAccessRoutes(app, store) {
   const controller = createKnowledgeAccessController(store);
   app.use(
     ['/api/helpdesk/knowledge-center', '/api/helpdesk/knowledge-directory'],
-    rateLimit({
+    createRateLimiter(app, 'knowledgeAccessRoutes', {
       windowMs: 60000,
       limit: 120,
       standardHeaders: 'draft-8',

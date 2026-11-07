@@ -1,3 +1,4 @@
+import { secureCookies } from './cookieSecurity.js';
 import { isTimeZone } from '../shared/timezones.js';
 import { isEmailAddress } from '../shared/emailAddress.js';
 import { randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
@@ -9,10 +10,8 @@ import { createAccountStore } from './accountStore.js';
 const deriveKey = promisify(scrypt);
 const duration = 8 * 60 * 60 * 1000;
 
-export function createAuth() {
-  const accounts = createAccountStore();
+export function createAuth(accounts = createAccountStore()) {
   const sessions = new Map();
-  const attempts = new Map();
   function token(request) {
     return request.headers.cookie
       ?.split(';')
@@ -30,7 +29,7 @@ export function createAuth() {
     }
     if (session.user.isDemo || ['alex', 'jordan'].includes(session.user.id)) return null;
     const account = await accounts.findById(session.user.id);
-    if (!account) return null;
+    if (!account || (session.sessionVersion || '') !== (account.sessionVersion || '')) return null;
     return Object.defineProperty(
       {
         ...session.user,
@@ -47,17 +46,6 @@ export function createAuth() {
     if (!(await accounts.setImpersonation(token(request), value)))
       throw Object.assign(new Error('Sign in again to change impersonation.'), { status: 401 });
   }
-  function rateLimit(request, response) {
-    const now = Date.now();
-    for (const [key, value] of attempts) if (value.expiresAt < now) attempts.delete(key);
-    const attempt = attempts.get(request.ip) || { count: 0, expiresAt: now + 60000 };
-    attempts.set(request.ip, attempt);
-    if (++attempt.count > 15) {
-      response.status(429).json({ error: 'Too many attempts. Try again in a minute.' });
-      return true;
-    }
-    return false;
-  }
   async function startSession(request, response, user, status = 200, redirectTo) {
     const old = token(request);
     sessions.delete(old);
@@ -72,14 +60,14 @@ export function createAuth() {
     };
     const sessionToken = randomBytes(32).toString('hex');
     const expiresAt = Date.now() + duration;
-    await accounts.saveSession(sessionToken, safeUser, expiresAt);
+    await accounts.saveSession(sessionToken, safeUser, expiresAt, user.sessionVersion || '');
     sessions.set(sessionToken, { user: safeUser, expiresAt });
     for (const [key, session] of sessions)
       if (Number(new Date(session.expiresAt)) <= Date.now()) sessions.delete(key);
     response.cookie('agentzuno_session', sessionToken, {
       httpOnly: true,
       sameSite: 'lax',
-      secure: process.env.COOKIE_SECURE === 'true',
+      secure: secureCookies(),
       maxAge: duration,
       path: '/',
     });
@@ -88,7 +76,6 @@ export function createAuth() {
     response.status(status).json({ user: safeUser });
   }
   async function login(request, response) {
-    if (rateLimit(request, response)) return;
     const { email, password } = request.body || {};
     if (
       typeof email !== 'string' ||
@@ -119,7 +106,6 @@ export function createAuth() {
       return response.status(400).json({
         error: 'Only name, email, password and timezone can be supplied during registration.',
       });
-    if (rateLimit(request, response)) return;
     const { email, password, name, timezone = 'UTC' } = request.body || {};
     if (!isTimeZone(timezone))
       return response.status(400).json({ error: 'Choose a valid timezone.' });

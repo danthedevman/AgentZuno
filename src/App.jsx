@@ -67,6 +67,7 @@ export default function App() {
       <Route path="/docs/:guide" component={DocsPage} />
       <Route path="/login" component={LoginPage} />
       <Route path="/preview/:workspaceId/proposals/:id" component={ArticlePreviewPage} />
+      <Route path="/preview/:workspaceId/articles/:articleId" component={ArticlePreviewPage} />
       <Route path="/slack/link" component={SlackLinkPage} />
       <Route path="/invite" component={InvitePage} />
       <Route path="/setup/database" component={DatabaseSetupPage} />

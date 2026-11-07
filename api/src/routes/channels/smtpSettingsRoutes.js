@@ -1,11 +1,11 @@
-import { rateLimit } from 'express-rate-limit';
+import { createRateLimiter } from '../../middleware/rateLimits.js';
 
 import { createSmtpSettingsController } from '../../controllers/channels/smtpSettingsController.js';
 export function installSmtpRoutes(app, store) {
   const controller = createSmtpSettingsController(store);
   app.use(
     '/api/helpdesk/smtp/test',
-    rateLimit({
+    createRateLimiter(app, 'smtpSettingsRoutes', {
       windowMs: 60000,
       limit: 10,
       standardHeaders: 'draft-8',

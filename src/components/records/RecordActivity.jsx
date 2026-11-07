@@ -1,5 +1,5 @@
 import Icon from '../Icon.jsx';
-import { For, Show, createResource, createSignal } from 'solid-js';
+import { For, Show, createResource, createSignal, onMount } from 'solid-js';
 import { api } from '../../services/api.js';
 import { useWorkspace } from '../../context/WorkspaceContext.jsx';
 import { useSession } from '../../context/SessionContext.jsx';
@@ -22,8 +22,11 @@ export default function RecordActivity(props) {
       ? 'related'
       : searchParams.activity === 'notes'
         ? 'notes'
-        : 'comments',
+        : props.propertiesContent
+          ? 'properties'
+          : 'comments',
   );
+  onMount(() => props.onPropertiesReady?.(() => setTab('properties')));
   const [mentionIds, setMentionIds] = createSignal([]);
   const [page, setPage] = createSignal(1);
   const [text, setText] = createSignal('');
@@ -33,7 +36,7 @@ export default function RecordActivity(props) {
   const [activity, { refetch }] = createResource(
     () =>
       !props.isNew &&
-      tab() !== 'related' && {
+      ['comments', 'notes'].includes(tab()) && {
         url: endpoint(),
         tableId: props.tableId || '',
         type: tab(),
@@ -45,9 +48,10 @@ export default function RecordActivity(props) {
   const permissions = () => (activity.error ? {} : activity.latest?.permissions || {});
   const canPost = () =>
     !props.isNew &&
-    tab() !== 'related' &&
+    ['comments', 'notes'].includes(tab()) &&
     (tab() === 'notes' ? permissions().canNote : permissions().canComment);
   const tabs = () => [
+    ...(props.propertiesContent ? ['properties'] : []),
     ...((permissions().canReadNotes ?? ['admin', 'agent', 'read-only'].includes(access()?.role))
       ? ['comments', 'notes']
       : ['comments']),
@@ -111,11 +115,13 @@ export default function RecordActivity(props) {
                 document.getElementById(`record-activity-${options[next]}`)?.focus();
               }}
             >
-              {item === 'related'
-                ? 'Related records'
-                : item === 'comments'
-                  ? 'Comments'
-                  : 'Work Notes'}
+              {item === 'properties'
+                ? 'Properties'
+                : item === 'related'
+                  ? 'Related records'
+                  : item === 'comments'
+                    ? 'Comments'
+                    : 'Work Notes'}
             </button>
           )}
         </For>
@@ -124,10 +130,13 @@ export default function RecordActivity(props) {
         id="record-activity-content"
         role="tabpanel"
         aria-labelledby={`record-activity-${tab()}`}
-        aria-busy={tab() !== 'related' && activity.loading}
+        aria-busy={['comments', 'notes'].includes(tab()) && activity.loading}
       >
+        <Show when={props.propertiesContent}>
+          <div hidden={tab() !== 'properties'}>{props.propertiesContent?.()}</div>
+        </Show>
         <Show when={tab() === 'related'}>{props.relatedContent?.()}</Show>
-        <Show when={tab() !== 'related'}>
+        <Show when={['comments', 'notes'].includes(tab())}>
           <Show when={props.isNew}>
             <p class="field-help">Save this record before adding comments or work notes.</p>
           </Show>

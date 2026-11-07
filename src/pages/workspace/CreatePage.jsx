@@ -92,15 +92,31 @@ export default function CreatePage(props) {
                 { label: `${props.record ? 'Edit' : 'New'} ${option()?.name}` },
               ]}
             />
-            <h1>
-              {props.record ? 'Edit' : 'New'} {option()?.name.toLowerCase()}
-            </h1>
+            <div class="record-page-heading">
+              <h1>
+                {props.record ? 'Edit' : 'New'} {option()?.name.toLowerCase()}
+              </h1>
+              <button
+                class="workspace-button small"
+                type="submit"
+                form="content-record-form"
+                disabled={
+                  !session()?.user ||
+                  isSaving() ||
+                  (recordType() === 'knowledge-base' && !permissions()?.ready)
+                }
+              >
+                <Icon name="save" />
+
+                {isSaving() ? 'Saving…' : 'Save'}
+              </button>
+            </div>
             <Show when={!session()?.user}>
               <p>
                 <A href="/login">Sign in</A> to save to your own workspace.
               </p>
             </Show>
-            <ValidatedForm class="create-form" onSubmit={save}>
+            <ValidatedForm id="content-record-form" class="create-form" onSubmit={save}>
               <label>
                 Name
                 <input
@@ -137,19 +153,6 @@ export default function CreatePage(props) {
               <Show when={error()}>
                 <ToastMessage tone="error">{error()}</ToastMessage>
               </Show>
-              <button
-                class="workspace-button"
-                type="submit"
-                disabled={
-                  !session()?.user ||
-                  isSaving() ||
-                  (recordType() === 'knowledge-base' && !permissions()?.ready)
-                }
-              >
-                <Icon name="save" />
-
-                {isSaving() ? 'Saving…' : 'Save'}
-              </button>
             </ValidatedForm>
           </Show>
         </section>

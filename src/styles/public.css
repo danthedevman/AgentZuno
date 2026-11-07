@@ -2751,7 +2751,7 @@ h1 {
   max-width: 1480px;
   grid-template-columns: 210px minmax(0, 800px) 180px;
   gap: 44px;
-  padding-top: 40px;
+  padding-top: 20px;
 }
 .docs-navigation nav {
   gap: 4px;

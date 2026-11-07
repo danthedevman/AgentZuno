@@ -44,7 +44,7 @@ Offering a form is not a submission. The employee reviews its answers and submit
 
 ## Delete a workflow
 
-Open **Settings → Danger Zone**. **Preserve existing requests** and **Preserve workflow history** both start off. Review these choices: leaving them off deletes the associated requests/tasks/attachments and runs/saved versions.
+Open **Settings → Danger Zone**. **Preserve existing requests** and **Preserve workflow history** both start on. Review these choices: turning them off deletes the associated requests/tasks/attachments and runs/saved versions.
 
 Select **Delete Workflow** and enter its exact saved name. Governance audits and private chat transcripts remain. Running or uncertain actions block deletion. Retained requests leave pending workflow approval and return to open; pending runs stop.
 

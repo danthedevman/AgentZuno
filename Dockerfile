@@ -13,6 +13,7 @@ RUN npm run build
 
 FROM nginxinc/nginx-unprivileged:alpine
 COPY LICENSE /usr/share/doc/agentzuno/LICENSE
+COPY docker/security-headers.conf /etc/nginx/security-headers.conf
 COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist /usr/share/nginx/html
 EXPOSE 8080

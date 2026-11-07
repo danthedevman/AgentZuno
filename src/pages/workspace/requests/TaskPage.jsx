@@ -1,6 +1,6 @@
 import Icon from '../../../components/Icon.jsx';
 import RecordActivity from '../../../components/records/RecordActivity.jsx';
-import RecordHeader from '../../../components/records/RecordHeader.jsx';
+import SplitResizeHandle from '../../../components/SplitResizeHandle.jsx';
 import RecordValue from '../../../components/records/RecordValue.jsx';
 import { Show, createResource, createSignal, createEffect } from 'solid-js';
 import { useParams, useNavigate } from '@solidjs/router';
@@ -16,6 +16,7 @@ import Skeleton from '../../../components/Skeleton.jsx';
 import ToastMessage from '../../../components/ToastMessage.jsx';
 
 export default function TaskPage() {
+  let selectPanel, showProperties, validateContent, validateProperties;
   const params = useParams(),
     navigate = useNavigate(),
     path = useWorkspacePath();
@@ -64,6 +65,16 @@ export default function TaskPage() {
   });
   async function save(closeComplete = false) {
     if (busy() || !canEdit()) return;
+    if (isEditing() && validateContent && !validateContent()) {
+      selectPanel?.('left');
+      return;
+    }
+    if (isEditing() && validateProperties && !validateProperties()) {
+      showProperties?.();
+      selectPanel?.('right');
+      queueMicrotask(() => validateProperties());
+      return;
+    }
     setBusy(true);
     try {
       if (isNew()) {
@@ -102,240 +113,39 @@ export default function TaskPage() {
     }
   }
   return (
-    <section class="reading-page task-record-page">
-      <div class="record-page-breadcrumbs">
+    <section class="reading-page task-record-page data-record-workspace">
+      <div class="data-record-topbar">
         <Breadcrumbs
           items={[
             { label: 'Tasks', href: '/workspace/data/ref-task' },
-            { label: isNew() ? 'New Task' : 'Task' },
+            { label: isNew() ? 'New Task' : (!task.error && task()?.title) || 'Task' },
           ]}
         />
-      </div>
-      <RecordHeader
-        title={isNew() ? 'New Task' : (!task.error && task()?.title) || 'Task'}
-        context={
-          !isNew() && !task.error && task()?.updatedAt
-            ? `Updated ${new Date(task().updatedAt).toLocaleString()}`
-            : undefined
-        }
-      >
-        <Show when={canEdit() && !isEditing()}>
-          <button
-            class="workspace-button secondary small"
-            disabled={busy()}
-            onClick={() => setEditing(true)}
-          >
-            Edit
-          </button>
-        </Show>
-        <Show when={!isNew() && canEdit() && task()?.status !== 'closed' && !isEditing()}>
-          <button class="workspace-button small" disabled={busy()} onClick={() => save(true)}>
-            <Icon name="check" />
-            Close Complete
-          </button>
-        </Show>
-      </RecordHeader>
-      <Show when={task.loading && !task.latest}>
-        <Skeleton label="Loading task" lines={6} />
-      </Show>
-      <Show when={task.error}>
-        <ToastMessage tone="error">{task.error.message}</ToastMessage>
-      </Show>
-      <Show when={isNew() || (!task.error && task())}>
-        <ValidatedForm
-          class="create-form task-record-form"
-          onSubmit={(event) => {
-            event.preventDefault();
-            save();
-          }}
-        >
-          <section class="record-surface record-property-sheet" aria-label="Task details">
-            <div class="record-property-list">
-              <div class="record-field-full">
-                <Show when={isEditing()} fallback={<RecordValue label="Title" value={title()} />}>
-                  <label>
-                    Title
-                    <input
-                      name="title"
-                      required
-                      maxlength="160"
-                      value={title()}
-                      onInput={(event) => setTitle(event.currentTarget.value)}
-                    />
-                  </label>
-                </Show>
-              </div>
-
-              <Show
-                when={isEditing()}
-                fallback={
-                  <RecordValue
-                    label="Status"
-                    badge={status()}
-                    value={
-                      status() === 'closed'
-                        ? 'Closed Complete'
-                        : status() === 'in-progress'
-                          ? 'In Progress'
-                          : 'Open'
-                    }
-                  />
-                }
-              >
-                <label>
-                  Status
-                  <Dropdown
-                    ariaLabel="Task status"
-                    disabled={isNew() || busy()}
-                    value={status()}
-                    options={[
-                      { value: 'open', label: 'Open' },
-                      { value: 'in-progress', label: 'In Progress' },
-                      { value: 'closed', label: 'Closed Complete' },
-                    ]}
-                    onChange={setStatus}
-                  />
-                </label>
-              </Show>
-              <Show when={!isNew()}>
-                <Show
-                  when={isEditing()}
-                  fallback={
-                    <RecordValue
-                      label="Assignment Group"
-                      value={task()?.queueName || 'Unassigned'}
-                    />
-                  }
-                >
-                  <label>
-                    Assignment Group
-                    <input readOnly value={task()?.queueName || 'Unassigned'} />
-                  </label>
-                </Show>
-                <Show
-                  when={isEditing()}
-                  fallback={
-                    <RecordValue
-                      label="Assigned To"
-                      value={task()?.assignedToName || 'Unassigned'}
-                      avatarId={task()?.assignedToId}
-                      avatarName={task()?.assignedToName}
-                      href={
-                        task()?.assignedToId ? `/workspace/users/${task().assignedToId}` : undefined
-                      }
-                    />
-                  }
-                >
-                  <ReferenceLookup
-                    label="Assigned To"
-                    placeholder="Unassigned"
-                    disabled={busy()}
-                    value={assignedToId()}
-                    options={
-                      (!assignees.error && assignees()) ||
-                      (task()?.assignedToId
-                        ? [
-                            {
-                              value: task().assignedToId,
-                              label: task().assignedToName || 'Agent',
-                              href: `/workspace/users/${task().assignedToId}`,
-                            },
-                          ]
-                        : [])
-                    }
-                    onChange={setAssignedToId}
-                  />
-                </Show>
-              </Show>
-              <Show
-                when={isEditing()}
-                fallback={
-                  <RecordValue
-                    label="Originating Request"
-                    value={task()?.requestReference?.label}
-                    href={task()?.requestReference?.href}
-                  />
-                }
-              >
-                <ReferenceLookup
-                  label="Originating Request"
-                  name="request"
-                  required={isNew()}
-                  readOnly={!isNew()}
-                  disabled={busy()}
-                  value={isNew() ? requestId() : task()?.requestId}
-                  options={
-                    isNew()
-                      ? ((!requests.error && requests()) || []).map((record) => ({
-                          value: record.id,
-                          label: `${record.number} · ${record.title}`,
-                        }))
-                      : [
-                          {
-                            value: task()?.requestId,
-                            label: task()?.requestReference?.label,
-                            href: task()?.requestReference?.href,
-                          },
-                        ]
-                  }
-                  onSearch={setRequestSearch}
-                  onChange={setRequestId}
-                />
-              </Show>
-
-              <Show
-                when={isEditing()}
-                fallback={
-                  <RecordValue
-                    label="Due Date"
-                    value={
-                      dueDate() ? new Date(dueDate() + 'T12:00:00').toLocaleDateString() : 'Not Set'
-                    }
-                  />
-                }
-              >
-                <label>
-                  Due Date
-                  <input
-                    name="dueDate"
-                    type="date"
-                    min="1900-01-01"
-                    max="9999-12-31"
-                    value={dueDate()}
-                    onInput={(event) => setDueDate(event.currentTarget.value)}
-                  />
-                </label>
-              </Show>
-              <Show when={!isNew() && task()?.createdAt}>
-                <RecordValue label="Created" value={new Date(task().createdAt).toLocaleString()} />
-              </Show>
-            </div>
-            <div
-              class="record-description-field"
-              classList={{ 'record-description-block': !isEditing() }}
+        <h1 class="sr-only">{isNew() ? 'New Task' : (!task.error && task()?.title) || 'Task'}</h1>
+        <div class="helpdesk-actions">
+          <Show when={canEdit() && !isEditing()}>
+            <button
+              class="workspace-button secondary small"
+              disabled={busy()}
+              onClick={() => setEditing(true)}
             >
-              <div class="record-field-full">
-                <Show
-                  when={isEditing()}
-                  fallback={<RecordValue label="Details" value={description()} />}
-                >
-                  <label>
-                    Details
-                    <textarea
-                      name="description"
-                      rows="6"
-                      maxlength="7000"
-                      value={description()}
-                      onInput={(event) => setDescription(event.currentTarget.value)}
-                    />
-                  </label>
-                </Show>
-              </div>
-            </div>
-          </section>
+              Edit
+            </button>
+          </Show>
+          <Show when={!isNew() && canEdit() && task()?.status !== 'closed' && !isEditing()}>
+            <button class="workspace-button small" disabled={busy()} onClick={() => save(true)}>
+              <Icon name="check" />
+              Close Complete
+            </button>
+          </Show>
           <Show when={isEditing() && canEdit()}>
             <div class="helpdesk-actions">
-              <button class="workspace-button" disabled={busy() || assignees.loading}>
+              <button
+                type="submit"
+                form="task-record-form"
+                class="workspace-button small"
+                disabled={busy() || assignees.loading}
+              >
                 <Icon name="save" />
 
                 {busy() ? 'Saving…' : 'Save'}
@@ -343,7 +153,7 @@ export default function TaskPage() {
               <Show when={!isNew()}>
                 <button
                   type="button"
-                  class="workspace-button secondary"
+                  class="workspace-button secondary small"
                   disabled={busy()}
                   onClick={() => {
                     restore();
@@ -355,10 +165,275 @@ export default function TaskPage() {
               </Show>
             </div>
           </Show>
-        </ValidatedForm>
-        <Show when={!isNew()}>
-          <RecordActivity kind="task" recordId={params.taskId} />
-        </Show>
+        </div>
+      </div>
+      <Show when={task.loading && !task.latest}>
+        <Skeleton label="Loading task" lines={6} />
+      </Show>
+      <Show when={task.error}>
+        <ToastMessage tone="error">{task.error.message}</ToastMessage>
+      </Show>
+      <Show when={isNew() || (!task.error && task())}>
+        <div class="data-record-workbench resizable-split">
+          <section class="data-record-properties" aria-label="Task details">
+            <div class="data-record-properties-scroll">
+              <ValidatedForm
+                id="task-record-form"
+                class="create-form task-record-form"
+                validationRef={(validate) => {
+                  validateContent = validate;
+                }}
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  save();
+                }}
+              >
+                <section class="record-surface record-property-sheet" aria-label="Task details">
+                  <div class="record-property-list">
+                    <div class="record-field-full">
+                      <Show
+                        when={isEditing()}
+                        fallback={<RecordValue label="Title" value={title()} />}
+                      >
+                        <label>
+                          Title
+                          <input
+                            name="title"
+                            required
+                            maxlength="160"
+                            value={title()}
+                            onInput={(event) => setTitle(event.currentTarget.value)}
+                          />
+                        </label>
+                      </Show>
+                    </div>
+                  </div>
+                  <div
+                    class="record-description-field"
+                    classList={{ 'record-description-block': !isEditing() }}
+                  >
+                    <div class="record-field-full">
+                      <Show
+                        when={isEditing()}
+                        fallback={<RecordValue label="Details" value={description()} />}
+                      >
+                        <label>
+                          Details
+                          <textarea
+                            name="description"
+                            rows="6"
+                            maxlength="7000"
+                            value={description()}
+                            onInput={(event) => setDescription(event.currentTarget.value)}
+                          />
+                        </label>
+                      </Show>
+                    </div>
+                  </div>
+                </section>
+              </ValidatedForm>
+            </div>
+          </section>
+          <SplitResizeHandle
+            storageKey={`task-record-form-activity-${params.workspaceId}`}
+            initialRatio={62}
+            minRightWidth={320}
+            maxRightWidth={640}
+            initialPanel="left"
+            leftLabel="Form"
+            rightLabel="Activity"
+            ariaLabel="Resize record panels"
+            switcherLabel="Record view"
+            onPanelReady={(select) => {
+              selectPanel = select;
+            }}
+          />
+          <aside class="data-record-timeline" aria-label="Task properties and activity">
+            <RecordActivity
+              kind="task"
+              recordId={params.taskId}
+              isNew={isNew()}
+              onPropertiesReady={(show) => {
+                showProperties = show;
+              }}
+              propertiesContent={() => (
+                <ValidatedForm
+                  id="task-properties-form"
+                  class="create-form record-surface record-property-sheet"
+                  validationRef={(validate) => {
+                    validateProperties = validate;
+                  }}
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    save();
+                  }}
+                >
+                  <div class="record-property-list">
+                    <Show
+                      when={isEditing()}
+                      fallback={
+                        <RecordValue
+                          label="Status"
+                          badge={status()}
+                          value={
+                            status() === 'closed'
+                              ? 'Closed Complete'
+                              : status() === 'in-progress'
+                                ? 'In Progress'
+                                : 'Open'
+                          }
+                        />
+                      }
+                    >
+                      <label>
+                        Status
+                        <Dropdown
+                          ariaLabel="Task status"
+                          disabled={isNew() || busy()}
+                          value={status()}
+                          options={[
+                            { value: 'open', label: 'Open' },
+                            { value: 'in-progress', label: 'In Progress' },
+                            { value: 'closed', label: 'Closed Complete' },
+                          ]}
+                          onChange={setStatus}
+                        />
+                      </label>
+                    </Show>
+                    <Show when={!isNew()}>
+                      <Show
+                        when={isEditing()}
+                        fallback={
+                          <RecordValue
+                            label="Assignment Group"
+                            value={task()?.queueName || 'Unassigned'}
+                          />
+                        }
+                      >
+                        <label>
+                          Assignment Group
+                          <input readOnly value={task()?.queueName || 'Unassigned'} />
+                        </label>
+                      </Show>
+                      <Show
+                        when={isEditing()}
+                        fallback={
+                          <RecordValue
+                            label="Assigned To"
+                            value={task()?.assignedToName || 'Unassigned'}
+                            avatarId={task()?.assignedToId}
+                            avatarName={task()?.assignedToName}
+                            href={
+                              task()?.assignedToId
+                                ? `/workspace/users/${task().assignedToId}`
+                                : undefined
+                            }
+                          />
+                        }
+                      >
+                        <ReferenceLookup
+                          label="Assigned To"
+                          placeholder="Unassigned"
+                          disabled={busy()}
+                          value={assignedToId()}
+                          options={
+                            (!assignees.error && assignees()) ||
+                            (task()?.assignedToId
+                              ? [
+                                  {
+                                    value: task().assignedToId,
+                                    label: task().assignedToName || 'Agent',
+                                    href: `/workspace/users/${task().assignedToId}`,
+                                  },
+                                ]
+                              : [])
+                          }
+                          onChange={setAssignedToId}
+                        />
+                      </Show>
+                    </Show>
+                    <Show
+                      when={isEditing()}
+                      fallback={
+                        <RecordValue
+                          label="Originating Request"
+                          value={task()?.requestReference?.label}
+                          href={task()?.requestReference?.href}
+                        />
+                      }
+                    >
+                      <ReferenceLookup
+                        label="Originating Request"
+                        name="request"
+                        required={isNew()}
+                        readOnly={!isNew()}
+                        disabled={busy()}
+                        value={isNew() ? requestId() : task()?.requestId}
+                        options={
+                          isNew()
+                            ? ((!requests.error && requests()) || []).map((record) => ({
+                                value: record.id,
+                                label: `${record.number} · ${record.title}`,
+                              }))
+                            : [
+                                {
+                                  value: task()?.requestId,
+                                  label: task()?.requestReference?.label,
+                                  href: task()?.requestReference?.href,
+                                },
+                              ]
+                        }
+                        onSearch={setRequestSearch}
+                        onChange={setRequestId}
+                      />
+                    </Show>
+
+                    <Show
+                      when={isEditing()}
+                      fallback={
+                        <RecordValue
+                          label="Due Date"
+                          value={
+                            dueDate()
+                              ? new Date(dueDate() + 'T12:00:00').toLocaleDateString()
+                              : 'Not Set'
+                          }
+                        />
+                      }
+                    >
+                      <label>
+                        Due Date
+                        <input
+                          name="dueDate"
+                          type="date"
+                          min="1900-01-01"
+                          max="9999-12-31"
+                          value={dueDate()}
+                          onInput={(event) => setDueDate(event.currentTarget.value)}
+                        />
+                      </label>
+                    </Show>
+                    <Show when={!isNew() && task()?.createdAt}>
+                      <RecordValue
+                        label="Created"
+                        value={new Date(task().createdAt).toLocaleString()}
+                      />
+                    </Show>
+                  </div>
+                </ValidatedForm>
+              )}
+              relatedContent={() => (
+                <RecordValue
+                  label="Originating Request"
+                  value={
+                    task()?.requestReference?.label || 'Save this task to see related records.'
+                  }
+                  href={task()?.requestReference?.href}
+                />
+              )}
+            />
+          </aside>
+        </div>
       </Show>
     </section>
   );
