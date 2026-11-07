@@ -4640,14 +4640,14 @@ html:not(.app-ready)
 }
 @media (prefers-reduced-motion: no-preference) {
   .landing-hero-copy .hero-heading-letter {
-    animation: hero-letter-reveal 400ms cubic-bezier(0.22, 1, 0.36, 1) both;
-    animation-delay: calc(var(--letter-order) * 8ms);
+    animation: hero-letter-reveal 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: calc(var(--letter-order) * 10ms);
   }
   .landing-hero-copy > .tagline {
-    animation: hero-copy-fade-up 350ms cubic-bezier(0.22, 1, 0.36, 1) 300ms both;
+    animation: hero-copy-fade-up 420ms cubic-bezier(0.22, 1, 0.36, 1) 360ms both;
   }
   .landing-hero-copy > .landing-actions {
-    animation: hero-actions-fade-in 300ms cubic-bezier(0.22, 1, 0.36, 1) 550ms both;
+    animation: hero-actions-fade-in 360ms cubic-bezier(0.22, 1, 0.36, 1) 660ms both;
   }
 }
 
