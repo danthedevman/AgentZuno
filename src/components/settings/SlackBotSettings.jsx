@@ -1,3 +1,4 @@
+import Icon from '../Icon.jsx';
 import A from '../WorkspaceLink.jsx';
 import SlackUserReview from './SlackUserReview.jsx';
 import { confirmAction } from '../../services/confirmations.js';
@@ -183,6 +184,8 @@ export default function SlackBotSettings(props) {
           </button>
         </Show>
         <button class="workspace-button small" disabled={busy() || !!users.error}>
+          <Icon name="save" />
+
           {props.manageUsers ? 'Save User Links' : 'Save Bot Settings'}
         </button>
       </ValidatedForm>

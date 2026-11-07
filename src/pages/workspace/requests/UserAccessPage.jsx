@@ -1,3 +1,4 @@
+import Icon from '../../../components/Icon.jsx';
 import { createResource, createSignal, Show } from 'solid-js';
 import { useNavigate, useParams } from '@solidjs/router';
 import { api } from '../../../services/api.js';
@@ -113,6 +114,7 @@ export default function UserAccessPage() {
                       disabled={busy()}
                       onClick={() => change('active')}
                     >
+                      <Icon name="check" />
                       Confirm Provisioned
                     </button>
                     <button

@@ -1,3 +1,4 @@
+import Icon from '../Icon.jsx';
 import { Show, createSignal } from 'solid-js';
 import { api } from '../../services/api.js';
 import { displayLabel } from '../../utils/displayLabels.js';
@@ -72,6 +73,8 @@ export default function RequestChatAction(props) {
             }
           }}
         >
+          <Icon name="check" />
+
           {saving() ? 'Applying…' : `Confirm ${title()}`}
         </button>
       </Show>

@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { hasWorkflowChanges } from '../src/services/workflows/workflowPublication.js';
+import {
+  hasWorkflowChanges,
+  workflowDraftSnapshot,
+} from '../src/services/workflows/workflowPublication.js';
 
 test('publication stays unchanged after saving, but metadata or executable edits enable publishing', () => {
   const definition = {
@@ -24,4 +27,25 @@ test('publication stays unchanged after saving, but metadata or executable edits
   );
   assert.equal(hasWorkflowChanges(definition, 'export default updatedWorkflow;', published), true);
   assert.equal(hasWorkflowChanges(definition, published.source, published), false);
+});
+
+test('draft snapshots ignore property order but retain field and rule order', () => {
+  const definition = {
+    name: 'Access',
+    form: { fields: [{ id: 'name' }, { id: 'reason' }] },
+    routing: [{ id: 'first' }, { id: 'second' }],
+  };
+  const reordered = { routing: definition.routing, form: definition.form, name: definition.name };
+  assert.equal(
+    workflowDraftSnapshot(definition, 'source'),
+    workflowDraftSnapshot(reordered, 'source'),
+  );
+  assert.notEqual(
+    workflowDraftSnapshot(definition, 'source'),
+    workflowDraftSnapshot({ ...definition, routing: [...definition.routing].reverse() }, 'source'),
+  );
+  assert.notEqual(
+    workflowDraftSnapshot(definition, 'source'),
+    workflowDraftSnapshot(definition, 'updated source'),
+  );
 });

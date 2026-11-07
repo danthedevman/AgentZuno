@@ -39,7 +39,7 @@ export default function WorkflowReferenceField(props) {
       ]);
   });
   return (
-    <div aria-busy={options.loading}>
+    <div class="workflow-reference-field" aria-busy={options.loading}>
       <ReferenceLookup
         referenceTable={props.field.referenceTable}
         onOpen={() => refetch()}

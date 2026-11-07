@@ -1,3 +1,4 @@
+import Icon from '../../components/Icon.jsx';
 import { Show, createSignal } from 'solid-js';
 import { A, useNavigate } from '@solidjs/router';
 import { useSession } from '../../context/SessionContext.jsx';
@@ -29,6 +30,7 @@ export default function InvitePage() {
               <>
                 <p>Sign in or register with the email address that received this invitation.</p>
                 <A class="workspace-button" href="/login?next=invite">
+                  <Icon name="login" />
                   Sign In
                 </A>
                 <A href="/register?next=invite">Register</A>
@@ -55,6 +57,8 @@ export default function InvitePage() {
                 }
               }}
             >
+              <Icon name="send" />
+
               {busy() ? 'Accepting…' : 'Accept Invitation'}
             </button>
           </Show>

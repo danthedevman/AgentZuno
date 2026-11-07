@@ -1,3 +1,4 @@
+import Icon from '../../../components/Icon.jsx';
 import TaskListPage from '../requests/TaskListPage.jsx';
 import { pollConversation } from '../../../services/chat/conversationPolling.js';
 import ReferenceArrow from '../../../components/ReferenceArrow.jsx';
@@ -243,6 +244,8 @@ function DataTablePage() {
                         }
                         onClick={() => openRecord()}
                       >
+                        <Icon name="plus" />
+
                         {params.id === 'ref-task' ? 'Add Task' : 'Add Record'}
                       </button>
                     </div>
@@ -348,6 +351,7 @@ function DataTablePage() {
           <div class="connections-heading">
             <PageHeading title="Data Tables" />
             <A class="workspace-button small" href="/workspace/data/new">
+              <Icon name="plus" />
               New Table
             </A>
           </div>

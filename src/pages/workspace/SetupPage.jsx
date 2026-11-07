@@ -1,3 +1,4 @@
+import Icon from '../../components/Icon.jsx';
 import { createSignal, For, Show } from 'solid-js';
 import { useNavigate, useParams } from '@solidjs/router';
 import { useWorkspace } from '../../context/WorkspaceContext.jsx';
@@ -83,6 +84,8 @@ export default function SetupPage() {
             class="workspace-button"
             onClick={() => (step() < 2 ? setStep(step() + 1) : finish())}
           >
+            <Icon name="arrow" />
+
             {step() < 2 ? 'Continue' : 'Open Workspace'}
           </button>
         </div>

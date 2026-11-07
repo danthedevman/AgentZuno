@@ -1,3 +1,4 @@
+import Icon from '../../../components/Icon.jsx';
 import { useToasts } from '../../../context/ToastContext.jsx';
 import Breadcrumbs from '../../../components/Breadcrumbs.jsx';
 import KnowledgePermissions from '../../../components/knowledge/KnowledgePermissions.jsx';
@@ -80,6 +81,7 @@ export default function CreateTopicPage(props) {
           when={editing()}
           fallback={
             <button class="workspace-button small" onClick={() => setEditing(true)}>
+              <Icon name="edit" />
               Edit Topic
             </button>
           }
@@ -96,6 +98,8 @@ export default function CreateTopicPage(props) {
             class="workspace-button small"
             disabled={saving()}
           >
+            <Icon name="save" />
+
             {saving() ? 'Saving…' : 'Save Topic'}
           </button>
         </Show>

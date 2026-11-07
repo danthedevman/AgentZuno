@@ -1,3 +1,4 @@
+import Icon from '../../components/Icon.jsx';
 import { A, useNavigate } from '@solidjs/router';
 import { Show, createResource, createSignal } from 'solid-js';
 import { useSession } from '../../context/SessionContext.jsx';
@@ -39,6 +40,7 @@ export default function SlackLinkPage() {
               <>
                 <p>Sign in with your existing AgentZuno workspace account to review this link.</p>
                 <A class="workspace-button" href="/login?next=slack-link">
+                  <Icon name="login" />
                   Sign In
                 </A>
               </>
@@ -73,6 +75,7 @@ export default function SlackLinkPage() {
                   }
                 }}
               >
+                <Icon name="link" />
                 Confirm Account Link
               </button>
             </Show>

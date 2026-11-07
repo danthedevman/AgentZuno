@@ -298,6 +298,7 @@ export default function RequestsPage(props) {
                 executeArchive(ids);
               }}
             >
+              <Icon name="archive" />
               Archive
             </button>
           </div>

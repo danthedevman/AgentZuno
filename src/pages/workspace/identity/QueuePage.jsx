@@ -1,3 +1,4 @@
+import Icon from '../../../components/Icon.jsx';
 import RecordForm from '../../../components/records/RecordForm.jsx';
 import RecordActivity from '../../../components/records/RecordActivity.jsx';
 import BackLink from '../../../components/BackLink.jsx';
@@ -88,6 +89,7 @@ export default function QueuePage(props) {
             when={editing()}
             fallback={
               <button type="button" class="workspace-button small" onClick={() => setEditing(true)}>
+                <Icon name="edit" />
                 Edit
               </button>
             }
@@ -108,6 +110,8 @@ export default function QueuePage(props) {
                 Cancel
               </button>
               <button class="workspace-button small" form="queue-form" disabled={saving()}>
+                <Icon name="save" />
+
                 {saving() ? 'Saving…' : 'Save'}
               </button>
             </div>

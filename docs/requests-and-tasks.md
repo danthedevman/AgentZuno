@@ -9,6 +9,10 @@ Requests collect an employee's submitted answers, approvals, and support work. T
 3. Use the request panel beside the conversation to review answers, status, attachments, and tasks.
 4. Return through **Dashboard → My Requests**.
 
+Zuno replies open at the start of the response. Scroll down to complete long forms and reach Submit. Reopening an unsubmitted form loads its current published version; a changed or unavailable workflow cannot accept a stale submission.
+
+The request panel’s **Approvals** tab lists workflow and support approvals, their states, decision dates, comments, and recorded skip or assignment failures. Being the requester never bypasses approval. A different active member with approval permission must be available.
+
 If a chat has several requests, switch between them with the selector above the request panel. AI chat needs an enabled provider configured by an Admin.
 
 ![A submitted request alongside its conversation](/help/readme-request-chat-dark.png)

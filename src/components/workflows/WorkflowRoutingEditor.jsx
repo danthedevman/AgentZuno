@@ -205,7 +205,7 @@ export default function WorkflowRoutingEditor(props) {
               match: 'all',
               conditions: [conditionFor(fields()[0])],
               action: 'route',
-              queueName: 'Support',
+              queueName: '',
             },
           ])
         }

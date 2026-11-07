@@ -1,3 +1,4 @@
+import Icon from '../Icon.jsx';
 import { For, Show, createResource, createSignal } from 'solid-js';
 import { api } from '../../services/api.js';
 import { useWorkspace } from '../../context/WorkspaceContext.jsx';
@@ -149,6 +150,8 @@ export default function RecordActivity(props) {
                   />
                 </label>
                 <button class="workspace-button small" disabled={busy()}>
+                  <Icon name="chat" />
+
                   {busy() ? 'Posting…' : tab() === 'notes' ? 'Add Note' : 'Add Comment'}
                 </button>
               </ValidatedForm>

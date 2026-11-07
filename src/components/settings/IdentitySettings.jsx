@@ -1,3 +1,4 @@
+import Icon from '../Icon.jsx';
 import Toggle from '../Toggle.jsx';
 import ToastMessage from '../ToastMessage.jsx';
 import ValidatedForm from '../ValidatedForm.jsx';
@@ -151,6 +152,8 @@ export default function IdentitySettings() {
               <ToastMessage tone="success" message={message()} />
             </Show>
             <button class="workspace-button" type="submit" disabled={isSaving()}>
+              <Icon name="save" />
+
               {isSaving() ? 'Saving…' : 'Save identity provider'}
             </button>
           </ValidatedForm>
@@ -160,6 +163,8 @@ export default function IdentitySettings() {
                 class="workspace-button"
                 href={`/api/auth/oidc/start?workspace=${session().user.workspaceId}&link=1`}
               >
+                <Icon name="link" />
+
                 {settings()?.linked ? 'Relink enterprise identity' : 'Link enterprise identity'}
               </a>
             </p>

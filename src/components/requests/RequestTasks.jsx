@@ -1,3 +1,4 @@
+import Icon from '../Icon.jsx';
 import A from '../WorkspaceLink.jsx';
 import ProfileAvatar from '../identity/ProfileAvatar.jsx';
 import { Show, createSignal } from 'solid-js';
@@ -39,6 +40,7 @@ export default function RequestTasks(props) {
               setAdding(true);
             }}
           >
+            <Icon name="plus" />
             Add Task
           </button>
         </Show>
@@ -77,6 +79,7 @@ export default function RequestTasks(props) {
           </label>
           <div class="helpdesk-actions">
             <button class="workspace-button small" disabled={busy()}>
+              <Icon name="plus" />
               Create Task
             </button>
             <button

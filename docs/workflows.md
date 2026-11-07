@@ -26,7 +26,7 @@ A workflow can also register information in a Data Table without creating a fulf
 | Runs               | Inspect actual executions.                                          |
 | History / Versions | Revisit authoring conversations or saved workflow versions.         |
 
-Draft changes save automatically. They do not change the published workflow until you publish them.
+The first complete generated flow saves as a draft. While the Admin agent updates the flow, the Visual tab keeps the current workflow visible and replaces it when the update is ready. Draft changes save automatically, or you can select **Save Draft** in the top bar. Neither changes the published workflow. New conditional routing rules start without an assignment group; select a group before the draft can save. Background save issues appear beside the save status, while manual saves show a success or error notification.
 
 ## Test and publish
 

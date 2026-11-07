@@ -1,3 +1,4 @@
+import { requestApprovalHistory } from '../../requests/requestApprovals.js';
 import {
   requestFields as fields,
   requestText as text,
@@ -368,6 +369,10 @@ export function createHelpdeskController(store, service) {
   };
   const postRequests = async (request, response) =>
     response.status(201).json(await service.create(request.helpdeskUser, request.body));
+  const getRequestsIdApprovals = async (request, response) => {
+    const record = await service.get(request.helpdeskUser, request.params.id);
+    response.json(await requestApprovalHistory(store, request.helpdeskUser, record));
+  };
   const getRequestsId = async (request, response) => {
     const record = await service.get(request.helpdeskUser, request.params.id);
     const result = safeRequest(record, request.helpdeskUser);
@@ -454,6 +459,7 @@ export function createHelpdeskController(store, service) {
     getRequests,
     postRequests,
     getRequestsId,
+    getRequestsIdApprovals,
     patchRequestsId,
     postRequestsIdPath,
     getRequestsIdDraftsChatId,

@@ -298,14 +298,33 @@ export function createWorkflowExecution(store, fetcher = fetch) {
               );
               return result;
             }
-            const currentApprovers = await resolveWorkflowApprovers(store, run, input);
+            let currentApprovers;
+            try {
+              currentApprovers = await resolveWorkflowApprovers(store, run, input);
+            } catch (error) {
+              const failureReason =
+                error.approvalFailureCode === 'self-approval'
+                  ? 'The requester cannot approve their own request. Choose another eligible approver.'
+                  : 'No eligible approver is available. Check group membership and approval permission.';
+              await runs().updateOne(
+                { ...filter, 'steps.id': stepId },
+                {
+                  $set: {
+                    'steps.$.status': 'blocked',
+                    'steps.$.failureReason': failureReason,
+                    'steps.$.completedAt': new Date(),
+                  },
+                },
+              );
+              throw error;
+            }
             const ids = previous?.resolvedUserIds
               ? previous.resolvedUserIds.filter((id) => currentApprovers.includes(id))
               : currentApprovers;
             if (!ids.length) deny('Approval assignment changed. Review this request.');
             await runs().updateOne(
               { ...filter, 'steps.id': stepId },
-              { $set: { 'steps.$.resolvedUserIds': ids } },
+              { $set: { 'steps.$.resolvedUserIds': ids, 'steps.$.status': 'awaiting-approval' } },
             );
             await store.collection('helpdeskRequests').updateOne(
               { ...scope, _id: request._id },

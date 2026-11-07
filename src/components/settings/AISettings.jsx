@@ -1,3 +1,4 @@
+import Icon from '../Icon.jsx';
 import ToastMessage from '../ToastMessage.jsx';
 import ValidatedForm from '../ValidatedForm.jsx';
 import { For, Show, createResource, createSignal, createEffect, on } from 'solid-js';
@@ -257,6 +258,8 @@ export default function AISettings() {
               <ToastMessage tone="success" message={message()} />
             </Show>
             <button class="workspace-button" disabled={saving()}>
+              <Icon name="save" />
+
               {saving() ? 'Saving…' : 'Save AI settings'}
             </button>
           </ValidatedForm>

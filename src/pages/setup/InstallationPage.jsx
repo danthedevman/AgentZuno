@@ -1,3 +1,4 @@
+import Icon from '../../components/Icon.jsx';
 import { A, useNavigate } from '@solidjs/router';
 import { createEffect, createResource, Show } from 'solid-js';
 import { useSession } from '../../context/SessionContext.jsx';
@@ -35,6 +36,7 @@ export default function InstallationPage() {
           <h1>Unable to connect</h1>
           <p>Check that the AgentZuno backend is running, then try again.</p>
           <button class="workspace-button" onClick={() => refetch()}>
+            <Icon name="refresh" />
             Try Again
           </button>
           <A href="/docs#database-setup">Setup guide</A>

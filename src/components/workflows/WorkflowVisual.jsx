@@ -221,14 +221,22 @@ export default function WorkflowVisual(props) {
                                   when={step.params.target === 'group'}
                                   fallback={
                                     <li>
-                                      <A href={`/workspace/users/${step.params.userId}`}>
+                                      <A
+                                        href={`/workspace/users/${step.params.userId}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                      >
                                         {approverLabel(step.params.userId)}
                                       </A>
                                     </li>
                                   }
                                 >
                                   <li>
-                                    <A href={`/workspace/users/groups/${step.params.groupId}`}>
+                                    <A
+                                      href={`/workspace/users/groups/${step.params.groupId}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                    >
                                       {(
                                         !visualApprovalGroups.error &&
                                         visualApprovalGroups()?.find(

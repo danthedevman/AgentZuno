@@ -134,9 +134,41 @@ export default function HomePage() {
       </nav>
       <MarketingSection class="homepage" aria-labelledby="app-name">
         <div class="landing-hero-copy">
-          <h1 id="app-name" class="marketing-hero-heading">
-            <span>Your help desk</span>
-            <span>From ask to done</span>
+          <h1
+            id="app-name"
+            class="marketing-hero-heading"
+            aria-label="Your help desk. From ask to done"
+          >
+            <For each={['Your help desk', 'From ask to done']}>
+              {(line, lineIndex) => (
+                <span aria-hidden="true">
+                  <For each={line.split(' ')}>
+                    {(word, wordIndex) => (
+                      <>
+                        <span class="hero-heading-word">
+                          <For each={[...word]}>
+                            {(letter, letterIndex) => (
+                              <span
+                                class="hero-heading-letter"
+                                style={{
+                                  '--letter-order':
+                                    lineIndex() * 14 +
+                                    line.split(' ').slice(0, wordIndex()).join('').length +
+                                    letterIndex(),
+                                }}
+                              >
+                                {letter}
+                              </span>
+                            )}
+                          </For>
+                        </span>
+                        {wordIndex() < line.split(' ').length - 1 ? ' ' : ''}
+                      </>
+                    )}
+                  </For>
+                </span>
+              )}
+            </For>
           </h1>
           <p class="tagline">
             <For each={tagline()}>{(line) => <span>{line}</span>}</For>

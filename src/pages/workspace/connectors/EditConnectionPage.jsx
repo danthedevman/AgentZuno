@@ -1,3 +1,4 @@
+import Icon from '../../../components/Icon.jsx';
 import { useToasts } from '../../../context/ToastContext.jsx';
 import Skeleton from '../../../components/Skeleton.jsx';
 import ToastMessage from '../../../components/ToastMessage.jsx';
@@ -60,6 +61,7 @@ export default function EditConnectionPage() {
                     <input name="name" value={connection.name} maxlength="160" required />
                   </label>
                   <button class="workspace-button" disabled={saving()}>
+                    <Icon name="save" />
                     Save
                   </button>
                   <p>

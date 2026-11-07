@@ -1,3 +1,4 @@
+import Icon from '../../../components/Icon.jsx';
 import RecordActivity from '../../../components/records/RecordActivity.jsx';
 import RecordHeader from '../../../components/records/RecordHeader.jsx';
 import RecordValue from '../../../components/records/RecordValue.jsx';
@@ -129,6 +130,7 @@ export default function TaskPage() {
         </Show>
         <Show when={!isNew() && canEdit() && task()?.status !== 'closed' && !isEditing()}>
           <button class="workspace-button small" disabled={busy()} onClick={() => save(true)}>
+            <Icon name="check" />
             Close Complete
           </button>
         </Show>
@@ -334,6 +336,8 @@ export default function TaskPage() {
           <Show when={isEditing() && canEdit()}>
             <div class="helpdesk-actions">
               <button class="workspace-button" disabled={busy() || assignees.loading}>
+                <Icon name="save" />
+
                 {busy() ? 'Saving…' : 'Save'}
               </button>
               <Show when={!isNew()}>

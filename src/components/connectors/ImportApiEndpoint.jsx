@@ -1,3 +1,4 @@
+import Icon from '../Icon.jsx';
 import ToastMessage from '../ToastMessage.jsx';
 import ValidatedForm from '../ValidatedForm.jsx';
 import { Show, createSignal } from 'solid-js';
@@ -118,6 +119,8 @@ export default function ImportApiEndpoint(props) {
             isSaving() || (destination() === 'existing' && !workspace()?.knowledgeBases.length)
           }
         >
+          <Icon name="download" />
+
           {isSaving() ? 'Scanning…' : 'Scan and import private copy'}
         </button>
       </ValidatedForm>

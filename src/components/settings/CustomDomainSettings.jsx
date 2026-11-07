@@ -1,3 +1,4 @@
+import Icon from '../Icon.jsx';
 import { Show, createResource, createSignal } from 'solid-js';
 import { api } from '../../services/api.js';
 import ValidatedForm from '../ValidatedForm.jsx';
@@ -60,6 +61,7 @@ export default function CustomDomainSettings() {
               />
             </label>
             <button class="workspace-button small" disabled={busy()}>
+              <Icon name="save" />
               Save Domain
             </button>
           </ValidatedForm>
@@ -127,6 +129,8 @@ export default function CustomDomainSettings() {
                   )
                 }
               >
+                <Icon name="link" />
+
                 {settings().enabled ? 'Disable Portal' : 'Enable Portal'}
               </button>
               <button

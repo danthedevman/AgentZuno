@@ -1,3 +1,4 @@
+import Icon from '../../../components/Icon.jsx';
 import { Show } from 'solid-js';
 import { useWorkspace } from '../../../context/WorkspaceContext.jsx';
 import A from '../../../components/WorkspaceLink.jsx';
@@ -16,6 +17,7 @@ export default function TaskListPage() {
         <h1>Tasks</h1>
         <Show when={canCreate()}>
           <A class="workspace-button small" href="/workspace/tasks/new">
+            <Icon name="plus" />
             Add Task
           </A>
         </Show>

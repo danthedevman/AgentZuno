@@ -14,7 +14,7 @@ I wanted to see how quickly I could build an AI help desk using Codex and what I
 
 - **Two agents:** An Admin agent for building workflows and proposing knowledge changes, and Zuno for employee support, with separate permissions.
 - **Conversational requests:** Provider-selected guided forms, attachments, and request details alongside the conversation.
-- **Executable workflows:** TypeScript, conditional routing, user/group/manager approvals, visual previews, and published revisions.
+- **Executable workflows:** TypeScript, conditional routing, user/group/manager approvals with request approval history, visual previews, and published revisions. Drafts autosave, with a Save Draft button for manual saves; Publish applies changes to the live workflow. Incomplete routing stays unsaved until a group is selected, with an inline reminder instead of repeated toasts.
 - **Support work:** My Work dashboards, assigned requests, group queues, request tasks, comments, work notes, and workload reports. Admins and authorized Agents can create and close tasks, including through confirmed Zuno actions.
 - **Shared knowledge:** A resizable knowledge explorer with bases, up to three topic levels, article readers, reviewed AI proposals, and inherited access controls.
 - **Organization data:** Workforce profiles, identity provisioning, reference records, and customizable Data Tables.

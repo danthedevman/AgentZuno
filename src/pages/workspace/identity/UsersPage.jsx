@@ -169,6 +169,8 @@ export default function UsersPage() {
               tab() !== 'users' ? navigate(path(`/workspace/users/${tab()}/new`)) : openUser()
             }
           >
+            <Icon name="plus" />
+
             {tab() === 'groups' ? 'Add Group' : 'Add User'}
           </button>
         </Show>
@@ -468,6 +470,8 @@ export default function UsersPage() {
                         }}
                       >
                         <button class="workspace-button small">
+                          <Icon name="key" />
+
                           {config().hasToken
                             ? 'Rotate provisioning token'
                             : 'Generate provisioning token'}

@@ -1,3 +1,4 @@
+import Icon from '../../../components/Icon.jsx';
 import { createResource, Show } from 'solid-js';
 import { useParams } from '@solidjs/router';
 import { api } from '../../../services/api.js';
@@ -36,8 +37,13 @@ export default function ArticleReadPage(props) {
           }
         />
         <Show when={access()?.role === 'admin' && content()?.body}>
-          <A class="workspace-button small" href={`/workspace/articles/${content().id}/edit`}>
-            Edit Article
+          <A
+            class="workspace-button secondary icon-only small"
+            aria-label="Edit Article"
+            title="Edit Article"
+            href={`/workspace/articles/${content().id}/edit`}
+          >
+            <Icon name="edit" />
           </A>
         </Show>
       </div>

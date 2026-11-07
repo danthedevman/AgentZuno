@@ -1,3 +1,4 @@
+import Icon from '../Icon.jsx';
 import { Dynamic } from 'solid-js/web';
 import KnowledgeEditorPanel from './KnowledgeEditorPanel.jsx';
 import { Show, createResource, createEffect, createSignal } from 'solid-js';
@@ -170,6 +171,8 @@ export default function KnowledgeQuickEditor(props) {
               class="workspace-button"
               disabled={saving() || !!record.error || !permissions()?.ready}
             >
+              <Icon name="save" />
+
               {saving() ? 'Saving…' : 'Save'}
             </button>
             <Show when={props.record && record() && !record().isDefault}>

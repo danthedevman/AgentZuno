@@ -1,3 +1,4 @@
+import Icon from '../../../components/Icon.jsx';
 import ChangeReview from '../../../components/records/ChangeReview.jsx';
 import { changedSections } from '../../../utils/textDiff.js';
 import { pollConversation } from '../../../services/chat/conversationPolling.js';
@@ -425,6 +426,8 @@ export default function CreateArticlePage(props) {
               disabled={!canEdit() || busy() || uploading() || isGeneratingArticle()}
               onClick={() => review('Published', proposal()?.draft, false, true)}
             >
+              <Icon name="publish" />
+
               {status() === 'Published' ? 'Publish Changes' : 'Publish'}
             </button>
           </Show>
@@ -690,6 +693,7 @@ export default function CreateArticlePage(props) {
                           disabled={busy() || item().status !== 'pending'}
                           onClick={approve}
                         >
+                          <Icon name="publish" />
                           Approve &amp; {item().draft.status === 'Published' ? 'Publish' : 'Save'}
                         </button>
                         <button

@@ -1,3 +1,4 @@
+import Icon from '../Icon.jsx';
 import { Show, createSignal } from 'solid-js';
 import ValidatedForm from '../ValidatedForm.jsx';
 
@@ -30,6 +31,7 @@ export default function ApprovalDecisionForm(props) {
             disabled={isBusy()}
             onClick={() => decide(true)}
           >
+            <Icon name="check" />
             Approve
           </button>
           <button
@@ -65,6 +67,8 @@ export default function ApprovalDecisionForm(props) {
         </label>
         <div class="approval-decision-actions">
           <button type="submit" class="workspace-button small" disabled={isBusy()}>
+            <Icon name="close" />
+
             {isBusy() ? 'Submitting…' : 'Confirm Rejection'}
           </button>
           <button

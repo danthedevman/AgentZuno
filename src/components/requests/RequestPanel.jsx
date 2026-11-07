@@ -1,3 +1,4 @@
+import RequestApprovals from './RequestApprovals.jsx';
 import RequestAccess from './RequestAccess.jsx';
 import MentionTextarea from '../MentionTextarea.jsx';
 import { createStore, reconcile } from 'solid-js/store';
@@ -74,7 +75,9 @@ export default function RequestPanel(props) {
   const [workNote, setWorkNote] = createSignal('');
   const [error, setError] = createSignal('');
   const [saving, setSaving] = createSignal(false);
-  const [detailTab, setDetailTab] = createSignal(query.tab === 'tasks' ? 'tasks' : 'details');
+  const [detailTab, setDetailTab] = createSignal(
+    ['tasks', 'approvals', 'attachments'].includes(query.tab) ? query.tab : 'details',
+  );
   const [isEditing, setIsEditing] = createSignal(false);
   const [editVersion, setEditVersion] = createSignal(null);
   function beginEdit() {
@@ -251,7 +254,25 @@ export default function RequestPanel(props) {
               >
                 Tasks
               </button>
+              <button
+                role="tab"
+                aria-selected={detailTab() === 'approvals'}
+                onClick={() => setDetailTab('approvals')}
+              >
+                Approvals
+              </button>
             </div>
+            <Show when={detailTab() === 'approvals'}>
+              <RequestApprovals
+                requestId={requestId()}
+                version={current()?.version}
+                onChanged={async () => {
+                  await refetch();
+                  await refreshRuns();
+                  await props.onChanged?.();
+                }}
+              />
+            </Show>
             <Show when={detailTab() === 'tasks'}>
               <RequestTasks
                 refreshKey={props.refreshKey}
@@ -594,6 +615,8 @@ export default function RequestPanel(props) {
                         />
                       </label>
                       <button class="workspace-button small" disabled={saving()}>
+                        <Icon name="chat" />
+
                         {saving()
                           ? 'Saving…'
                           : mode() === 'work-note'

@@ -1,7 +1,10 @@
 import WorkflowDangerZone from '../../../components/workflows/WorkflowDangerZone.jsx';
 import { pollConversation } from '../../../services/chat/conversationPolling.js';
 import ChatPanelToolbar from '../../../components/chat/ChatPanelToolbar.jsx';
-import { hasWorkflowChanges } from '../../../services/workflows/workflowPublication.js';
+import {
+  hasWorkflowChanges,
+  workflowDraftSnapshot,
+} from '../../../services/workflows/workflowPublication.js';
 import { followChatProgress } from '../../../services/chat/chatFollow.js';
 import ConversationSkeleton from '../../../components/chat/ConversationSkeleton.jsx';
 import SplitResizeHandle from '../../../components/SplitResizeHandle.jsx';
@@ -148,15 +151,21 @@ export default function WorkflowBuilderPage() {
   const [savedDefinition, setSavedDefinition] = createSignal('');
   const [hasEdits, setHasEdits] = createSignal(false);
   const [saveStatus, setSaveStatus] = createSignal('');
+  const [draftSaveError, setDraftSaveError] = createSignal('');
   const [lastAttempt, setLastAttempt] = createSignal('');
   const current = () => !saved.error && saved()?.find((item) => item.id === selected());
   const [manualPermissions, setManualPermissions] = createSignal(undefined);
   const [manualName, setManualName] = createSignal(undefined);
   const [manualRouting, setManualRouting] = createSignal(undefined);
   const [manualForm, setManualForm] = createSignal(undefined);
+  const [awaitingAgentRevision, setAwaitingAgentRevision] = createSignal(false);
   let latestAgentRevision = '';
   createEffect(() => {
     const chat = !conversation.error && conversation();
+    if (chat?.id === chatId() && ['queued', 'responding'].includes(chat.status)) {
+      setAwaitingAgentRevision(true);
+      return;
+    }
     if (
       !chatId() ||
       chat?.id !== chatId() ||
@@ -169,7 +178,9 @@ export default function WorkflowBuilderPage() {
     const revision = JSON.stringify([chat.id, response?.id, chat.typescript, chat.definition]);
     if (revision === latestAgentRevision) return;
     latestAgentRevision = revision;
+    if (!awaitingAgentRevision() && !current()?.isAuthoringDraft) return;
     batch(() => {
+      setAwaitingAgentRevision(false);
       setSource(chat.typescript);
       setSourceEdited(false);
       setCodeDefinition(chat.definition);
@@ -177,13 +188,12 @@ export default function WorkflowBuilderPage() {
       setManualRouting(undefined);
       setManualName(undefined);
       setManualPermissions(undefined);
+      setHasEdits(true);
     });
   });
   let latestDefinition = '';
   createEffect(() => {
-    const value = JSON.stringify(
-      (!conversation.error && conversation()?.definition) || baseDefinition(),
-    );
+    const value = JSON.stringify(baseDefinition());
     if (value !== latestDefinition) {
       latestDefinition = value;
       setManualForm(undefined);
@@ -195,9 +205,9 @@ export default function WorkflowBuilderPage() {
   const definition = createMemo(() => {
     const value =
       codeDefinition() ||
-      (chatId() && !conversation.error && conversation()?.definition) ||
-      baseDefinition();
-    if (!value) return value;
+      baseDefinition() ||
+      (chatId() && !conversation.error && conversation()?.definition);
+    if (!value) return null;
     const { form, ...rest } = value;
     return {
       ...rest,
@@ -235,7 +245,7 @@ export default function WorkflowBuilderPage() {
   });
   createEffect(() => {
     const value = definition();
-    const serialized = JSON.stringify({ definition: value, source: source() });
+    const serialized = workflowDraftSnapshot(value, source());
     if (
       !isAdmin() ||
       !hasEdits() ||
@@ -249,6 +259,11 @@ export default function WorkflowBuilderPage() {
       serialized === lastAttempt()
     )
       return;
+    if (value.routing?.some((rule) => !rule.queueName?.trim())) {
+      setSaveStatus('Draft Not Saved');
+      setDraftSaveError('Select a group for each routing rule to save this draft.');
+      return;
+    }
     try {
       defineWorkflow(value);
     } catch {
@@ -262,6 +277,7 @@ export default function WorkflowBuilderPage() {
     setError('');
     setMessage('');
     setSending(true);
+    setAwaitingAgentRevision(true);
     const content = text().trim();
     setPendingUserText(content);
     setViewingHistory(false);
@@ -309,10 +325,12 @@ export default function WorkflowBuilderPage() {
   }
   function choose(id) {
     setHasEdits(false);
+    setAwaitingAgentRevision(false);
     setSourceEdited(false);
     setCodeDefinition(null);
     setManualForm(undefined);
     setSaveStatus('');
+    setDraftSaveError('');
     setSelected(id);
     setChatId('');
     setText('');
@@ -320,9 +338,7 @@ export default function WorkflowBuilderPage() {
     setMessage('');
     const item = !saved.error && saved()?.find((item) => item.id === id);
     setSource(item?.source || (item?.definition ? toTypeScript(item.definition) : ''));
-    setSavedDefinition(
-      item?.definition ? JSON.stringify({ definition: item.definition, source: item.source }) : '',
-    );
+    setSavedDefinition(item?.definition ? workflowDraftSnapshot(item.definition, item.source) : '');
     setBaseDefinition(
       item?.definition ||
         (item && !item.isAuthoringDraft
@@ -338,16 +354,21 @@ export default function WorkflowBuilderPage() {
     );
   }
   async function save(enabled = false, automatic = false, unpublish = false) {
-    setError('');
-    setMessage('');
     if (saving() || deleting()) return;
+    if (!automatic) {
+      setError('');
+      setMessage('');
+    }
+    setDraftSaveError('');
     setSaving(true);
     setSaveStatus('Saving Draft…');
-    const snapshot = JSON.stringify({ definition: definition(), source: source() });
+    const snapshot = workflowDraftSnapshot(definition(), source());
     const savingRecordId = selected();
     setLastAttempt(snapshot);
     try {
       const value = definition();
+      if (value.routing?.some((rule) => !rule.queueName?.trim()))
+        throw new Error('Select a group for each routing rule to save this draft.');
       if (
         !(await confirmRemovedFields(
           current()?.definition?.form?.fields || [],
@@ -392,8 +413,7 @@ export default function WorkflowBuilderPage() {
       clearConfirmedFields();
       await refreshSaved();
       if (selected() !== savingRecordId) return;
-      const hasNewerEdits =
-        snapshot !== JSON.stringify({ definition: definition(), source: source() });
+      const hasNewerEdits = snapshot !== workflowDraftSnapshot(definition(), source());
       setSelected(result.id);
       if (!hasNewerEdits) {
         setSource(result.source);
@@ -404,7 +424,7 @@ export default function WorkflowBuilderPage() {
         setManualRouting(undefined);
         setManualPermissions(undefined);
       }
-      setSavedDefinition(JSON.stringify({ definition: result.definition, source: result.source }));
+      setSavedDefinition(workflowDraftSnapshot(result.definition, result.source));
       setSaveStatus(enabled ? 'Published' : unpublish ? 'Unpublished' : 'Draft Saved');
       if (!params.id) {
         setLoadedId(result.id);
@@ -420,7 +440,8 @@ export default function WorkflowBuilderPage() {
         );
     } catch (error) {
       setSaveStatus('Draft Not Saved');
-      setError(error.message);
+      if (automatic) setDraftSaveError(error.message);
+      else setError(error.message);
     } finally {
       setSaving(false);
     }
@@ -429,6 +450,8 @@ export default function WorkflowBuilderPage() {
     current()?.enabled && hasWorkflowChanges(definition(), code(), current()?.publishedConfig);
   function publicationReason() {
     if (!definition()) return 'Create a workflow definition before publishing.';
+    if (definition().routing?.some((rule) => !rule.queueName?.trim()))
+      return 'Select a group for each routing rule.';
     try {
       defineWorkflow(definition());
     } catch (error) {
@@ -531,8 +554,22 @@ export default function WorkflowBuilderPage() {
               <Show when={saving()}>
                 <Icon name="loading" class="saving-spinner" />
               </Show>
-              {saveStatus() || (definition() ? publicationReason() : '')}
+              <span>
+                {saveStatus() || (definition() ? publicationReason() : '')}
+                <Show when={draftSaveError()}>
+                  <span class="workflow-draft-save-error">{draftSaveError()}</span>
+                </Show>
+              </span>
             </span>
+            <button
+              class="workspace-button secondary small"
+              type="button"
+              disabled={saving() || sending() || processing() || !definition()}
+              onClick={() => save()}
+            >
+              <Icon name="save" />
+              Save Draft
+            </button>
             <Show when={current()?.enabled}>
               <button
                 class="workspace-button secondary small"
@@ -559,6 +596,8 @@ export default function WorkflowBuilderPage() {
               }
               onClick={() => save(true)}
             >
+              <Icon name="publish" />
+
               {current()?.enabled ? 'Publish Changes' : 'Publish'}
             </button>
           </div>
@@ -810,7 +849,11 @@ export default function WorkflowBuilderPage() {
                       setViewingHistory(false);
                       setHasEdits(true);
                       setManualRouting(routing);
-                      setSource(toTypeScript({ ...definition(), routing }));
+                      try {
+                        setSource(toTypeScript({ ...definition(), routing }));
+                      } catch {
+                        // Keep incomplete routing editable until a destination is selected.
+                      }
                     }}
                   />
                 </Show>
@@ -914,6 +957,7 @@ export default function WorkflowBuilderPage() {
                                 setEditingCode(true);
                               }}
                             >
+                              <Icon name="code" />
                               Start with Code
                             </button>
                           </Show>
@@ -971,6 +1015,7 @@ export default function WorkflowBuilderPage() {
                       disabled={testing() || !code()}
                       onClick={() => testWorkflow({})}
                     >
+                      <Icon name="play" />
                       Run Test
                     </button>
                   }

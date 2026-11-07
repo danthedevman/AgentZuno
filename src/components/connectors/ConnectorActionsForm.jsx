@@ -1,3 +1,4 @@
+import Icon from '../Icon.jsx';
 import Toggle from '../Toggle.jsx';
 import { For, Show, createEffect, createSignal } from 'solid-js';
 import ValidatedForm from '../ValidatedForm.jsx';
@@ -52,6 +53,8 @@ export default function ConnectorActionsForm(props) {
           )}
         </For>
         <button class="workspace-button small" disabled={saving()}>
+          <Icon name="save" />
+
           {saving() ? 'Saving…' : 'Save Actions'}
         </button>
       </ValidatedForm>

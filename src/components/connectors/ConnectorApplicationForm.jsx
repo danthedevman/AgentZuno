@@ -1,3 +1,4 @@
+import Icon from '../Icon.jsx';
 import { Show, createEffect, createSignal } from 'solid-js';
 import ValidatedForm from '../ValidatedForm.jsx';
 import { api } from '../../services/api.js';
@@ -95,6 +96,8 @@ export default function ConnectorApplicationForm(props) {
         <p>Saving application details requires you to confirm the connector settings again.</p>
       </Show>
       <button class="workspace-button small" disabled={saving()}>
+        <Icon name="save" />
+
         {saving() ? 'Saving…' : 'Save Connection Details'}
       </button>
     </ValidatedForm>

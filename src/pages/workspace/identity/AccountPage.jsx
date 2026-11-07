@@ -1,3 +1,4 @@
+import Icon from '../../../components/Icon.jsx';
 import DemoSettings from '../../../components/settings/DemoSettings.jsx';
 import AuditSettings from '../../../components/settings/AuditSettings.jsx';
 import SmtpSettings from '../../../components/settings/SmtpSettings.jsx';
@@ -35,6 +36,7 @@ export default function AccountPage() {
               <>
                 <p>Sign in to see your profile and personal workspace.</p>
                 <A class="workspace-button" href="/login">
+                  <Icon name="login" />
                   Sign in
                 </A>
               </>

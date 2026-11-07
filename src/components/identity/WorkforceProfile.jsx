@@ -282,6 +282,7 @@ export default function WorkforceProfile(props) {
                 form="workforce-profile-form"
                 disabled={busy()}
               >
+                <Icon name="save" />
                 Save Changes
               </button>
               <button

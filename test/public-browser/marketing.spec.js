@@ -27,6 +27,12 @@ test('prerendered marketing hydrates visible panels and starts their animations'
     await page.locator('.hero-demo-stack').scrollIntoViewIfNeeded();
     await expect(page.locator('.hero-employee-message')).toBeVisible();
     await expect(page.locator('.hero-agent-activity')).toBeVisible();
+    await expect(
+      page.locator('.hero-conversation-visual.is-front .hero-employee-message'),
+    ).toHaveCSS('animation-name', 'chat-bubble-arrive');
+    await expect(
+      page.getByRole('heading', { name: 'Your help desk. From ask to done', exact: true }),
+    ).toBeAttached();
     expect(
       await page.evaluate(
         () => window.initialMarketingHeading === document.querySelector('.landing-hero-copy h1'),
@@ -35,11 +41,23 @@ test('prerendered marketing hydrates visible panels and starts their animations'
     await page.getByRole('button', { name: 'Show employee request' }).click();
     await expect(page.getByRole('button', { name: 'Show workflow builder' })).toBeVisible();
     await expect(page.locator('.hero-employee-panel .hero-employee-message')).toBeVisible();
+    await expect(page.locator('.hero-employee-panel .hero-employee-message')).toHaveCSS(
+      'animation-name',
+      'chat-bubble-arrive',
+    );
     const knowledge = page.locator('.marketing-knowledge-chat');
     await knowledge.scrollIntoViewIfNeeded();
     await expect(knowledge.getByRole('button', { name: 'Read article' })).toBeVisible({
       timeout: 10000,
     });
+    await expect(knowledge.locator('.marketing-live-user')).toHaveCSS(
+      'animation-name',
+      'chat-bubble-arrive',
+    );
+    await expect(knowledge.locator('.marketing-live-agent')).toHaveCSS(
+      'animation-name',
+      'chat-bubble-arrive',
+    );
     await knowledge.getByRole('button', { name: 'Read article' }).click();
     await expect(knowledge.getByText('Open your device’s Wi-Fi settings')).toBeVisible();
     expect(await page.evaluate(() => window.disconnectedAnimationTargets)).toEqual([]);
@@ -51,6 +69,11 @@ test('lifecycle visuals have no numbering and respect reduced motion', async ({ 
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/');
   await expect(page.locator('.hero-conversation-visual.is-front')).toHaveClass(/is-published/);
+  await expect(page.locator('.hero-heading-letter').first()).toHaveCSS('animation-name', 'none');
+  await expect(page.locator('.hero-conversation-visual.is-front .hero-employee-message')).toHaveCSS(
+    'animation-name',
+    'none',
+  );
   const lifecycle = page.locator('.request-lifecycle');
   await lifecycle.scrollIntoViewIfNeeded();
   await expect(lifecycle.locator('article')).toHaveCount(4);

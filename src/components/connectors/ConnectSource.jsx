@@ -1,3 +1,4 @@
+import Icon from '../Icon.jsx';
 import { displayLabel } from '../../utils/displayLabels.js';
 import ToastMessage from '../ToastMessage.jsx';
 import SourceKnowledgeBases from './SourceKnowledgeBases.jsx';
@@ -172,6 +173,7 @@ export default function ConnectSource(props) {
                     }
                     onClick={() => action(connection.id, 'sync')}
                   >
+                    <Icon name="download" />
                     Import now
                   </button>
                   <button
@@ -292,6 +294,7 @@ export default function ConnectSource(props) {
                 }
                 onClick={connectOAuth}
               >
+                <Icon name="link" />
                 Authorize with {props.app.name}
               </button>
               <small>Or enter an existing delegated OAuth token above.</small>
@@ -303,6 +306,8 @@ export default function ConnectSource(props) {
                 isSaving() || (destination() === 'existing' && !workspace()?.knowledgeBases.length)
               }
             >
+              <Icon name="save" />
+
               {isSaving()
                 ? 'Verifying…'
                 : props.connection

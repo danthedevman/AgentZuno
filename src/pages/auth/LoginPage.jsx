@@ -1,3 +1,4 @@
+import Icon from '../../components/Icon.jsx';
 import { publicAsset } from '../../services/public/publicAsset.js';
 import ToastMessage from '../../components/ToastMessage.jsx';
 import ValidatedForm from '../../components/ValidatedForm.jsx';
@@ -116,6 +117,7 @@ export default function LoginPage(props) {
               class="workspace-button"
               href={`/api/auth/oidc/start?workspace=${enterprise().workspaceId}`}
             >
+              <Icon name="login" />
               Continue with enterprise SSO
             </a>
           </p>
@@ -165,6 +167,8 @@ export default function LoginPage(props) {
             <ToastMessage tone="error">{error()}</ToastMessage>
           </Show>
           <button class="workspace-button" type="submit" disabled={isSubmitting()}>
+            <Icon name={isRegister() ? 'user-add' : 'login'} />
+
             {isSubmitting() ? 'Opening workspace…' : isRegister() ? 'Create account' : 'Sign in'}
           </button>
         </ValidatedForm>

@@ -1,12 +1,13 @@
 import { createEffect, onCleanup } from 'solid-js';
 
-export function followChatProgress(element, revision, identity = () => '') {
+export function followChatProgress(element, revision, identity = () => '', responseId = () => '') {
   let observed;
   let following = true;
   let previousTop = 0;
   let frame;
   let thread;
   let initialized = false;
+  let previousResponse = '';
   function onScroll() {
     if (!observed) return;
     if (observed.scrollTop < previousTop - 2) following = false;
@@ -16,9 +17,11 @@ export function followChatProgress(element, revision, identity = () => '') {
   createEffect(() => {
     revision();
     const nextThread = identity();
+    const nextResponse = responseId();
     if (thread !== nextThread) {
       following = true;
       thread = nextThread;
+      previousResponse = '';
       initialized = false;
     }
     cancelAnimationFrame(frame);
@@ -33,7 +36,20 @@ export function followChatProgress(element, revision, identity = () => '') {
         previousTop = node.scrollTop;
         node.addEventListener('scroll', onScroll, { passive: true });
       }
-      if (following)
+      const response = nextResponse
+        ? node.querySelector(`[data-message-id="${CSS.escape(nextResponse)}"]`)
+        : null;
+      if (response && nextResponse !== previousResponse && following) {
+        node.scrollTo({
+          top:
+            node.scrollTop +
+            response.getBoundingClientRect().top -
+            node.getBoundingClientRect().top -
+            16,
+          behavior: 'instant',
+        });
+        previousTop = node.scrollTop;
+      } else if (!nextResponse && following)
         node.scrollTo({
           top: node.scrollHeight,
           behavior:
@@ -41,6 +57,12 @@ export function followChatProgress(element, revision, identity = () => '') {
               ? 'instant'
               : 'smooth',
         });
+      if (
+        response &&
+        (!following ||
+          response.getBoundingClientRect().top - node.getBoundingClientRect().top <= 20)
+      )
+        previousResponse = nextResponse;
       if (node.querySelector('article')) initialized = true;
     });
   });

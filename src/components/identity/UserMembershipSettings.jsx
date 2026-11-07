@@ -1,3 +1,4 @@
+import Icon from '../Icon.jsx';
 import RecordForm from '../records/RecordForm.jsx';
 import { roleOptions, canAssignGroups } from '../../utils/roles.js';
 import { useSession } from '../../context/SessionContext.jsx';
@@ -120,6 +121,7 @@ export default function UserMembershipSettings(props) {
               }
             >
               <button type="submit" class="workspace-button" disabled={busy()}>
+                <Icon name="save" />
                 Save Access
               </button>
               <button

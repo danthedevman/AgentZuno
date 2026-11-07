@@ -49,7 +49,9 @@ export default function WorkflowApprovalEditor(props) {
         >
           Add Approval
         </button>
-        <A href="/workspace/users?tab=groups">Manage Groups</A>
+        <A href="/workspace/users?tab=groups" target="_blank" rel="noopener noreferrer">
+          Manage Groups
+        </A>
       </div>
       <Show when={!approvals().length}>
         <p>No approval steps.</p>

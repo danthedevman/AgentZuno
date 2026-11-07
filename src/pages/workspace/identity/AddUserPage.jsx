@@ -1,3 +1,4 @@
+import Icon from '../../../components/Icon.jsx';
 import { Show, createResource, createSignal } from 'solid-js';
 import { useWorkspace } from '../../../context/WorkspaceContext.jsx';
 import { useToasts } from '../../../context/ToastContext.jsx';
@@ -96,6 +97,8 @@ export default function AddUserPage() {
             Cancel
           </A>
           <button form="add-user-form" class="workspace-button small" disabled={saving()}>
+            <Icon name="send" />
+
             {saving() ? 'Inviting…' : 'Send Invitation'}
           </button>
         </Show>

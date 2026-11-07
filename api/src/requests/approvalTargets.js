@@ -71,7 +71,15 @@ export async function resolveWorkflowApprovers(store, run, input) {
   const allowed = members
     .map((member) => member.userId)
     .filter((id) => accounts.some((account) => account.id === id));
-  if (!allowed.length) deny('Choose another active user with approval permission.');
+  if (!allowed.length)
+    throw Object.assign(new Error('Choose another active user with approval permission.'), {
+      status: 403,
+      publicMessage: 'Choose another active user with approval permission.',
+      approvalFailureCode:
+        ids?.length && ids.every((id) => id === run.actorId)
+          ? 'self-approval'
+          : 'no-eligible-approver',
+    });
   return allowed;
 }
 export async function canReviewWorkflowApproval(store, user, requestId) {
@@ -130,11 +138,17 @@ export async function validateWorkflowApprovalTargets(store, user, definition) {
         ObjectId.isValid(step.params.groupId) &&
         (await store.collection('approvalGroups').findOne({
           ...helpdeskScope(user),
-          _id: new ObjectId(step.params.groupId),
-          active: true,
-          approvalEnabled: { $ne: false },
+          _id: new ObjectId(queryString(step.params.groupId, 24)),
         }));
-      if (!group?.userIds?.length) deny('Choose an active approval group.', 400);
+      if (!group || group.active !== true)
+        deny('Choose an active approval group in this workspace.', 400);
+      if (group.approvalEnabled === false)
+        deny(`Enable approvals for “${group.name}” or choose another approval group.`, 400);
+      if (!group.userIds?.length)
+        deny(
+          `The approval group “${group.name}” has no members. Add members with approval permission before publishing.`,
+          400,
+        );
     }
     if (step.when?.departmentIds) {
       const count = await store.collection('workforceReferences').countDocuments({

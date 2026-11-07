@@ -1,3 +1,4 @@
+import Icon from '../../components/Icon.jsx';
 import ToastMessage from '../../components/ToastMessage.jsx';
 import Breadcrumbs from '../../components/Breadcrumbs.jsx';
 import KnowledgePermissions from '../../components/knowledge/KnowledgePermissions.jsx';
@@ -145,6 +146,8 @@ export default function CreatePage(props) {
                   (recordType() === 'knowledge-base' && !permissions()?.ready)
                 }
               >
+                <Icon name="save" />
+
                 {isSaving() ? 'Saving…' : 'Save'}
               </button>
             </ValidatedForm>

@@ -1,3 +1,4 @@
+import Icon from '../../components/Icon.jsx';
 import { publicAsset } from '../../services/public/publicAsset.js';
 import { A, useNavigate } from '@solidjs/router';
 import { createResource, createSignal, Show } from 'solid-js';
@@ -53,6 +54,7 @@ export default function DatabaseSetupPage() {
             when={!status()?.configured}
             fallback={
               <A class="workspace-button" href="/register">
+                <Icon name="arrow" />
                 Continue to Register
               </A>
             }
@@ -129,6 +131,8 @@ export default function DatabaseSetupPage() {
                 </label>
               </Show>
               <button class="workspace-button" disabled={busy()}>
+                <Icon name="link" />
+
                 {busy() ? 'Testing Connection…' : 'Connect and Continue'}
               </button>
             </ValidatedForm>

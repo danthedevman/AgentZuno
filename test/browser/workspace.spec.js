@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { toTypeScript } from '../../api/sdk/workflows/index.js';
 
 test.beforeEach(async ({ page }) => {
   page.browserErrors = [];
@@ -1897,4 +1898,534 @@ test('workflow Settings danger zone uses default-off preservation choices and ty
       (row) => row.id === workflow.id,
     ),
   ).toBe(false);
+});
+
+test('workflow routing waits for a group and draft saves stay separate from publication', async ({
+  page,
+  isMobile,
+}) => {
+  await page
+    .context()
+    .addCookies([{ name: 'browser_test', value: '1', url: 'http://127.0.0.1:4180' }]);
+  const id = 'abababababababababababab';
+  let workflow = {
+    id,
+    name: 'Access request',
+    version: 1,
+    enabled: true,
+    department: 'general',
+    keywords: [],
+    action: 'route',
+    queueName: 'Support',
+    definition: {
+      version: 1,
+      name: 'Access request',
+      trigger: { department: 'general', phrases: [] },
+      steps: [
+        {
+          id: 'review',
+          action: 'approval',
+          params: { target: 'group', groupId: 'acacacacacacacacacacacac', reason: 'Review access' },
+        },
+        { id: 'route-request', action: 'route', params: { queueName: 'Support' } },
+      ],
+      form: {
+        title: 'Access request',
+        fields: [
+          {
+            id: 'type',
+            label: 'Access type',
+            type: 'select',
+            required: true,
+            options: ['New', 'Change'],
+          },
+        ],
+      },
+    },
+  };
+  const saves = [];
+  let rejectSave = false;
+  await page.route('**/api/helpdesk/approval-groups?*', (route) =>
+    route.fulfill({ json: [{ id: 'acacacacacacacacacacacac', name: 'Access Review' }] }),
+  );
+  await page.route('**/api/helpdesk/workflows', (route) => route.fulfill({ json: [workflow] }));
+  await page.route(`**/api/helpdesk/workflows/${id}/view`, (route) =>
+    route.fulfill({ json: { workflowId: id, chatId: null } }),
+  );
+  await page.route('**/api/helpdesk/queues?*', (route) =>
+    route.fulfill({ json: [{ id: 'support', name: 'Support' }] }),
+  );
+  await page.route(`**/api/helpdesk/workflows/${id}`, async (route) => {
+    if (route.request().method() !== 'PUT') return route.continue();
+    const body = route.request().postDataJSON();
+    saves.push(body);
+    if (rejectSave)
+      return route.fulfill({
+        status: 400,
+        json: { error: 'Draft save unavailable. Please retry.' },
+      });
+    workflow = { ...workflow, ...body, enabled: true, version: workflow.version + 1, id };
+    await route.fulfill({ json: workflow });
+  });
+  await page.addInitScript(() => localStorage.setItem('agentzuno-theme', 'light'));
+  await page.goto(`/workspace/222222222222222222222222/workflows/${id}/edit`);
+  if (isMobile)
+    await page
+      .getByRole('group', { name: 'Conversation view', exact: true })
+      .getByRole('button', { name: 'Workflow', exact: true })
+      .click();
+  const originalUrl = page.url();
+  const popupPromise = page.waitForEvent('popup');
+  await page.getByRole('link', { name: 'Access Review', exact: true }).click();
+  const popup = await popupPromise;
+  await expect(popup).toHaveURL(/users\/groups\/acacacacacacacacacacacac$/);
+  await popup.close();
+  expect(page.url()).toBe(originalUrl);
+  const zoom = page.getByRole('button', { name: 'Zoom in', exact: true });
+  await expect(zoom).toHaveCSS('width', '28px');
+  await zoom.click();
+  await expect(page.getByRole('status', { name: 'Zoom level' })).toContainText('125%');
+  expect(
+    await page
+      .locator('.chat-panel-toolbar')
+      .evaluate((el) => getComputedStyle(el).backgroundColor),
+  ).not.toBe('rgb(0, 0, 0)');
+  await expect(page.getByRole('button', { name: 'Publish Changes', exact: true })).toHaveCSS(
+    'font-size',
+    '14px',
+  );
+  await page.getByRole('tab', { name: 'Form', exact: true }).click();
+  await page.getByRole('button', { name: 'Add Routing Rule', exact: true }).click();
+  await expect(
+    page.getByText('Select a group for each routing rule to save this draft.', { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Publish Changes', exact: true })).toBeDisabled();
+  await page.waitForTimeout(1200);
+  expect(saves).toHaveLength(0);
+  const group = page.getByRole('combobox', { name: 'Assignment Group', exact: true });
+  await group.fill('Support');
+  await page.getByRole('option', { name: 'Support', exact: true }).click();
+  await expect.poll(() => saves.length).toBe(1);
+  await expect(page.getByRole('status').filter({ hasText: 'Draft Saved' })).toBeVisible();
+  expect(saves[0].intent).toBe('draft');
+  expect(saves[0].definition.routing[0].queueName).toBe('Support');
+  await page.getByRole('button', { name: 'Save Draft', exact: true }).click();
+  await expect.poll(() => saves.length).toBe(2);
+  await expect(page.getByText('Workflow draft saved.', { exact: true })).toBeVisible();
+  expect(saves[1].intent).toBe('draft');
+  await expect(page.getByRole('button', { name: 'Unpublish', exact: true })).toBeVisible();
+  rejectSave = true;
+  await page
+    .getByRole('textbox', { name: 'Workflow Name', exact: true })
+    .fill('Updated access request');
+  await expect(page.locator('.workflow-save-status')).toContainText(
+    'Draft save unavailable. Please retry.',
+  );
+  await expect(
+    page.locator('.toast-message').filter({ hasText: 'Draft save unavailable' }),
+  ).toHaveCount(0);
+  await expect(page.getByRole('textbox', { name: 'Workflow Name', exact: true })).toHaveValue(
+    'Updated access request',
+  );
+  await page.getByRole('button', { name: 'Save Draft', exact: true }).click();
+  await expect(
+    page.getByText('Draft save unavailable. Please retry.', { exact: true }),
+  ).toHaveCount(1);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('generated workflows save their first draft and retain the flow during AI updates', async ({
+  page,
+  isMobile,
+}) => {
+  await page
+    .context()
+    .addCookies([{ name: 'browser_test', value: '1', url: 'http://127.0.0.1:4180' }]);
+  const id = 'adadadadadadadadadadadad';
+  const chatId = 'aeaeaeaeaeaeaeaeaeaeaeae';
+  let definition = {
+    version: 1,
+    name: 'Register an AI tool',
+    trigger: { phrases: [] },
+    steps: [{ id: 'route-request', action: 'route', params: { queueName: 'Support' } }],
+  };
+  let complete = false;
+  let workflow = {
+    id,
+    name: 'Untitled Workflow',
+    isAuthoringDraft: true,
+    definition: null,
+    source: '',
+    enabled: false,
+    version: 1,
+    department: 'general',
+    keywords: [],
+    action: 'route',
+    queueName: '',
+  };
+  const saves = [];
+  await page.route('**/api/helpdesk/workflows', (route) => route.fulfill({ json: [workflow] }));
+  await page.route(`**/api/helpdesk/workflows/${id}/view`, (route) =>
+    route.fulfill({ json: { workflowId: id, chatId } }),
+  );
+  await page.route(`**/api/helpdesk/workflows/${id}`, async (route) => {
+    const body = route.request().postDataJSON();
+    saves.push(body);
+    workflow = { ...workflow, ...body, id, version: workflow.version + 1, isAuthoringDraft: false };
+    await route.fulfill({ json: workflow });
+  });
+  await page.route(`**/api/helpdesk/workflow-conversations/${chatId}`, (route) =>
+    route.fulfill({
+      json: {
+        id: chatId,
+        status: complete ? 'complete' : 'responding',
+        messages: [],
+        ...(complete ? { definition, typescript: toTypeScript(definition) } : {}),
+      },
+    }),
+  );
+  await page.route(`**/api/helpdesk/workflow-conversations/${chatId}/messages`, (route) => {
+    complete = false;
+    return route.fulfill({ json: { id: chatId } });
+  });
+  await page.goto(`/workspace/222222222222222222222222/workflows/new?draft=${id}&chat=${chatId}`);
+  if (isMobile)
+    await page
+      .getByRole('group', { name: 'Conversation view', exact: true })
+      .getByRole('button', { name: 'Workflow', exact: true })
+      .click();
+  const skeleton = page.getByRole('status', { name: 'Updating workflow flow' });
+  await expect(
+    page.getByText('Your workflow will appear here as you build it with the Admin agent.', {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(skeleton).toHaveCount(0);
+  expect(saves).toHaveLength(0);
+  complete = true;
+  await expect(page.locator('.workflow-save-status')).toContainText('Draft Saved');
+  expect(saves).toHaveLength(1);
+  expect(saves[0].name).toBe('Register an AI tool');
+  expect(saves[0].intent).toBe('draft');
+  expect(saves[0].enabled).toBe(false);
+  await expect(skeleton).toHaveCount(0);
+  if (isMobile)
+    await page
+      .getByRole('group', { name: 'Conversation view', exact: true })
+      .getByRole('button', { name: 'Chat', exact: true })
+      .click();
+  await page
+    .locator('.builder-chat-composer textarea')
+    .fill('Rename the workflow to Register approved AI tools');
+  await page.locator('.builder-chat-composer button[type="submit"]').click();
+  if (isMobile)
+    await page
+      .getByRole('group', { name: 'Conversation view', exact: true })
+      .getByRole('button', { name: 'Workflow', exact: true })
+      .click();
+  await expect(skeleton).toHaveCount(0);
+  await expect(page.getByRole('textbox', { name: 'Workflow Name', exact: true })).toHaveValue(
+    'Register an AI tool',
+  );
+  await expect(page.locator('.workflow-node').first()).toContainText('Register an AI tool');
+  definition = { ...definition, name: 'Register approved AI tools' };
+  complete = true;
+  await expect(page.getByRole('textbox', { name: 'Workflow Name', exact: true })).toHaveValue(
+    'Register approved AI tools',
+  );
+  await expect.poll(() => saves.length).toBe(2);
+  await expect(skeleton).toHaveCount(0);
+  expect(saves[1].intent).toBe('draft');
+});
+
+test('Zuno replies start at the message top and long forms remain reachable', async ({ page }) => {
+  await page
+    .context()
+    .addCookies([{ name: 'browser_test', value: '1', url: 'http://127.0.0.1:4180' }]);
+  const id = 'afafafafafafafafafafafaf';
+  const messages = [
+    { id: 'earlier-question', role: 'user', text: 'I need help with access.' },
+    {
+      id: 'earlier-answer',
+      role: 'assistant',
+      text: Array(30).fill('Earlier support guidance.').join('\n\n'),
+      status: 'complete',
+    },
+    { id: 'new-question', role: 'user', text: 'Show me the request form.' },
+    {
+      id: 'new-answer',
+      role: 'assistant',
+      text: Array(20)
+        .fill('Review this guidance before completing your request below.')
+        .join('\n\n'),
+      status: 'complete',
+    },
+  ];
+  let complete = false;
+  await page.route(`**/api/helpdesk/support/conversations/${id}`, (route) =>
+    route.fulfill({
+      json: {
+        id,
+        status: complete ? 'complete' : 'responding',
+        messages: complete
+          ? messages
+          : messages.map((message) =>
+              message.id === 'new-answer'
+                ? { ...message, text: '', status: 'responding' }
+                : message,
+            ),
+        requests: [],
+        requestForm: complete
+          ? {
+              offerId: '00000000-0000-4000-8000-000000000000',
+              workflowId: 'aaaaaaaaaaaaaaaaaaaaaaaa',
+              workflowVersion: 1,
+              title: 'IT access request',
+              fields: Array.from({ length: 10 }, (_, index) => ({
+                id: `detail-${index}`,
+                label: `Detail ${index + 1}`,
+                type: 'text',
+                required: false,
+              })),
+            }
+          : null,
+      },
+    }),
+  );
+  await page.goto(`/workspace/222222222222222222222222/chat/${id}`);
+  const log = page.getByRole('log', { name: 'Chat messages' });
+  const response = page.locator('[data-message-id="new-answer"]');
+  await expect(response).toBeVisible();
+  complete = true;
+  await expect
+    .poll(async () => {
+      const bounds = await response.boundingBox();
+      const container = await log.boundingBox();
+      return Math.abs(bounds.y - container.y - 16);
+    })
+    .toBeLessThan(12);
+  const firstField = page.getByRole('textbox', { name: 'Detail 1 Optional', exact: true });
+  await firstField.scrollIntoViewIfNeeded();
+  await firstField.fill('Needs access to the support tools');
+  await expect(firstField).toBeInViewport();
+  const submit = page.getByRole('button', { name: 'Submit Request', exact: true });
+  await submit.scrollIntoViewIfNeeded();
+  await expect(submit).toBeInViewport();
+  await expect(firstField).toHaveValue('Needs access to the support tools');
+});
+
+test('opening an existing workflow does not save or restore an older chat definition', async ({
+  page,
+}) => {
+  await page
+    .context()
+    .addCookies([{ name: 'browser_test', value: '1', url: 'http://127.0.0.1:4180' }]);
+  const id = 'babababababababababababa';
+  const chatId = 'bcbcbcbcbcbcbcbcbcbcbcbc';
+  const definition = {
+    version: 1,
+    name: 'Saved workflow',
+    trigger: { phrases: [] },
+    steps: [{ id: 'route', action: 'route', params: { queueName: 'Support' } }],
+  };
+  let workflow = {
+    id,
+    name: definition.name,
+    definition,
+    source: toTypeScript(definition),
+    enabled: false,
+    version: 3,
+    department: 'general',
+    keywords: [],
+    action: 'route',
+    queueName: 'Support',
+  };
+  const saves = [];
+  await page.route('**/api/helpdesk/workflows', (route) => route.fulfill({ json: [workflow] }));
+  await page.route(`**/api/helpdesk/workflows/${id}/view`, (route) =>
+    route.fulfill({ json: { workflowId: id, chatId } }),
+  );
+  await page.route(`**/api/helpdesk/workflow-conversations/${chatId}`, (route) =>
+    route.fulfill({
+      json: {
+        id: chatId,
+        status: 'complete',
+        definition: { ...definition, name: 'Older chat definition' },
+        typescript: toTypeScript({ ...definition, name: 'Older chat definition' }),
+        messages: [
+          {
+            id: 'old-reply',
+            role: 'assistant',
+            text: 'Earlier workflow response',
+            status: 'complete',
+          },
+        ],
+      },
+    }),
+  );
+  await page.route(`**/api/helpdesk/workflows/${id}`, async (route) => {
+    const body = route.request().postDataJSON();
+    saves.push(body);
+    workflow = { ...workflow, ...body, id, version: workflow.version + 1 };
+    await route.fulfill({ json: workflow });
+  });
+  await page.goto(`/workspace/222222222222222222222222/workflows/${id}/edit`);
+  await expect(page.getByText('Earlier workflow response', { exact: true })).toBeAttached();
+  await expect(page.getByRole('textbox', { name: 'Workflow Name', exact: true })).toHaveValue(
+    'Saved workflow',
+  );
+  await page.waitForTimeout(1200);
+  expect(saves).toHaveLength(0);
+  await expect(page.locator('.workflow-save-status')).not.toContainText('Draft Saved');
+  await page.getByRole('textbox', { name: 'Workflow Name', exact: true }).fill('Edited workflow');
+  await expect.poll(() => saves.length).toBe(1);
+  expect(saves[0].definition.name).toBe('Edited workflow');
+});
+
+test('request Approvals tab distinguishes blocked, skipped and decided approvals', async ({
+  page,
+  isMobile,
+}) => {
+  await page
+    .context()
+    .addCookies([{ name: 'browser_test', value: '1', url: 'http://127.0.0.1:4180' }]);
+  const requests = await (await page.request.get('/api/helpdesk/requests')).json();
+  const request = (requests.rows || requests).find((row) => row.chatId);
+  await page.route(`**/api/helpdesk/requests/${request.id}/approvals`, (route) =>
+    route.fulfill({
+      json: [
+        {
+          id: 'blocked',
+          target: 'Legal Review',
+          status: 'blocked',
+          reason: 'Review vendor access',
+          explanation:
+            'The requester cannot approve their own request. Choose another eligible approver.',
+          revision: 2,
+        },
+        {
+          id: 'skipped',
+          target: 'Conditional review',
+          status: 'skipped',
+          explanation: 'Approval conditions did not match.',
+        },
+        {
+          id: 'approved',
+          target: 'Manager',
+          status: 'approved',
+          completedAt: '2026-11-06T12:00:00Z',
+          decidedBy: 'Example Approver',
+          comment: 'Access confirmed.',
+        },
+      ],
+    }),
+  );
+  await page.goto(
+    `/workspace/222222222222222222222222/chat/${request.chatId}?request=${request.id}`,
+  );
+  if (isMobile) await page.getByRole('button', { name: 'Details', exact: true }).click();
+  await page.getByRole('tab', { name: 'Approvals', exact: true }).click();
+  const approvals = page.getByRole('region', { name: 'Request approvals' });
+  await expect(approvals.getByText('Blocked', { exact: true })).toBeVisible();
+  await expect(approvals.getByText('Skipped', { exact: true })).toBeVisible();
+  await expect(approvals.getByText('Approved', { exact: true })).toBeVisible();
+  await expect(approvals.getByText('Access confirmed.', { exact: true })).toBeVisible();
+  await expect(
+    approvals.getByText(
+      'The requester cannot approve their own request. Choose another eligible approver.',
+      { exact: true },
+    ),
+  ).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('workflow reference fields and their options use the full form width', async ({
+  page,
+  isMobile,
+}) => {
+  await page
+    .context()
+    .addCookies([{ name: 'browser_test', value: '1', url: 'http://127.0.0.1:4180' }]);
+  const id = 'bdbdbdbdbdbdbdbdbdbdbdbd';
+  const definition = {
+    version: 1,
+    name: 'Vendor access',
+    trigger: { phrases: [] },
+    steps: [{ id: 'route', action: 'route', params: { queueName: 'Support' } }],
+    form: {
+      title: 'Vendor access',
+      fields: [
+        {
+          id: 'application',
+          label: 'Application',
+          type: 'select',
+          required: true,
+          options: ['Vendor A', 'Vendor B'],
+        },
+        {
+          id: 'vendor',
+          label: 'Vendor profile',
+          type: 'reference',
+          referenceTable: 'users',
+          required: false,
+        },
+        { id: 'reason', label: 'Business reason', type: 'textarea', required: true },
+      ],
+    },
+  };
+  const workflow = {
+    id,
+    name: definition.name,
+    definition,
+    source: toTypeScript(definition),
+    version: 1,
+    enabled: false,
+    department: 'general',
+    keywords: [],
+    action: 'route',
+    queueName: 'Support',
+  };
+  const option = {
+    value: 'bebebebebebebebebebebebe',
+    label: `Alex Example (${'long-address-'.repeat(10)}@example.test)`,
+  };
+  await page.route('**/api/helpdesk/workflows', (route) => route.fulfill({ json: [workflow] }));
+  await page.route(`**/api/helpdesk/workflows/${id}/view`, (route) =>
+    route.fulfill({ json: { workflowId: id, chatId: null } }),
+  );
+  await page.route('**/api/helpdesk/data/tables/users/options', (route) =>
+    route.fulfill({ json: [option] }),
+  );
+  await page.goto(`/workspace/222222222222222222222222/workflows/${id}/edit`);
+  if (isMobile)
+    await page
+      .getByRole('group', { name: 'Conversation view', exact: true })
+      .getByRole('button', { name: 'Workflow', exact: true })
+      .click();
+  const form = page.getByRole('region', { name: 'Vendor access', exact: true });
+  const reference = form.getByRole('combobox', { name: 'Vendor profile', exact: true });
+  const control = form.locator('.multi-select-control');
+  const textarea = form.getByRole('textbox', { name: /Business reason/ });
+  await expect(reference).toBeVisible();
+  for (const zoom of [100, 75]) {
+    if (zoom === 75) await page.getByRole('button', { name: 'Zoom out', exact: true }).click();
+    const referenceBounds = await control.boundingBox();
+    const textareaBounds = await textarea.boundingBox();
+    expect(Math.abs(referenceBounds.width - textareaBounds.width)).toBeLessThan(2);
+    expect(Math.abs(referenceBounds.x - textareaBounds.x)).toBeLessThan(2);
+  }
+  await reference.fill('Alex');
+  const list = form.getByRole('listbox', { name: 'Vendor profile', exact: true });
+  await expect(list.getByRole('option', { name: option.label, exact: true })).toBeVisible();
+  const dropdownBounds = await form.locator('.multi-select-options').boundingBox();
+  expect(Math.abs(dropdownBounds.width - (await control.boundingBox()).width)).toBeLessThan(2);
+  expect(
+    await form
+      .locator('.multi-select-options')
+      .evaluate((node) => node.scrollWidth <= node.clientWidth),
+  ).toBe(true);
+  await list.getByRole('option', { name: option.label, exact: true }).click();
+  await expect(list).toHaveCount(0);
+  await expect(form.locator('.selection-pill')).toContainText('Alex Example');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

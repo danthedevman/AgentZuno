@@ -1,3 +1,4 @@
+import Icon from '../Icon.jsx';
 import ChatPanelToolbar from '../chat/ChatPanelToolbar.jsx';
 import { followChatProgress } from '../../services/chat/chatFollow.js';
 import ConversationSkeleton from '../chat/ConversationSkeleton.jsx';
@@ -70,6 +71,8 @@ export default function DataTableBuilder(props) {
             disabled={props.saving || props.processing}
             onClick={() => setTab('fields')}
           >
+            <Icon name="save" />
+
             {props.saving ? 'Saving…' : 'Save Table'}
           </button>
         </div>

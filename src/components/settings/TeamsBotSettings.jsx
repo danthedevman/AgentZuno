@@ -1,3 +1,4 @@
+import Icon from '../Icon.jsx';
 import { Index, createResource, createSignal } from 'solid-js';
 import ValidatedForm from '../ValidatedForm.jsx';
 import ReferenceLookup from '../ReferenceLookup.jsx';
@@ -132,6 +133,8 @@ export default function TeamsBotSettings(props) {
           Add User Link
         </button>
         <button class="workspace-button small" disabled={busy() || !props.channel.configured}>
+          <Icon name="save" />
+
           {busy() ? 'Saving…' : 'Save Bot Settings'}
         </button>
       </div>

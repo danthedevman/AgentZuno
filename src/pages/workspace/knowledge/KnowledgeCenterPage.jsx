@@ -163,6 +163,7 @@ export default function KnowledgeCenterPage() {
           </button>
           <Show when={canManage()}>
             <A class="workspace-button small" href={articleLink()}>
+              <Icon name="plus" />
               Add Article
             </A>
           </Show>
@@ -177,7 +178,7 @@ export default function KnowledgeCenterPage() {
                 <input
                   type="search"
                   aria-label="Search knowledge folders"
-                  placeholder="Search folders…"
+                  placeholder="Search..."
                   maxlength="200"
                   value={folderSearch()}
                   onInput={(event) => setFolderSearch(event.currentTarget.value)}

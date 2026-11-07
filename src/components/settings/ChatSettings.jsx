@@ -79,6 +79,8 @@ export default function ChatSettings() {
               />
             </label>
             <button class="workspace-button" disabled={saving()}>
+              <Icon name="save" />
+
               {saving() ? 'Saving…' : 'Save chat settings'}
             </button>
           </ValidatedForm>

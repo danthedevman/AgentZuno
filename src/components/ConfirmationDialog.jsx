@@ -1,3 +1,4 @@
+import Icon from './Icon.jsx';
 import { Show, createSignal, createEffect, createUniqueId } from 'solid-js';
 import WorkspaceModal from './WorkspaceModal.jsx';
 import ValidatedForm from './ValidatedForm.jsx';
@@ -61,6 +62,16 @@ export default function ConfirmationDialog() {
                 class="workspace-button"
                 disabled={!!item.requiredText && typed() !== item.requiredText}
               >
+                <Icon
+                  name={
+                    /delete|remove/i.test(item.confirmLabel)
+                      ? 'delete'
+                      : /archive/i.test(item.confirmLabel)
+                        ? 'archive'
+                        : 'check'
+                  }
+                />
+
                 {item.confirmLabel}
               </button>
             </div>

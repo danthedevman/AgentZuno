@@ -1,3 +1,4 @@
+import Icon from '../Icon.jsx';
 import { Show, createResource, createSignal, createEffect } from 'solid-js';
 import { useWorkspace } from '../../context/WorkspaceContext.jsx';
 import { api } from '../../services/api.js';
@@ -129,6 +130,8 @@ export default function SmtpSettings() {
               </label>
               <div class="helpdesk-actions">
                 <button class="workspace-button" disabled={busy()}>
+                  <Icon name="save" />
+
                   {busy() ? 'Working…' : 'Save'}
                 </button>
                 <button

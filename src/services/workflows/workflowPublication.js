@@ -12,6 +12,10 @@ const canonical = (value) => {
   return value;
 };
 
+export function workflowDraftSnapshot(definition, source) {
+  return JSON.stringify(canonical({ definition, source }));
+}
+
 export function hasWorkflowChanges(definition, source, published) {
   if (!published) return true;
   if ((source || '').trim() !== (published.source || '').trim()) return true;

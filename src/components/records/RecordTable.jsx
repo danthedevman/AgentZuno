@@ -642,11 +642,15 @@ export default function RecordTable(props) {
                     class="workspace-button small"
                     onClick={() => action().onClick?.()}
                   >
+                    <Icon name={action().icon || 'plus'} />
+
                     {action().label}
                   </button>
                 }
               >
                 <A class="workspace-button small" href={action().href}>
+                  <Icon name={action().icon || 'plus'} />
+
                   {action().label}
                 </A>
               </Show>

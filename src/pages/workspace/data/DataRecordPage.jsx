@@ -1,3 +1,4 @@
+import Icon from '../../../components/Icon.jsx';
 import TooltipRegion from '../../../components/TooltipRegion.jsx';
 import DataRecordDeletion from '../../../components/data/DataRecordDeletion.jsx';
 import RecordActivity from '../../../components/records/RecordActivity.jsx';
@@ -138,6 +139,8 @@ export default function DataRecordPage() {
                   class="workspace-button"
                   disabled={saving() || table.loading}
                 >
+                  <Icon name="save" />
+
                   {saving() ? 'Saving…' : 'Save Record'}
                 </button>
                 <Show

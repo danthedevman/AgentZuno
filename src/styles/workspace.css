@@ -3881,7 +3881,7 @@ button.helpdesk-list-row {
 }
 .confirmation-actions {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: flex-end;
   flex-wrap: wrap;
   gap: 12px;
@@ -7348,11 +7348,13 @@ body:has(
   align-items: center;
   gap: 8px;
 }
-.workflow-zoom-controls button {
-  width: 36px;
-  height: 36px;
+.workflow-zoom-controls .workspace-button {
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  min-height: 28px;
   padding: 0;
-  font-size: 20px;
+  font-size: 16px;
   justify-content: center;
 }
 .workflow-zoom-controls output {
@@ -8563,9 +8565,9 @@ body:has(
   gap: 12px;
   min-height: 44px;
   padding: 8px 16px;
-  border-bottom: 1px solid #26262e;
-  background: #000;
-  color: #f2f2f7;
+  border-bottom: 1px solid var(--workspace-line);
+  background: var(--workspace-panel);
+  color: var(--workspace-ink);
 }
 .chat-panel-toolbar h1 {
   min-width: 0;
@@ -8583,10 +8585,10 @@ body:has(
   align-items: center;
   gap: 5px;
   padding: 5px 9px;
-  border: 1px solid #34343f;
+  border: 1px solid var(--workspace-line);
   border-radius: 6px;
-  background: #111116;
-  color: #e5e5ef;
+  background: var(--workspace-soft);
+  color: var(--workspace-ink);
   font: inherit;
   font-size: 11px;
   cursor: pointer;
@@ -12005,4 +12007,73 @@ body:has(
 }
 .workflow-danger-zone .field-help {
   margin: -12px 0 0;
+}
+
+.workspace-button:not(.secondary) {
+  font-size: 14px;
+  gap: 8px;
+}
+
+.workflow-draft-save-error {
+  display: block;
+  max-width: 360px;
+  color: var(--workspace-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+@media (max-width: 850px) {
+  .workflow-builder-heading {
+    flex-wrap: wrap;
+  }
+  .workflow-header-actions {
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+}
+
+.knowledge-article-topbar > .workspace-button.icon-only {
+  width: 32px;
+  min-width: 32px;
+  padding: 0;
+  justify-content: center;
+}
+.request-approvals {
+  display: grid;
+  gap: 16px;
+  padding: 24px 0;
+}
+.request-approval-row {
+  border: 1px solid var(--workspace-line);
+  border-radius: 8px;
+  padding: 20px;
+}
+.request-approval-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.request-approval-heading h3 {
+  margin: 0;
+  font-size: 14px;
+}
+.request-approval-row p {
+  margin: 12px 0;
+  overflow-wrap: anywhere;
+}
+.request-approval-meta {
+  color: var(--workspace-muted);
+  font-size: 12px;
+}
+
+.workflow-reference-field {
+  width: 100%;
+  min-width: 0;
+  align-self: stretch;
+}
+.workflow-reference-field .category-option > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }

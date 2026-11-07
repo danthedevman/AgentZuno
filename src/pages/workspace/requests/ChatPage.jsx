@@ -178,17 +178,12 @@ export default function ChatPage() {
         progress: current()?.progress,
       }),
     () => params.id,
+    () =>
+      current()?.operatorView
+        ? ''
+        : current()?.messages?.findLast((message) => message.role === 'assistant')?.id || '',
   );
   let resumed = false;
-  let openedRequestChat = '';
-  createEffect(() => {
-    const key = params.id && activeRequest() ? `${params.id}:${activeRequest().id}` : '';
-    if (!key || key === openedRequestChat || chat.loading || !current()?.messages?.length) return;
-    openedRequestChat = key;
-    requestAnimationFrame(() => {
-      if (messageList) messageList.scrollTop = messageList.scrollHeight;
-    });
-  });
   pollConversation(() => ['queued', 'responding'].includes(current()?.status), refreshChat);
   createEffect(() => {
     if (!pendingMessage()) return;

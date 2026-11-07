@@ -1,3 +1,4 @@
+import Icon from '../Icon.jsx';
 import { For, Show, createResource, createSignal } from 'solid-js';
 import { api } from '../../services/api.js';
 import { confirmAction } from '../../services/confirmations.js';
@@ -206,6 +207,7 @@ export default function SlackUserReview(props) {
           disabled={busy() || !Object.values(selected()).some(Boolean)}
           onClick={apply}
         >
+          <Icon name="link" />
           Link Selected Users
         </button>
       </Show>

@@ -1,3 +1,4 @@
+import Icon from '../Icon.jsx';
 import WorkflowReferenceField from '../workflows/WorkflowReferenceField.jsx';
 import { createStore, reconcile } from 'solid-js/store';
 import { For, Show, createEffect, createSignal } from 'solid-js';
@@ -137,6 +138,8 @@ export default function RequestForm(props) {
           fallback={<span class="request-form-preview-label">Form Preview</span>}
         >
           <button class="workspace-button" disabled={saving() || props.disabled}>
+            <Icon name="send" />
+
             {saving() ? 'Processing…' : props.submitLabel || 'Submit Request'}
           </button>
         </Show>

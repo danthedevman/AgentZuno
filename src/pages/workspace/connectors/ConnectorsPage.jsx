@@ -87,6 +87,8 @@ function SupportInboxSettings(props) {
         <ToastMessage tone="error">{error()}</ToastMessage>
       </Show>
       <button class="workspace-button small" disabled={busy()}>
+        <Icon name="save" />
+
         {busy() ? 'Saving…' : 'Save inbox settings'}
       </button>
     </ValidatedForm>
@@ -300,6 +302,8 @@ export default function ConnectorsPage() {
                             class="workspace-button small"
                             disabled={!channel.configured || !!busy()}
                           >
+                            <Icon name="link" />
+
                             {busy() === channel.id
                               ? 'Connecting…'
                               : !channel.connected

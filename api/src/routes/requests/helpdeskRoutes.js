@@ -62,6 +62,7 @@ export function installHelpdeskRoutes(app, store, service) {
   app.put('/api/helpdesk/inbox/:id', controller.putInboxId);
   app.get('/api/helpdesk/requests', controller.getRequests);
   app.post('/api/helpdesk/requests', controller.postRequests);
+  app.get('/api/helpdesk/requests/:id/approvals', controller.getRequestsIdApprovals);
   app.get('/api/helpdesk/requests/:id', controller.getRequestsId);
   app.patch('/api/helpdesk/requests/:id', controller.patchRequestsId);
   for (const [path, action] of [

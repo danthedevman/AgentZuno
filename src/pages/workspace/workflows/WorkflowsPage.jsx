@@ -1,3 +1,4 @@
+import Icon from '../../../components/Icon.jsx';
 import Skeleton from '../../../components/Skeleton.jsx';
 import { displayLabel } from '../../../utils/displayLabels.js';
 import { Show, createEffect, createResource } from 'solid-js';
@@ -26,6 +27,7 @@ export default function WorkflowsPage() {
         <PageHeading title="Workflows" />
         <Show when={isAdmin()}>
           <A class="workspace-button small" href="/workspace/workflows/new">
+            <Icon name="plus" />
             New workflow
           </A>
         </Show>

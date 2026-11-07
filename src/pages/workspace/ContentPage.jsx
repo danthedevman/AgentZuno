@@ -1,3 +1,4 @@
+import Icon from '../../components/Icon.jsx';
 import Skeleton from '../../components/Skeleton.jsx';
 import A from '../../components/WorkspaceLink.jsx';
 import { useLocation, useParams } from '@solidjs/router';
@@ -40,6 +41,7 @@ export default function ContentPage() {
                 class="workspace-button small"
                 href={`/workspace/records/file/${content().id}/edit`}
               >
+                <Icon name="edit" />
                 Edit file
               </A>
             </Show>
@@ -51,6 +53,7 @@ export default function ContentPage() {
                   fallback={<pre class="file-preview">{content().content}</pre>}
                 >
                   <a class="workspace-button" href={content().downloadUrl} download>
+                    <Icon name="download" />
                     Download file
                   </a>
                 </Show>

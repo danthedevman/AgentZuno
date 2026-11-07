@@ -1,3 +1,4 @@
+import Icon from '../Icon.jsx';
 import CodeBlock from '../CodeBlock.jsx';
 import ToastMessage from '../ToastMessage.jsx';
 import ValidatedForm from '../ValidatedForm.jsx';
@@ -95,6 +96,8 @@ export default function ImportSourceExport(props) {
             isSaving() || (destination() === 'existing' && !workspace()?.knowledgeBases.length)
           }
         >
+          <Icon name="download" />
+
           {isSaving() ? 'Importing…' : 'Import private copy'}
         </button>
       </ValidatedForm>
